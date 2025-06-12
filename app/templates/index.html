@@ -1,0 +1,96 @@
+<!doctype html>
+<html class="h-full bg-gray-900 text-white">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPOC-Shot Demo</title>
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-full flex items-center justify-center p-8">
+
+  <div class="w-full max-w-4xl">
+    <h1 class="text-4xl font-bold text-center mb-2">SPOC-Shot</h1>
+    <p class="text-center text-gray-400 mb-8">Live Demo: Single-Pass Self-Correction</p>
+
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+      <form id="prompt-form"
+            hx-post="/solve"
+            hx-ext="sse"
+            hx-trigger="submit"
+            hx-swap="none">
+        <div class="flex space-x-4">
+          <input name="prompt"
+                 class="flex-grow bg-gray-700 border border-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 placeholder="Enter a prompt, e.g., 'How many conversions this week?'">
+          <button type="submit"
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md transition-colors">
+            Run Agent
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div id="log-container" class="mt-8 bg-gray-800 p-6 rounded-lg shadow-lg min-h-[300px]">
+      <div id="log" class="space-y-3 font-mono text-sm">
+        <!-- Log entries will be appended here -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('prompt-form');
+    const log = document.getElementById('log');
+
+    form.addEventListener('htmx:beforeRequest', () => {
+      log.innerHTML = ''; // Clear previous logs
+    });
+
+    document.body.addEventListener('htmx:sseMessage', (event) => {
+      const data = JSON.parse(event.detail.data);
+      const entry = document.createElement('div');
+      entry.className = 'p-3 rounded-md';
+
+      let content = '';
+      switch (data.phase) {
+        case 'attempt':
+          content = `<span class="font-bold text-yellow-400">Attempt #${data.idx}</span>`;
+          entry.className += ' bg-gray-700';
+          break;
+        case 'stream':
+          // For streaming, we can append to the last entry if it's also a stream
+          const lastEntry = log.lastElementChild;
+          if (lastEntry && lastEntry.dataset.phase === 'stream') {
+            lastEntry.querySelector('span').textContent += data.token;
+            return; // Don't create a new div
+          }
+          content = `<span class="text-gray-300">${data.token}</span>`;
+          entry.dataset.phase = 'stream';
+          entry.className += ' bg-gray-700/50';
+          break;
+        case 'tool_call':
+          content = `<span class="text-purple-400">TOOL CALL:</span> <span class="text-gray-300">${JSON.stringify(data.call)}</span>`;
+          entry.className += ' bg-gray-700';
+          break;
+        case 'tool_result':
+          const resultClass = data.result.ok ? 'text-green-400' : 'text-red-400';
+          content = `<span class="${resultClass}">TOOL RESULT:</span> <span class="text-gray-300">${JSON.stringify(data.result)}</span>`;
+          entry.className += ' bg-gray-700';
+          break;
+        case 'done':
+          content = `<span class="font-bold text-green-400">✅ DONE</span> <span class="text-gray-300">${data.answer}</span> <span class="text-xs text-gray-500">(${data.latency})</span>`;
+          entry.className += ' bg-green-900/50 border border-green-700';
+          break;
+        case 'error':
+          content = `<span class="font-bold text-red-400">❌ ERROR:</span> <span class="text-gray-300">${data.message}</span>`;
+          entry.className += ' bg-red-900/50 border border-red-700';
+          break;
+      }
+      entry.innerHTML = content;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight; // Auto-scroll
+    });
+  </script>
+
+</body>
+</html>
