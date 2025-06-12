@@ -1,94 +1,389 @@
 <!doctype html>
-<html class="h-full bg-gray-900 text-white">
+<html class="h-full bg-gray-900 text-white font-sans">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SPOC-Shot Demo</title>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom styles for the toggle switch */
+    .toggle-checkbox:checked {
+      right: 0;
+      border-color: #4A5568;
+    }
+    .toggle-checkbox:checked + .toggle-label {
+      background-color: #4A5568;
+    }
+    /* Simple fade-in animation for log entries */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .log-entry {
+      animation: fadeIn 0.3s ease-out;
+    }
+  </style>
 </head>
-<body class="h-full flex items-center justify-center p-8">
+<body class="h-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
 
-  <div class="w-full max-w-4xl">
-    <h1 class="text-4xl font-bold text-center mb-2">SPOC-Shot</h1>
-    <p class="text-center text-gray-400 mb-8">Live Demo: Single-Pass Self-Correction</p>
+  <div class="w-full max-w-7xl mx-auto">
+    <header class="text-center mb-6">
+      <h1 class="text-4xl sm:text-5xl font-bold text-white">SPOC-Shot</h1>
+      <p class="text-gray-400 mt-2">A Live Demo of Single-Pass Self-Correcting Agent Loops</p>
+    </header>
 
-    <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
-      <form id="prompt-form"
-            hx-post="/solve"
-            hx-ext="sse"
-            hx-trigger="submit"
-            hx-swap="none">
-        <div class="flex space-x-4">
-          <input name="prompt"
-                 class="flex-grow bg-gray-700 border border-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                 placeholder="Enter a prompt, e.g., 'How many conversions this week?'">
-          <button type="submit"
-                  class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md transition-colors">
-            Run Agent
-          </button>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Left Column -->
+      <div class="flex flex-col gap-6">
+        <!-- Controls Panel -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
+          <h2 class="text-xl font-semibold mb-4">Controls</h2>
+          <form id="prompt-form"
+                hx-post="/solve"
+                hx-trigger="submit"
+                hx-ext="sse"
+                hx-swap="none">
+            <div class="mb-4">
+              <label for="agent-mode" class="block text-sm font-medium text-gray-300 mb-2">Agent Mode</label>
+              <div class="relative inline-block w-full text-sm">
+                  <select id="agent-mode" name="mode" class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="multi_pass" selected>Multi-Pass (Baseline)</option>
+                      <option value="single_pass">Single-Pass (SPOC)</option>
+                  </select>
+              </div>
+            </div>
+            <div class="mb-4">
+              <label for="prompt-input" class="block text-sm font-medium text-gray-300 mb-2">Demo Prompt</label>
+              <input id="prompt-input" name="prompt" class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500" value="How many conversions did we get this week?">
+            </div>
+            <button id="run-button" type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-500">
+              Run Agent
+            </button>
+          </form>
         </div>
-      </form>
+
+        <!-- Metrics Panel -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
+          <h2 class="text-xl font-semibold mb-4">Real-Time Performance</h2>
+          <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p class="text-gray-400 text-sm">Latency</p>
+              <p id="metric-latency" class="text-3xl font-bold">0.00s</p>
+            </div>
+            <div>
+              <p class="text-gray-400 text-sm">Tokens Used</p>
+              <p id="metric-tokens" class="text-3xl font-bold">0</p>
+            </div>
+            <div>
+              <p class="text-gray-400 text-sm">LLM Calls</p>
+              <p id="metric-llm-calls" class="text-3xl font-bold">0</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column -->
+      <div class="flex flex-col gap-6">
+        <!-- Code View Panel -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
+          <h2 class="text-xl font-semibold mb-4">Agent Logic</h2>
+          <div id="code-view" class="bg-gray-900 p-4 rounded-md text-xs font-mono">
+            <!-- Pseudo-code will be injected here -->
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div id="log-container" class="mt-8 bg-gray-800 p-6 rounded-lg shadow-lg min-h-[300px]">
-      <div id="log" class="space-y-3 font-mono text-sm">
-        <!-- Log entries will be appended here -->
+    <!-- Log Stream Panel -->
+    <div class="mt-6 bg-gray-800 p-6 rounded-lg shadow-2xl">
+      <h2 class="text-xl font-semibold mb-4">Log Stream</h2>
+      <div id="log-container" class="h-96 overflow-y-auto bg-gray-900 p-4 rounded-md">
+        <div id="log" class="space-y-2 text-sm font-mono">
+          <!-- Log entries will be appended here -->
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- Pseudo-code templates -->
+  <template id="multi-pass-code">
+    <pre><code class="language-python">
+# Multi-Pass (ReAct)
+for attempt in max_retries:
+  # 1. First LLM Call
+  tool_call = llm.think(prompt)
+
+  # 2. Execute Tool
+  result = execute(tool_call)
+
+  if result.is_success():
+    # 3. Second LLM Call
+    answer = llm.summarize(result)
+    return answer
+  else:
+    # 4. Loop to Retry
+    prompt = f"Fix this: {result.error}"
+    </code></pre>
+  </template>
+
+  <template id="single-pass-code">
+    <pre><code class="language-python">
+# Single-Pass (SPOC)
+while retries < max_retries:
+  # 1. Single, Stateful LLM Call
+  response = llm.refine(prompt)
+
+  if response.has_tool_call():
+    # 2. Execute Tool
+    result = execute(response.tool_call)
+    # 3. Feed result back into the SAME call
+    prompt = f"Result: {result}"
+  else:
+    # 4. Get final answer
+    return response.answer
+    </code></pre>
+  </template>
+
   <script>
-    const form = document.getElementById('prompt-form');
-    const log = document.getElementById('log');
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('prompt-form');
+      const log = document.getElementById('log');
+      const runButton = document.getElementById('run-button');
+      const modeSelect = document.getElementById('agent-mode');
+      const codeView = document.getElementById('code-view');
+      const multiPassTemplate = document.getElementById('multi-pass-code');
+      const singlePassTemplate = document.getElementById('single-pass-code');
 
-    form.addEventListener('htmx:beforeRequest', () => {
-      log.innerHTML = ''; // Clear previous logs
-    });
+      const latencyEl = document.getElementById('metric-latency');
+      const tokensEl = document.getElementById('metric-tokens');
+      const llmCallsEl = document.getElementById('metric-llm-calls');
 
-    document.body.addEventListener('htmx:sseMessage', (event) => {
-      const data = JSON.parse(event.detail.data);
-      const entry = document.createElement('div');
-      entry.className = 'p-3 rounded-md';
+      // --- State Management ---
+      let currentMode = 'multi_pass';
 
-      let content = '';
-      switch (data.phase) {
-        case 'attempt':
-          content = `<span class="font-bold text-yellow-400">Attempt #${data.idx}</span>`;
-          entry.className += ' bg-gray-700';
-          break;
-        case 'stream':
-          // For streaming, we can append to the last entry if it's also a stream
-          const lastEntry = log.lastElementChild;
-          if (lastEntry && lastEntry.dataset.phase === 'stream') {
-            lastEntry.querySelector('span').textContent += data.token;
-            return; // Don't create a new div
-          }
-          content = `<span class="text-gray-300">${data.token}</span>`;
-          entry.dataset.phase = 'stream';
-          entry.className += ' bg-gray-700/50';
-          break;
-        case 'tool_call':
-          content = `<span class="text-purple-400">TOOL CALL:</span> <span class="text-gray-300">${JSON.stringify(data.call)}</span>`;
-          entry.className += ' bg-gray-700';
-          break;
-        case 'tool_result':
-          const resultClass = data.result.ok ? 'text-green-400' : 'text-red-400';
-          content = `<span class="${resultClass}">TOOL RESULT:</span> <span class="text-gray-300">${JSON.stringify(data.result)}</span>`;
-          entry.className += ' bg-gray-700';
-          break;
-        case 'done':
-          content = `<span class="font-bold text-green-400">✅ DONE</span> <span class="text-gray-300">${data.answer}</span> <span class="text-xs text-gray-500">(${data.latency})</span>`;
-          entry.className += ' bg-green-900/50 border border-green-700';
-          break;
-        case 'error':
-          content = `<span class="font-bold text-red-400">❌ ERROR:</span> <span class="text-gray-300">${data.message}</span>`;
-          entry.className += ' bg-red-900/50 border border-red-700';
-          break;
+      const updateCodeView = () => {
+        codeView.innerHTML = currentMode === 'single_pass'
+          ? singlePassTemplate.innerHTML
+          : multiPassTemplate.innerHTML;
+      };
+
+      const resetMetrics = () => {
+        latencyEl.textContent = '0.00s';
+        tokensEl.textContent = '0';
+        llmCallsEl.textContent = '0';
+      };
+
+      const updateMetrics = (metrics) => {
+        if (!metrics) return;
+        latencyEl.textContent = `${(metrics.latency || 0).toFixed(2)}s`;
+        tokensEl.textContent = metrics.tokens || 0;
+        llmCallsEl.textContent = metrics.llm_calls || 0;
+      };
+
+      // --- Event Listeners ---
+      modeSelect.addEventListener('change', (e) => {
+        currentMode = e.target.value;
+        updateCodeView();
+      });
+
+      form.addEventListener('htmx:beforeRequest', (e) => {
+        log.innerHTML = '<div class="text-gray-500">Waiting for agent...</div>';
+        runButton.disabled = true;
+        runButton.textContent = 'Running...';
+        resetMetrics();
+
+        // HTMX doesn't have a clean way to send form data as JSON
+        // when also using the SSE extension. We will cancel the HTMX
+        // request and send our own fetch request.
+        e.preventDefault();
+
+        const prompt = document.getElementById('prompt-input').value;
+        const payload = {
+            prompt: prompt,
+            mode: currentMode
+        };
+        
+        console.log("Sending payload:", JSON.stringify(payload, null, 2));
+
+        // Use the browser's native fetch API to stream the response
+        fetch('/solve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            // Clear the "Waiting" message
+            if (log.firstElementChild && log.firstElementChild.textContent.includes('Waiting')) {
+                log.innerHTML = '';
+            }
+
+            function push() {
+                reader.read().then(({ done, value }) => {
+                    if (done) {
+                        runButton.disabled = false;
+                        runButton.textContent = 'Run Agent';
+                        return;
+                    }
+                    // The response is a stream of "data: {...}" events.
+                    // We need to parse them.
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n').filter(line => line.trim().startsWith('data:'));
+                    for (const line of lines) {
+                        const jsonStr = line.replace('data:', '').trim();
+                        if (jsonStr) {
+                            const data = JSON.parse(jsonStr);
+                            handleSseMessage(data);
+                        }
+                    }
+                    push();
+                });
+            }
+            push();
+        })
+        .catch(err => {
+            console.error('Fetch error:', err);
+            runButton.disabled = false;
+            runButton.textContent = 'Run Agent';
+        });
+      });
+
+      function handleSseMessage(data) {
+        const entry = document.createElement('div');
+        entry.className = 'log-entry p-2 rounded-md flex items-start';
+
+        const ICONS = {
+          propose: '🧠',
+          execute: '⚙️',
+          failure: '❌',
+          patch: '🔧',
+          success: '✅',
+          tool_result: '📦',
+          model_response: '💬',
+          error: '🔥'
+        };
+
+        let icon = ICONS[data.phase] || '➡️';
+        let content = '';
+        let colorClass = 'bg-gray-700/50';
+
+        switch (data.phase) {
+          case 'propose':
+            content = `<span class="font-bold text-cyan-400">PROPOSE</span>: Agent is thinking...`;
+            break;
+          case 'model_response':
+            content = `<span class="font-bold text-gray-400">MODEL</span>: <pre class="inline-block whitespace-pre-wrap">${data.content}</pre>`;
+            break;
+          case 'execute':
+            content = `<span class="font-bold text-purple-400">EXECUTE</span>: Calling tool <code class="text-white">${data.call.name}</code> with args <code class="text-white">${JSON.stringify(data.call.args)}</code>`;
+            break;
+          case 'tool_result':
+            const resultClass = data.result.ok ? 'text-green-400' : 'text-red-400';
+            content = `<span class="font-bold ${resultClass}">RESULT</span>: <pre class="inline-block whitespace-pre-wrap">${JSON.stringify(data.result)}</pre>`;
+            break;
+          case 'failure':
+             content = `<span class="font-bold text-red-500">FAILURE</span>: ${data.message}`;
+             colorClass = 'bg-red-900/30';
+             break;
+          case 'patch':
+            content = `<span class="font-bold text-yellow-400">PATCH</span>: Tool failed. Attempting to self-correct...`;
+            colorClass = 'bg-yellow-900/30';
+            break;
+          case 'success':
+            content = `<span class="font-bold text-green-400">SUCCESS</span>: <pre class="inline-block whitespace-pre-wrap">${data.answer}</pre>`;
+            colorClass = 'bg-green-900/30';
+            break;
+          case 'error':
+            content = `<span class="font-bold text-red-500">ERROR</span>: ${data.message}`;
+            colorClass = 'bg-red-900/50 border border-red-700';
+            break;
+        }
+        
+        entry.className += ` ${colorClass}`;
+        entry.innerHTML = `<span class="mr-3">${icon}</span> <div class="flex-1">${content}</div>`;
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
+
+        updateMetrics(data.metrics);
       }
-      entry.innerHTML = content;
-      log.appendChild(entry);
-      log.scrollTop = log.scrollHeight; // Auto-scroll
+
+      // Remove the now-unused global SSE listener
+      // document.body.removeEventListener('htmx:sseMessage', ...);
+
+      form.addEventListener('htmx:afterRequest', () => {
+        runButton.disabled = false;
+        runButton.textContent = 'Run Agent';
+      });
+
+      document.body.addEventListener('htmx:sseMessage', (event) => {
+        if (log.firstElementChild && log.firstElementChild.textContent.includes('Waiting')) {
+            log.innerHTML = ''; // Clear "Waiting" message
+        }
+        
+        const data = JSON.parse(event.detail.data);
+        const entry = document.createElement('div');
+        entry.className = 'log-entry p-2 rounded-md flex items-start';
+
+        const ICONS = {
+          propose: '🧠',
+          execute: '⚙️',
+          failure: '❌',
+          patch: '🔧',
+          success: '✅',
+          tool_result: '📦',
+          model_response: '💬',
+          error: '🔥'
+        };
+
+        let icon = ICONS[data.phase] || '➡️';
+        let content = '';
+        let colorClass = 'bg-gray-700/50';
+
+        switch (data.phase) {
+          case 'propose':
+            content = `<span class="font-bold text-cyan-400">PROPOSE</span>: Agent is thinking...`;
+            break;
+          case 'model_response':
+            content = `<span class="font-bold text-gray-400">MODEL</span>: <pre class="inline-block whitespace-pre-wrap">${data.content}</pre>`;
+            break;
+          case 'execute':
+            content = `<span class="font-bold text-purple-400">EXECUTE</span>: Calling tool <code class="text-white">${data.call.name}</code> with args <code class="text-white">${JSON.stringify(data.call.args)}</code>`;
+            break;
+          case 'tool_result':
+            const resultClass = data.result.ok ? 'text-green-400' : 'text-red-400';
+            content = `<span class="font-bold ${resultClass}">RESULT</span>: <pre class="inline-block whitespace-pre-wrap">${JSON.stringify(data.result)}</pre>`;
+            break;
+          case 'failure':
+             content = `<span class="font-bold text-red-500">FAILURE</span>: ${data.message}`;
+             colorClass = 'bg-red-900/30';
+             break;
+          case 'patch':
+            content = `<span class="font-bold text-yellow-400">PATCH</span>: Tool failed. Attempting to self-correct...`;
+            colorClass = 'bg-yellow-900/30';
+            break;
+          case 'success':
+            content = `<span class="font-bold text-green-400">SUCCESS</span>: <pre class="inline-block whitespace-pre-wrap">${data.answer}</pre>`;
+            colorClass = 'bg-green-900/30';
+            break;
+          case 'error':
+            content = `<span class="font-bold text-red-500">ERROR</span>: ${data.message}`;
+            colorClass = 'bg-red-900/50 border border-red-700';
+            break;
+        }
+        
+        entry.className += ` ${colorClass}`;
+        entry.innerHTML = `<span class="mr-3">${icon}</span> <div class="flex-1">${content}</div>`;
+        log.appendChild(entry);
+        log.scrollTop = log.scrollHeight;
+
+        updateMetrics(data.metrics);
+      });
+
+      // --- Initial Setup ---
+      updateCodeView();
     });
   </script>
 

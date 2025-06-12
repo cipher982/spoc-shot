@@ -16,6 +16,25 @@ TOOL_REGISTRY = {
     "sql_query": sql_query
 }
 
+def get_tool_signature():
+    """
+    Returns a string describing the available tools.
+    """
+    return json.dumps({
+        "name": "sql_query",
+        "description": "Query the company database.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "column": {
+                    "type": "string",
+                    "description": "The column to query, e.g., 'users', 'revenue', 'convs'."
+                }
+            },
+            "required": ["column"]
+        }
+    }, indent=2)
+
 def run_tool(call: dict):
     """
     Runs a tool from the registry based on the provided call dictionary.
