@@ -255,6 +255,9 @@ while retries < max_retries:
         const entry = document.createElement('div');
         entry.className = 'log-entry p-2 rounded-md flex items-start';
 
+        const now = new Date();
+        const timestamp = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
+
         const ICONS = {
           propose: '🧠',
           execute: '⚙️',
@@ -303,7 +306,7 @@ while retries < max_retries:
         }
         
         entry.className += ` ${colorClass}`;
-        entry.innerHTML = `<span class="mr-3">${icon}</span> <div class="flex-1">${content}</div>`;
+        entry.innerHTML = `<span class="mr-2 text-gray-500">${timestamp}</span><span class="mr-3">${icon}</span> <div class="flex-1">${content}</div>`;
         log.appendChild(entry);
         log.scrollTop = log.scrollHeight;
 

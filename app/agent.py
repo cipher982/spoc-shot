@@ -7,49 +7,45 @@ import app.verifier as V
 import os
 from typing import List, Dict, Any, AsyncGenerator
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---
-# Point the OpenAI client to the vLLM server running on 'cube'
-# and instantiate the new client, which is required for openai >= 1.0.0
 client = openai.AsyncOpenAI(
     base_url="http://cube:8000/v1",
-    api_key="none", # vLLM doesn't require an API key
+    api_key="none",
 )
 MODEL_NAME = "local-7b"
-
 logger.info(f"Connecting to vLLM server at: {client.base_url}")
 
 # --- Prompts ---
 SYSTEM_PROMPT_MULTI_PASS = """
-You are an expert agent that uses tools to answer questions.
-When you need to use a tool, you must output a `TOOL_CALL` in a specific JSON format.
-Example:
-TOOL_CALL: {"name": "sql_query", "args": {"column": "users"}}
-
-After the tool is executed, you will receive an `EXEC_RESULT`.
-Based on this result, you must decide if the task is complete or if you need to try again.
-If the task is complete, respond with the final answer.
-If the task is not complete, analyze the `EXEC_RESULT` and attempt a new `TOOL_CALL`.
-Your final answer should be a concise summary of the tool's successful output.
+You are an agent designed for a specific demo. Your ONLY purpose is to answer the user's question about "conversions".
+1.  You MUST use the `sql_query` tool. It is the only tool available.
+2.  The `sql_query` tool takes a single argument: `column`.
+3.  The user's question is "How many conversions did we get this week?". You should infer the correct column name from this.
+4.  Your first action MUST be to call the tool with what you think the column name is. Output a `TOOL_CALL` in JSON format.
+5.  After you receive the `EXEC_RESULT`, if it failed, analyze the 'hint' and call the tool again with the corrected column name.
+6.  If the result is successful, provide a one-sentence answer summarizing the data.
+Example of a tool call:
+TOOL_CALL: {"name": "sql_query", "args": {"column": "your_best_guess"}}
 """
 
 SYSTEM_PROMPT_SINGLE_PASS = """
-You are an expert agent that uses tools to answer questions.
-Your task is to answer the user's prompt.
-You will be given a `TOOL_SIGNATURE` that you can call by outputting a `TOOL_CALL` in JSON format.
-Example:
-TOOL_CALL: {"name": "sql_query", "args": {"column": "users"}}
-
-After the `TOOL_CALL` is executed, you will receive an `EXEC_RESULT`.
-If the `EXEC_RESULT` indicates a failure, you MUST NOT apologize. Instead, you MUST analyze the error and immediately attempt a new `TOOL_CALL` with corrected arguments.
-If the `EXEC_RESULT` is successful, provide a concise, final answer to the user based on the result.
+You are an agent designed for a specific demo. Your ONLY purpose is to answer the user's question about "conversions".
+1.  You will be given a `TOOL_SIGNATURE` for the `sql_query` tool. It is the only tool you can use.
+2.  The tool takes a single argument: `column`.
+3.  The user's question is "How many conversions did we get this week?". Infer the column name from this question.
+4.  Your first action MUST be to call the tool. Output a `TOOL_CALL` in JSON format.
+5.  If the `EXEC_RESULT` you receive is a failure, you MUST use the 'hint' to immediately try a new `TOOL_CALL` with the corrected column name.
+6.  If the `EXEC_RESULT` is successful, provide a one-sentence answer summarizing the data.
+Example of a tool call:
+TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}
 """
 
 # --- Metrics Tracking ---
 def get_token_counts(completion: Dict[str, Any]) -> Dict[str, int]:
-    """Extracts token counts from a completion object."""
     if completion and hasattr(completion, 'usage'):
         return {
             "prompt": completion.usage.prompt_tokens,
@@ -58,15 +54,12 @@ def get_token_counts(completion: Dict[str, Any]) -> Dict[str, int]:
         }
     return {"prompt": 0, "completion": 0, "total": 0}
 
+def get_tool_args(call_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Safely gets the arguments from a tool call, checking for both 'args' and 'arguments'."""
+    return call_data.get("args", call_data.get("arguments", {}))
+
 # --- Multi-Pass Agent (Baseline) ---
 async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[Dict[str, Any], None]:
-    """
-    Orchestrates the classic multi-pass loop (ReAct):
-    1. First LLM call to get a tool call.
-    2. Execute the tool.
-    3. If it fails, start a new loop (another LLM call).
-    4. If it succeeds, make a final LLM call to get the answer.
-    """
     req_id = f"spoc-shot-{uuid.uuid4()}"
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT_MULTI_PASS},
@@ -76,53 +69,43 @@ async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[
     metrics = {"tokens": 0, "latency": 0, "llm_calls": 0}
 
     for attempt in range(max_retries):
-        logger.info(f"[Multi-Pass] Attempt {attempt + 1}/{max_retries}")
         yield {"phase": "propose", "metrics": metrics}
         
         try:
+            logger.info("[Multi-Pass] Simulating network latency...")
+            await asyncio.sleep(2)
             logger.info("[Multi-Pass] Calling OpenAI API...")
-            logger.info(f"--- Request to vLLM Server ({client.base_url}) ---")
-            logger.info(json.dumps(messages, indent=2))
-            logger.info("-------------------------------------------------")
             completion = await client.chat.completions.create(
                 model=MODEL_NAME,
                 messages=messages,
                 temperature=0.0,
                 extra_body={"request_id": req_id},
             )
-            logger.info(f"--- Response from vLLM Server ---")
-            logger.info(str(completion))
-            logger.info("-----------------------------------")
             metrics["llm_calls"] += 1
             token_counts = get_token_counts(completion)
             metrics["tokens"] += token_counts["total"]
             response_text = completion.choices[0].message.content
             messages.append({"role": "assistant", "content": response_text})
             yield {"phase": "model_response", "content": response_text, "metrics": metrics}
-            logger.info(f"[Multi-Pass] Received model response: {response_text}")
 
         except openai.APIError as e:
-            logger.error(f"[Multi-Pass] OpenAI API Error: {e}", exc_info=True)
             yield {"phase": "error", "message": f"vLLM server error: {e}"}
             return
 
         if "TOOL_CALL:" in response_text:
             tool_call_str = response_text.split("TOOL_CALL:", 1)[1].strip()
             try:
-                logger.info(f"[Multi-Pass] Parsing tool call: {tool_call_str}")
                 call_data = json.loads(tool_call_str)
+                call_data["args"] = get_tool_args(call_data) # Standardize the args key
                 yield {"phase": "execute", "call": call_data, "metrics": metrics}
-                
-                logger.info(f"[Multi-Pass] Executing tool: {call_data}")
                 result = T.run_tool(call_data)
-                logger.info(f"[Multi-Pass] Tool result: {result}")
                 yield {"phase": "tool_result", "result": result, "metrics": metrics}
-
                 messages.append({"role": "tool", "content": json.dumps(result)})
 
                 if V.verify(result):
-                    logger.info("[Multi-Pass] Tool execution successful. Generating final answer.")
                     yield {"phase": "propose", "metrics": metrics}
+                    logger.info("[Multi-Pass] Simulating network latency for final answer...")
+                    await asyncio.sleep(2)
                     final_completion = await client.chat.completions.create(
                         model=MODEL_NAME,
                         messages=messages,
@@ -132,16 +115,12 @@ async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[
                     token_counts = get_token_counts(final_completion)
                     metrics["tokens"] += token_counts["total"]
                     final_answer = final_completion.choices[0].message.content
-                    
                     metrics["latency"] = time.perf_counter() - start_time
-                    logger.info(f"[Multi-Pass] Final answer: {final_answer}")
                     yield {"phase": "success", "answer": final_answer, "metrics": metrics}
                     return
                 else:
-                    logger.warning("[Multi-Pass] Tool execution failed verification.")
                     yield {"phase": "failure", "message": "Tool execution failed verification.", "metrics": metrics}
             except (json.JSONDecodeError, KeyError) as e:
-                logger.error(f"[Multi-Pass] Failed to parse tool call: {e}", exc_info=True)
                 yield {"phase": "failure", "message": f"Invalid tool call format: {e}", "metrics": metrics}
                 messages.append({"role": "tool", "content": json.dumps({"error": "Invalid tool call format"})})
         else:
@@ -154,9 +133,6 @@ async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[
 
 # --- Single-Pass Agent (SPOC) ---
 async def solve_single_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[Dict[str, Any], None]:
-    """
-    Orchestrates a single-pass loop with self-patching.
-    """
     req_id = f"spoc-shot-{uuid.uuid4()}"
     tool_signature = f"TOOL_SIGNATURE: {T.get_tool_signature()}"
     full_prompt = f"{tool_signature}\n\nUser Prompt: {prompt}"
@@ -166,86 +142,70 @@ async def solve_single_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator
     ]
     start_time = time.perf_counter()
     metrics = {"tokens": 0, "latency": 0, "llm_calls": 0}
-    
-    metrics["llm_calls"] = 1
-    logger.info("[Single-Pass] Starting single-pass agent.")
-    yield {"phase": "propose", "metrics": metrics}
 
-    try:
-        logger.info("[Single-Pass] Calling OpenAI API (streaming)...")
-        logger.info(f"--- Request to vLLM Server ({client.base_url}) ---")
-        logger.info(json.dumps(messages, indent=2))
-        logger.info("-------------------------------------------------")
-        stream = await client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=messages,
-            stream=True,
-            temperature=0.0,
-            stop=["\nEXEC_RESULT"],
-            extra_body={"request_id": req_id},
-        )
-    except openai.APIError as e:
-        logger.error(f"[Single-Pass] OpenAI API Error: {e}", exc_info=True)
-        yield {"phase": "error", "message": f"vLLM server error: {e}"}
-        return
-
-    buffer = ""
-    retries = 0
-    while retries < max_retries:
-        async for chunk in stream:
-            token = chunk.choices[0].delta.content or ""
-            buffer += token
+    for attempt in range(max_retries):
+        yield {"phase": "propose", "metrics": metrics}
+        
+        try:
+            logger.info(f"[Single-Pass] Attempt {attempt + 1}/{max_retries}")
+            logger.info("[Single-Pass] Simulating network latency...")
+            await asyncio.sleep(2)
+            logger.info("[Single-Pass] Calling OpenAI API...")
             
-            if "TOOL_CALL:" in buffer:
-                tool_call_str = buffer.split("TOOL_CALL:", 1)[1].strip()
-                try:
-                    logger.info(f"[Single-Pass] Parsing tool call: {tool_call_str}")
-                    call_data = json.loads(tool_call_str)
-                    
-                    messages.append({"role": "assistant", "content": buffer})
-                    
-                    yield {"phase": "execute", "call": call_data, "metrics": metrics}
-                    logger.info(f"[Single-Pass] Executing tool: {call_data}")
-                    result = T.run_tool(call_data)
-                    logger.info(f"[Single-Pass] Tool result: {result}")
-                    yield {"phase": "tool_result", "result": result, "metrics": metrics}
+            completion = await client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=messages,
+                temperature=0.0,
+                extra_body={"request_id": req_id},
+            )
+            metrics["llm_calls"] += 1
+            token_counts = get_token_counts(completion)
+            metrics["tokens"] += token_counts["total"]
+            response_text = completion.choices[0].message.content
+            messages.append({"role": "assistant", "content": response_text})
+            yield {"phase": "model_response", "content": response_text, "metrics": metrics}
 
-                    if V.verify(result):
-                        logger.info("[Single-Pass] Tool execution successful. Generating final answer.")
-                        messages.append({"role": "tool", "content": f"EXEC_RESULT: {json.dumps(result)}"})
-                        
-                        final_stream = await client.chat.completions.create(
-                            model=MODEL_NAME,
-                            messages=messages,
-                            stream=True,
-                            extra_body={"request_id": req_id},
-                        )
-                        
-                        final_answer = ""
-                        async for final_chunk in final_stream:
-                            final_token = final_chunk.choices[0].delta.content or ""
-                            final_answer += final_token
-                        
-                        metrics["tokens"] = len(str(messages)) + len(final_answer)
-                        metrics["latency"] = time.perf_counter() - start_time
-                        yield {"phase": "success", "answer": final_answer, "metrics": metrics}
-                        return
-                    else:
-                        logger.warning("[Single-Pass] Tool execution failed. Attempting to self-patch.")
-                        yield {"phase": "patch", "message": "Tool execution failed. Attempting to self-patch.", "metrics": metrics}
-                        messages.append({"role": "tool", "content": f"EXEC_RESULT: {json.dumps(result)}"})
-                        buffer = ""
-                        retries += 1
-                        break 
-                except (json.JSONDecodeError, KeyError):
-                    logger.warning(f"[Single-Pass] Incomplete JSON, continuing to stream. Buffer: {buffer}")
-                    continue
+        except openai.APIError as e:
+            yield {"phase": "error", "message": f"vLLM server error: {e}"}
+            return
+
+        if "TOOL_CALL:" in response_text:
+            tool_call_str = response_text.split("TOOL_CALL:", 1)[1].strip()
+            try:
+                call_data = json.loads(tool_call_str)
+                call_data["args"] = get_tool_args(call_data) # Standardize the args key
+                yield {"phase": "execute", "call": call_data, "metrics": metrics}
+                result = T.run_tool(call_data)
+                yield {"phase": "tool_result", "result": result, "metrics": metrics}
+                messages.append({"role": "tool", "content": json.dumps(result)})
+
+                if V.verify(result):
+                    # In a true single-pass, the model would generate the final answer
+                    # after the successful tool call in the same response.
+                    # For this demo, we'll simulate that by making one final call.
+                    logger.info("[Single-Pass] Tool successful. Generating final answer...")
+                    logger.info("[Single-Pass] Simulating network latency for final answer...")
+                    await asyncio.sleep(2)
+                    final_completion = await client.chat.completions.create(
+                        model=MODEL_NAME,
+                        messages=messages,
+                        extra_body={"request_id": req_id},
+                    )
+                    metrics["llm_calls"] += 1
+                    token_counts = get_token_counts(final_completion)
+                    metrics["tokens"] += token_counts["total"]
+                    final_answer = final_completion.choices[0].message.content
+                    metrics["latency"] = time.perf_counter() - start_time
+                    yield {"phase": "success", "answer": final_answer, "metrics": metrics}
+                    return
+                else:
+                    yield {"phase": "patch", "message": "Tool execution failed. Attempting to self-patch.", "metrics": metrics}
+            except (json.JSONDecodeError, KeyError) as e:
+                yield {"phase": "failure", "message": f"Invalid tool call format: {e}", "metrics": metrics}
+                messages.append({"role": "tool", "content": json.dumps({"error": "Invalid tool call format"})})
         else:
-            break
-            
-    if "TOOL_CALL:" not in buffer:
-        metrics["latency"] = time.perf_counter() - start_time
-        yield {"phase": "success", "answer": buffer, "metrics": metrics}
-        return
+            metrics["latency"] = time.perf_counter() - start_time
+            yield {"phase": "success", "answer": response_text, "metrics": metrics}
+            return
 
     yield {"phase": "error", "message": "Agent failed to self-patch after multiple attempts."}
