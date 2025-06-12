@@ -72,8 +72,12 @@
               <p id="metric-latency" class="text-3xl font-bold">0.00s</p>
             </div>
             <div>
-              <p class="text-gray-400 text-sm">Tokens Used</p>
-              <p id="metric-tokens" class="text-3xl font-bold">0</p>
+              <p class="text-gray-400 text-sm">Input Tokens</p>
+              <p id="metric-prompt-tokens" class="text-3xl font-bold">0</p>
+            </div>
+            <div>
+              <p class="text-gray-400 text-sm">Output Tokens</p>
+              <p id="metric-completion-tokens" class="text-3xl font-bold">0</p>
             </div>
             <div>
               <p class="text-gray-400 text-sm">LLM Calls</p>
@@ -156,7 +160,8 @@ while retries < max_retries:
       const singlePassTemplate = document.getElementById('single-pass-code');
 
       const latencyEl = document.getElementById('metric-latency');
-      const tokensEl = document.getElementById('metric-tokens');
+      const promptTokensEl = document.getElementById('metric-prompt-tokens');
+      const completionTokensEl = document.getElementById('metric-completion-tokens');
       const llmCallsEl = document.getElementById('metric-llm-calls');
 
       // --- State Management ---
@@ -170,14 +175,16 @@ while retries < max_retries:
 
       const resetMetrics = () => {
         latencyEl.textContent = '0.00s';
-        tokensEl.textContent = '0';
+        promptTokensEl.textContent = '0';
+        completionTokensEl.textContent = '0';
         llmCallsEl.textContent = '0';
       };
 
       const updateMetrics = (metrics) => {
         if (!metrics) return;
         latencyEl.textContent = `${(metrics.latency || 0).toFixed(2)}s`;
-        tokensEl.textContent = metrics.tokens || 0;
+        promptTokensEl.textContent = metrics.prompt_tokens || 0;
+        completionTokensEl.textContent = metrics.completion_tokens || 0;
         llmCallsEl.textContent = metrics.llm_calls || 0;
       };
 

@@ -66,7 +66,7 @@ async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[
         {"role": "user", "content": prompt}
     ]
     start_time = time.perf_counter()
-    metrics = {"tokens": 0, "latency": 0, "llm_calls": 0}
+    metrics = {"prompt_tokens": 0, "completion_tokens": 0, "latency": 0, "llm_calls": 0}
 
     for attempt in range(max_retries):
         yield {"phase": "propose", "metrics": metrics}
@@ -83,7 +83,8 @@ async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[
             )
             metrics["llm_calls"] += 1
             token_counts = get_token_counts(completion)
-            metrics["tokens"] += token_counts["total"]
+            metrics["prompt_tokens"] += token_counts["prompt"]
+            metrics["completion_tokens"] += token_counts["completion"]
             response_text = completion.choices[0].message.content
             messages.append({"role": "assistant", "content": response_text})
             yield {"phase": "model_response", "content": response_text, "metrics": metrics}
@@ -113,7 +114,8 @@ async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[
                     )
                     metrics["llm_calls"] += 1
                     token_counts = get_token_counts(final_completion)
-                    metrics["tokens"] += token_counts["total"]
+                    metrics["prompt_tokens"] += token_counts["prompt"]
+                    metrics["completion_tokens"] += token_counts["completion"]
                     final_answer = final_completion.choices[0].message.content
                     metrics["latency"] = time.perf_counter() - start_time
                     yield {"phase": "success", "answer": final_answer, "metrics": metrics}
@@ -141,7 +143,7 @@ async def solve_single_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator
         {"role": "user", "content": full_prompt}
     ]
     start_time = time.perf_counter()
-    metrics = {"tokens": 0, "latency": 0, "llm_calls": 0}
+    metrics = {"prompt_tokens": 0, "completion_tokens": 0, "latency": 0, "llm_calls": 0}
 
     for attempt in range(max_retries):
         yield {"phase": "propose", "metrics": metrics}
@@ -160,7 +162,8 @@ async def solve_single_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator
             )
             metrics["llm_calls"] += 1
             token_counts = get_token_counts(completion)
-            metrics["tokens"] += token_counts["total"]
+            metrics["prompt_tokens"] += token_counts["prompt"]
+            metrics["completion_tokens"] += token_counts["completion"]
             response_text = completion.choices[0].message.content
             messages.append({"role": "assistant", "content": response_text})
             yield {"phase": "model_response", "content": response_text, "metrics": metrics}
@@ -193,7 +196,8 @@ async def solve_single_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator
                     )
                     metrics["llm_calls"] += 1
                     token_counts = get_token_counts(final_completion)
-                    metrics["tokens"] += token_counts["total"]
+                    metrics["prompt_tokens"] += token_counts["prompt"]
+                    metrics["completion_tokens"] += token_counts["completion"]
                     final_answer = final_completion.choices[0].message.content
                     metrics["latency"] = time.perf_counter() - start_time
                     yield {"phase": "success", "answer": final_answer, "metrics": metrics}
