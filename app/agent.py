@@ -12,8 +12,9 @@ import asyncio
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---
+VLLM_BASE_URL = os.environ.get("VLLM_BASE_URL", "http://cube:8000/v1")
 client = openai.AsyncOpenAI(
-    base_url="http://cube:8000/v1",
+    base_url=VLLM_BASE_URL,
     api_key="none",
 )
 MODEL_NAME = "local-7b"
@@ -112,7 +113,8 @@ async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[
                         messages=messages,
                         extra_body={"request_id": req_id},
                     )
-                    metrics["llm_calls"] += 1
+                    # This call reuses the same request_id to resume generation
+                    # so we don't count it as a new LLM call for the metrics.
                     token_counts = get_token_counts(final_completion)
                     metrics["prompt_tokens"] += token_counts["prompt"]
                     metrics["completion_tokens"] += token_counts["completion"]
@@ -194,7 +196,9 @@ async def solve_single_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator
                         messages=messages,
                         extra_body={"request_id": req_id},
                     )
-                    metrics["llm_calls"] += 1
+                    # This call reuses the same request_id to resume generation,
+                    # so we treat it as a continuation rather than a new LLM
+                    # call for metric purposes.
                     token_counts = get_token_counts(final_completion)
                     metrics["prompt_tokens"] += token_counts["prompt"]
                     metrics["completion_tokens"] += token_counts["completion"]
