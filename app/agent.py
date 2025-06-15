@@ -75,7 +75,7 @@ def get_tool_args(call_data: Dict[str, Any]) -> Dict[str, Any]:
     return call_data.get("args", call_data.get("arguments", {}))
 
 # --- Multi-Pass Agent (Baseline) ---
-async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[Dict[str, Any], None]:
+async def solve_multi_pass(prompt: str, max_retries: int = 3, scenario: str = "sql") -> AsyncGenerator[Dict[str, Any], None]:
     if WEBLLM_MODE == "webllm":
         yield {"phase": "error", "message": "Server-side inference disabled. Please use WebLLM mode in the browser."}
         return
@@ -158,7 +158,7 @@ async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[
 
 
 # --- Single-Pass Agent (SPOC) ---
-async def solve_single_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[Dict[str, Any], None]:
+async def solve_single_pass(prompt: str, max_retries: int = 3, scenario: str = "sql") -> AsyncGenerator[Dict[str, Any], None]:
     if WEBLLM_MODE == "webllm":
         yield {"phase": "error", "message": "Server-side inference disabled. Please use WebLLM mode in the browser."}
         return
@@ -167,7 +167,7 @@ async def solve_single_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator
         yield {"phase": "error", "message": "vLLM client not initialized. Check server configuration."}
         return
     req_id = f"spoc-shot-{uuid.uuid4()}"
-    tool_signature = f"TOOL_SIGNATURE: {T.get_tool_signature()}"
+    tool_signature = f"TOOL_SIGNATURE: {T.get_tool_signature(scenario)}"
     full_prompt = f"{tool_signature}\n\nUser Prompt: {prompt}"
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT_SINGLE_PASS},

@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="h-full bg-gray-900 text-white font-sans">
+<html class="bg-gray-900">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,8 +11,20 @@
   </script>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
   <!-- Remove the early import - we'll do dynamic import in the function -->
   <style>
+    /* Reset and base styles */
+    * {
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden; /* Prevent horizontal scroll */
+    }
+    
     /* Custom styles for the toggle switch */
     .toggle-checkbox:checked {
       right: 0;
@@ -21,6 +33,7 @@
     .toggle-checkbox:checked + .toggle-label {
       background-color: #4A5568;
     }
+    
     /* Simple fade-in animation for log entries */
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
@@ -29,12 +42,32 @@
     .log-entry {
       animation: fadeIn 0.3s ease-out;
     }
+    
+    /* Ensure proper spacing and prevent overflow */
+    .main-container {
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    
+    /* Responsive grid improvements */
+    @media (max-width: 1024px) {
+      .grid.lg\\:grid-cols-2 {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem;
+      }
+    }
+    
+    /* Prevent canvas from causing overflow */
+    canvas {
+      max-width: 100%;
+      height: auto;
+    }
   </style>
 </head>
-<body class="h-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+<body class="min-h-full bg-gray-900 text-white font-sans p-4 sm:p-6 lg:p-8">
 
-  <div class="w-full max-w-7xl mx-auto">
-    <header class="text-center mb-6">
+  <div class="main-container w-full max-w-7xl mx-auto">
+    <header class="text-center mb-8 py-6">
       <h1 class="text-4xl sm:text-5xl font-bold text-white">SPOC-Shot</h1>
       <p class="text-gray-400 mt-2">A Live Demo of Single-Pass Self-Correcting Agent Loops</p>
     </header>
@@ -61,17 +94,26 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       <!-- Left Column -->
       <div class="flex flex-col gap-6">
         <!-- Controls Panel -->
         <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
-          <h2 class="text-xl font-semibold mb-4">Controls</h2>
+          <h2 class="text-xl font-semibold mb-4">Agent Configuration</h2>
           <form id="prompt-form"
                 hx-post="/solve"
                 hx-trigger="submit"
                 hx-ext="sse"
                 hx-swap="none">
+            <div class="mb-4">
+              <label for="scenario-select" class="block text-sm font-medium text-gray-300 mb-2">Agent Scenario</label>
+              <select id="scenario-select" name="scenario" class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="sql" selected>🗃️ SQL Query Agent</option>
+                <option value="research">🔍 Research Agent</option>
+                <option value="data_analysis">📊 Data Analyst</option>
+                <option value="math_tutor">🧮 Math Tutor</option>
+              </select>
+            </div>
             <div class="mb-4">
               <label for="agent-mode" class="block text-sm font-medium text-gray-300 mb-2">Agent Mode</label>
               <div class="relative inline-block w-full text-sm">
@@ -82,34 +124,98 @@
               </div>
             </div>
             <div class="mb-4">
-              <label for="prompt-input" class="block text-sm font-medium text-gray-300 mb-2">Demo Prompt</label>
-              <input id="prompt-input" name="prompt" class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500" value="How many conversions did we get this week?">
+              <label for="complexity-slider" class="block text-sm font-medium text-gray-300 mb-2">Complexity Level: <span id="complexity-value">3</span></label>
+              <input type="range" id="complexity-slider" min="1" max="5" value="3" class="w-full bg-gray-700 rounded-lg appearance-none cursor-pointer">
+              <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Simple</span>
+                <span>Complex</span>
+              </div>
             </div>
-            <button id="run-button" type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-500">
-              Run Agent
-            </button>
+            <div class="mb-4">
+              <label for="prompt-input" class="block text-sm font-medium text-gray-300 mb-2">Prompt</label>
+              <textarea id="prompt-input" name="prompt" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your prompt here...">How many conversions did we get this week?</textarea>
+            </div>
+            <div class="flex gap-2">
+              <button id="run-button" type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-500">
+                Run Agent
+              </button>
+              <button id="race-button" type="button" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-500">
+                🏁 Race
+              </button>
+            </div>
           </form>
         </div>
 
-        <!-- Metrics Panel -->
+        <!-- Enhanced Metrics Panel -->
         <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
           <h2 class="text-xl font-semibold mb-4">Real-Time Performance</h2>
-          <div class="grid grid-cols-3 gap-4 text-center">
+          
+          <!-- Token Burn Meter -->
+          <div class="mb-6">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm font-medium text-gray-300">Token Burn Rate</span>
+              <span id="burn-rate" class="text-sm text-orange-400">0 tok/s</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-3 relative overflow-hidden">
+              <div id="token-burn-bar" class="h-3 rounded-full transition-all duration-300 bg-gradient-to-r from-orange-500 to-red-500" style="width: 0%"></div>
+              <div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+                <span id="total-tokens">0 tokens</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Memory Visualization -->
+          <div class="mb-6">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm font-medium text-gray-300">Context Memory</span>
+              <span id="memory-efficiency" class="text-sm text-blue-400">100% retained</span>
+            </div>
+            <div class="grid grid-cols-10 gap-1 h-4">
+              <div id="memory-blocks" class="contents">
+                <!-- Memory blocks will be generated here -->
+              </div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Fresh</span>
+              <span>Cached</span>
+            </div>
+          </div>
+
+          <!-- Cost Calculator -->
+          <div class="mb-6 p-3 bg-gray-900/50 rounded-lg">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm font-medium text-gray-300">💰 Cost Analysis</span>
+              <span id="cost-per-run" class="text-sm text-green-400">$0.000</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 text-xs">
+              <div>
+                <div class="text-gray-400">Per 1K runs:</div>
+                <div id="cost-1k" class="font-bold text-green-300">$0.00</div>
+              </div>
+              <div>
+                <div class="text-gray-400">Monthly (10K):</div>
+                <div id="cost-monthly" class="font-bold text-blue-300">$0.00</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Core Metrics -->
+          <div class="grid grid-cols-2 gap-4 text-center">
             <div>
               <p class="text-gray-400 text-sm">Latency</p>
-              <p id="metric-latency" class="text-3xl font-bold">0.00s</p>
-            </div>
-            <div>
-              <p class="text-gray-400 text-sm">Input Tokens</p>
-              <p id="metric-prompt-tokens" class="text-3xl font-bold">0</p>
-            </div>
-            <div>
-              <p class="text-gray-400 text-sm">Output Tokens</p>
-              <p id="metric-completion-tokens" class="text-3xl font-bold">0</p>
+              <p id="metric-latency" class="text-2xl font-bold">0.00s</p>
             </div>
             <div>
               <p class="text-gray-400 text-sm">LLM Calls</p>
-              <p id="metric-llm-calls" class="text-3xl font-bold">0</p>
+              <p id="metric-llm-calls" class="text-2xl font-bold">0</p>
+            </div>
+            <div>
+              <p class="text-gray-400 text-sm">Input Tokens</p>
+              <p id="metric-prompt-tokens" class="text-xl font-bold">0</p>
+            </div>
+            <div>
+              <p class="text-gray-400 text-sm">Output Tokens</p>
+              <p id="metric-completion-tokens" class="text-xl font-bold">0</p>
             </div>
           </div>
         </div>
@@ -117,6 +223,33 @@
 
       <!-- Right Column -->
       <div class="flex flex-col gap-6">
+        <!-- 3D Context Flow Visualization -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
+          <h2 class="text-xl font-semibold mb-4 flex items-center">
+            🌊 Context Flow Visualization
+            <button id="toggle-3d" class="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm">
+              Enable 3D
+            </button>
+          </h2>
+          <div id="context-viz-container" class="h-64 bg-gray-900 rounded-md relative overflow-hidden">
+            <!-- 3D visualization will be rendered here -->
+            <div id="context-viz-placeholder" class="flex items-center justify-center h-full text-gray-500">
+              Click "Enable 3D" to visualize context flow
+            </div>
+            <canvas id="context-viz-canvas" style="display: none;"></canvas>
+          </div>
+          <div class="mt-3 flex justify-between text-xs text-gray-400">
+            <div class="flex items-center">
+              <div class="w-3 h-3 bg-blue-500 rounded mr-2"></div>
+              <span>Single-Pass Flow</span>
+            </div>
+            <div class="flex items-center">
+              <div class="w-3 h-3 bg-red-500 rounded mr-2"></div>
+              <span>Multi-Pass Fragments</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Code View Panel -->
         <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
           <h2 class="text-xl font-semibold mb-4">Agent Logic</h2>
@@ -127,8 +260,194 @@
       </div>
     </div>
 
+    <!-- Racing Panel (hidden by default) -->
+    <div id="racing-panel" class="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl" style="display: none;">
+      <h2 class="text-xl font-semibold mb-4 flex items-center">
+        🏁 Agent Racing Arena
+        <button id="close-race" class="ml-auto text-gray-400 hover:text-white">✕</button>
+      </h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Multi-Pass Lane -->
+        <div class="bg-red-900/20 border border-red-700 p-4 rounded-lg">
+          <h3 class="text-lg font-semibold text-red-300 mb-3 flex items-center">
+            🐌 Multi-Pass Agent
+            <span id="multi-pass-status" class="ml-auto text-sm px-2 py-1 bg-gray-700 rounded">Ready</span>
+          </h3>
+          <div class="mb-3">
+            <div class="flex justify-between text-sm text-gray-300 mb-1">
+              <span>Progress</span>
+              <span id="multi-pass-progress-text">0%</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div id="multi-pass-progress" class="bg-red-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+          <div id="multi-pass-log" class="h-48 overflow-y-auto bg-gray-900/50 p-3 rounded text-xs font-mono">
+            <div class="text-gray-500">Waiting to start...</div>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+            <div>
+              <div class="text-gray-400">Time</div>
+              <div id="multi-pass-time" class="font-bold">--</div>
+            </div>
+            <div>
+              <div class="text-gray-400">Tokens</div>
+              <div id="multi-pass-tokens" class="font-bold">--</div>
+            </div>
+            <div>
+              <div class="text-gray-400">Calls</div>
+              <div id="multi-pass-calls" class="font-bold">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Single-Pass Lane -->
+        <div class="bg-green-900/20 border border-green-700 p-4 rounded-lg">
+          <h3 class="text-lg font-semibold text-green-300 mb-3 flex items-center">
+            🚀 Single-Pass Agent
+            <span id="single-pass-status" class="ml-auto text-sm px-2 py-1 bg-gray-700 rounded">Ready</span>
+          </h3>
+          <div class="mb-3">
+            <div class="flex justify-between text-sm text-gray-300 mb-1">
+              <span>Progress</span>
+              <span id="single-pass-progress-text">0%</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div id="single-pass-progress" class="bg-green-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+          </div>
+          <div id="single-pass-log" class="h-48 overflow-y-auto bg-gray-900/50 p-3 rounded text-xs font-mono">
+            <div class="text-gray-500">Waiting to start...</div>
+          </div>
+          <div class="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+            <div>
+              <div class="text-gray-400">Time</div>
+              <div id="single-pass-time" class="font-bold">--</div>
+            </div>
+            <div>
+              <div class="text-gray-400">Tokens</div>
+              <div id="single-pass-tokens" class="font-bold">--</div>
+            </div>
+            <div>
+              <div class="text-gray-400">Calls</div>
+              <div id="single-pass-calls" class="font-bold">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Race Results -->
+      <div id="race-results" class="mt-6 p-4 bg-gray-900/50 rounded-lg" style="display: none;">
+        <h3 class="text-lg font-semibold mb-3 text-center">🏆 Race Results</h3>
+        <div id="winner-announcement" class="text-center text-2xl font-bold mb-4"></div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+          <div>
+            <div class="text-gray-400 text-sm">Speed Advantage</div>
+            <div id="speed-advantage" class="text-xl font-bold"></div>
+          </div>
+          <div>
+            <div class="text-gray-400 text-sm">Token Efficiency</div>
+            <div id="token-efficiency" class="text-xl font-bold"></div>
+          </div>
+          <div>
+            <div class="text-gray-400 text-sm">Cost Savings</div>
+            <div id="cost-savings" class="text-xl font-bold"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Network Effect Simulation -->
+    <div class="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl">
+      <h2 class="text-xl font-semibold mb-4 flex items-center">
+        📈 Network Effect Simulation
+        <button id="simulate-network" class="ml-auto bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm">
+          Run Simulation
+        </button>
+      </h2>
+      
+      <div class="mb-6">
+        <label for="scale-slider" class="block text-sm font-medium text-gray-300 mb-2">
+          User Scale: <span id="scale-value">1,000</span> users
+        </label>
+        <input type="range" id="scale-slider" min="10" max="100000" value="1000" step="10" 
+               class="w-full bg-gray-700 rounded-lg appearance-none cursor-pointer">
+        <div class="flex justify-between text-xs text-gray-400 mt-1">
+          <span>10 users</span>
+          <span>100K users</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Multi-Pass Impact -->
+        <div class="bg-red-900/20 border border-red-700 p-4 rounded-lg">
+          <h3 class="text-lg font-semibold text-red-300 mb-3">🐌 Multi-Pass Impact</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-300">Total Tokens:</span>
+              <span id="multi-total-tokens" class="font-bold text-red-400">--</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-300">Monthly Cost:</span>
+              <span id="multi-monthly-cost" class="font-bold text-red-400">--</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-300">Latency:</span>
+              <span id="multi-total-latency" class="font-bold text-red-400">--</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-300">Context Loss:</span>
+              <span id="multi-context-loss" class="font-bold text-red-400">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Single-Pass Impact -->
+        <div class="bg-green-900/20 border border-green-700 p-4 rounded-lg">
+          <h3 class="text-lg font-semibold text-green-300 mb-3">🚀 Single-Pass Impact</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-300">Total Tokens:</span>
+              <span id="single-total-tokens" class="font-bold text-green-400">--</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-300">Monthly Cost:</span>
+              <span id="single-monthly-cost" class="font-bold text-green-400">--</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-300">Latency:</span>
+              <span id="single-total-latency" class="font-bold text-green-400">--</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-300">Context Retention:</span>
+              <span id="single-context-retention" class="font-bold text-green-400">--</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Savings Summary -->
+      <div id="savings-summary" class="mt-6 p-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-700 rounded-lg" style="display: none;">
+        <h3 class="text-lg font-semibold text-center mb-4">💰 Potential Savings</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+          <div>
+            <div class="text-2xl font-bold text-green-400" id="cost-savings-amount">--</div>
+            <div class="text-sm text-gray-300">Monthly Savings</div>
+          </div>
+          <div>
+            <div class="text-2xl font-bold text-blue-400" id="speed-improvement">--</div>
+            <div class="text-sm text-gray-300">Speed Improvement</div>
+          </div>
+          <div>
+            <div class="text-2xl font-bold text-purple-400" id="efficiency-gain">--</div>
+            <div class="text-sm text-gray-300">Efficiency Gain</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Log Stream Panel -->
-    <div class="mt-6 bg-gray-800 p-6 rounded-lg shadow-2xl">
+    <div id="log-panel" class="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl">
       <h2 class="text-xl font-semibold mb-4">Log Stream</h2>
       <div id="log-container" class="h-96 overflow-y-auto bg-gray-900 p-4 rounded-md">
         <div id="log" class="space-y-2 text-sm font-mono">
@@ -182,10 +501,35 @@ while retries < max_retries:
       const form = document.getElementById('prompt-form');
       const log = document.getElementById('log');
       const runButton = document.getElementById('run-button');
+      const raceButton = document.getElementById('race-button');
       const modeSelect = document.getElementById('agent-mode');
+      const scenarioSelect = document.getElementById('scenario-select');
+      const complexitySlider = document.getElementById('complexity-slider');
+      const complexityValue = document.getElementById('complexity-value');
+      const promptInput = document.getElementById('prompt-input');
       const codeView = document.getElementById('code-view');
       const multiPassTemplate = document.getElementById('multi-pass-code');
       const singlePassTemplate = document.getElementById('single-pass-code');
+
+      // Racing elements
+      const racingPanel = document.getElementById('racing-panel');
+      const logPanel = document.getElementById('log-panel');
+      const closeRaceButton = document.getElementById('close-race');
+      const raceResults = document.getElementById('race-results');
+
+      // Network simulation elements
+      const simulateNetworkButton = document.getElementById('simulate-network');
+      const scaleSlider = document.getElementById('scale-slider');
+      const scaleValue = document.getElementById('scale-value');
+      const savingsSummary = document.getElementById('savings-summary');
+
+      // 3D visualization elements
+      const toggle3DButton = document.getElementById('toggle-3d');
+      const contextVizContainer = document.getElementById('context-viz-container');
+      const contextVizPlaceholder = document.getElementById('context-viz-placeholder');
+      const contextVizCanvas = document.getElementById('context-viz-canvas');
+      let scene, camera, renderer, contextBubbles = [], animationId;
+      let is3DEnabled = false;
 
       const latencyEl = document.getElementById('metric-latency');
       const promptTokensEl = document.getElementById('metric-prompt-tokens');
@@ -200,8 +544,24 @@ while retries < max_retries:
 
       // --- State Management ---
       let currentMode = 'multi_pass';
+      let currentScenario = 'sql';
       let webllmEngine = null;
       let modelLoaded = false;
+
+      // Scenario configurations
+      const scenarioPrompts = {
+        sql: "How many conversions did we get this week?",
+        research: "What are the latest developments in climate change research?",
+        data_analysis: "Analyze the user engagement trends from our metrics data",
+        math_tutor: "Solve the equation: 2x + 5 = 15"
+      };
+
+      const scenarioDescriptions = {
+        sql: "Query company databases for business metrics",
+        research: "Multi-step web search and synthesis",
+        data_analysis: "Complex data pipeline analysis",
+        math_tutor: "Step-by-step problem solving"
+      };
 
       const updateCodeView = () => {
         codeView.innerHTML = currentMode === 'single_pass'
@@ -214,14 +574,102 @@ while retries < max_retries:
         promptTokensEl.textContent = '0';
         completionTokensEl.textContent = '0';
         llmCallsEl.textContent = '0';
+        
+        // Reset enhanced metrics
+        document.getElementById('burn-rate').textContent = '0 tok/s';
+        document.getElementById('token-burn-bar').style.width = '0%';
+        document.getElementById('total-tokens').textContent = '0 tokens';
+        document.getElementById('memory-efficiency').textContent = '100% retained';
+        document.getElementById('cost-per-run').textContent = '$0.000';
+        document.getElementById('cost-1k').textContent = '$0.00';
+        document.getElementById('cost-monthly').textContent = '$0.00';
+        
+        // Reset memory blocks
+        initializeMemoryBlocks();
       };
 
       const updateMetrics = (metrics) => {
         if (!metrics) return;
+        
+        // Update basic metrics
         latencyEl.textContent = `${(metrics.latency || 0).toFixed(2)}s`;
         promptTokensEl.textContent = metrics.prompt_tokens || 0;
         completionTokensEl.textContent = metrics.completion_tokens || 0;
         llmCallsEl.textContent = metrics.llm_calls || 0;
+        
+        // Update enhanced metrics
+        updateEnhancedMetrics(metrics);
+      };
+
+      const updateEnhancedMetrics = (metrics) => {
+        const totalTokens = (metrics.prompt_tokens || 0) + (metrics.completion_tokens || 0);
+        const latency = metrics.latency || 0;
+        const burnRate = latency > 0 ? (totalTokens / latency).toFixed(0) : 0;
+        
+        // Update token burn meter
+        document.getElementById('burn-rate').textContent = `${burnRate} tok/s`;
+        document.getElementById('total-tokens').textContent = `${totalTokens} tokens`;
+        const burnPercentage = Math.min(100, (totalTokens / 500) * 100); // Scale to 500 tokens max
+        document.getElementById('token-burn-bar').style.width = `${burnPercentage}%`;
+        
+        // Update memory visualization
+        updateMemoryVisualization(metrics);
+        
+        // Update cost calculator
+        updateCostCalculator(totalTokens);
+      };
+
+      const initializeMemoryBlocks = () => {
+        const memoryBlocks = document.getElementById('memory-blocks');
+        memoryBlocks.innerHTML = '';
+        for (let i = 0; i < 10; i++) {
+          const block = document.createElement('div');
+          block.className = 'bg-gray-600 rounded-sm h-full';
+          block.id = `memory-block-${i}`;
+          memoryBlocks.appendChild(block);
+        }
+      };
+
+      const updateMemoryVisualization = (metrics) => {
+        const mode = currentMode;
+        const llmCalls = metrics.llm_calls || 0;
+        
+        if (mode === 'single_pass') {
+          // Single-pass retains context - show cached blocks
+          const cachedBlocks = Math.min(10, llmCalls * 3);
+          for (let i = 0; i < 10; i++) {
+            const block = document.getElementById(`memory-block-${i}`);
+            if (i < cachedBlocks) {
+              block.className = 'bg-blue-500 rounded-sm h-full transition-colors duration-500';
+            } else {
+              block.className = 'bg-gray-600 rounded-sm h-full';
+            }
+          }
+          document.getElementById('memory-efficiency').textContent = `${Math.max(70, 100 - llmCalls * 5)}% retained`;
+        } else {
+          // Multi-pass loses context - show fresh blocks each time
+          for (let i = 0; i < 10; i++) {
+            const block = document.getElementById(`memory-block-${i}`);
+            if (i < 3) {
+              block.className = 'bg-orange-500 rounded-sm h-full transition-colors duration-500';
+            } else {
+              block.className = 'bg-gray-600 rounded-sm h-full';
+            }
+          }
+          document.getElementById('memory-efficiency').textContent = `${Math.max(20, 50 - llmCalls * 10)}% retained`;
+        }
+      };
+
+      const updateCostCalculator = (totalTokens) => {
+        // Rough cost estimates (GPT-4 pricing: ~$0.03 per 1K tokens)
+        const costPerToken = 0.00003;
+        const costPerRun = (totalTokens * costPerToken).toFixed(5);
+        const cost1K = (totalTokens * costPerToken * 1000).toFixed(2);
+        const costMonthly = (totalTokens * costPerToken * 10000).toFixed(2);
+        
+        document.getElementById('cost-per-run').textContent = `$${costPerRun}`;
+        document.getElementById('cost-1k').textContent = `$${cost1K}`;
+        document.getElementById('cost-monthly').textContent = `$${costMonthly}`;
       };
 
       // --- WebLLM Initialization ---
@@ -337,6 +785,42 @@ while retries < max_retries:
         updateCodeView();
       });
 
+      scenarioSelect.addEventListener('change', (e) => {
+        currentScenario = e.target.value;
+        promptInput.value = scenarioPrompts[currentScenario];
+      });
+
+      complexitySlider.addEventListener('input', (e) => {
+        complexityValue.textContent = e.target.value;
+      });
+
+      raceButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        startRace();
+      });
+
+      closeRaceButton.addEventListener('click', () => {
+        racingPanel.style.display = 'none';
+        logPanel.style.display = 'block';
+      });
+
+      scaleSlider.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        scaleValue.textContent = value >= 1000 ? `${(value/1000).toFixed(0)}K` : value.toString();
+      });
+
+      simulateNetworkButton.addEventListener('click', () => {
+        runNetworkSimulation();
+      });
+
+      toggle3DButton.addEventListener('click', () => {
+        if (is3DEnabled) {
+          disable3D();
+        } else {
+          enable3D();
+        }
+      });
+
       form.addEventListener('htmx:beforeRequest', (e) => {
         log.innerHTML = '<div class="text-gray-500">Waiting for agent...</div>';
         runButton.disabled = true;
@@ -349,11 +833,12 @@ while retries < max_retries:
         e.preventDefault();
 
         const prompt = document.getElementById('prompt-input').value;
+        const scenario = document.getElementById('scenario-select').value;
         
         // Check if we should use WebLLM or server
         if (modelLoaded && webllmEngine) {
           // Use WebLLM for inference
-          runWebLLMAgent(prompt, currentMode);
+          runWebLLMAgent(prompt, currentMode, scenario);
         } else if (runButton.textContent.includes('Demo Mode')) {
           // Demo mode - show simulated error
           log.innerHTML = '<div class="text-yellow-500">Demo Mode: WebLLM is required for actual inference</div>';
@@ -364,7 +849,8 @@ while retries < max_retries:
           // Fallback to server-based inference
           const payload = {
               prompt: prompt,
-              mode: currentMode
+              mode: currentMode,
+              scenario: scenario
           };
           
           console.log("Using server mode. Sending payload:", JSON.stringify(payload, null, 2));
@@ -416,8 +902,8 @@ while retries < max_retries:
       });
 
       // --- WebLLM Agent Implementation ---
-      const runWebLLMAgent = async (prompt, mode) => {
-        console.log(`Running WebLLM agent in ${mode} mode with prompt: ${prompt}`);
+      const runWebLLMAgent = async (prompt, mode, scenario = 'sql') => {
+        console.log(`Running WebLLM agent in ${mode} mode, ${scenario} scenario with prompt: ${prompt}`);
         
         // Clear log and reset UI
         log.innerHTML = '<div class="text-gray-500">Running agent with WebLLM...</div>';
@@ -428,9 +914,9 @@ while retries < max_retries:
         
         try {
           if (mode === 'multi_pass') {
-            await runMultiPassWebLLM(prompt, metrics, startTime);
+            await runMultiPassWebLLM(prompt, metrics, startTime, scenario);
           } else {
-            await runSinglePassWebLLM(prompt, metrics, startTime);
+            await runSinglePassWebLLM(prompt, metrics, startTime, scenario);
           }
         } catch (error) {
           console.error('WebLLM agent error:', error);
@@ -445,7 +931,7 @@ while retries < max_retries:
         }
       };
 
-      const runMultiPassWebLLM = async (prompt, metrics, startTime) => {
+      const runMultiPassWebLLM = async (prompt, metrics, startTime, scenario = 'sql') => {
         const requestId = `spoc-shot-${Date.now()}`;
         
         // Simulate the multi-pass logic
@@ -489,7 +975,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "your_best_guess"}}`;
               handleSseMessage({ phase: 'execute', call: toolCall, metrics });
               
               // Execute tool (client-side simulation)
-              const result = simulateToolCall(toolCall);
+              const result = simulateToolCall(toolCall, scenario);
               handleSseMessage({ phase: 'tool_result', result, metrics });
               
               if (result.ok) {
@@ -531,7 +1017,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "your_best_guess"}}`;
         handleSseMessage({ phase: 'error', message: 'Agent failed after multiple attempts', metrics });
       };
 
-      const runSinglePassWebLLM = async (prompt, metrics, startTime) => {
+      const runSinglePassWebLLM = async (prompt, metrics, startTime, scenario = 'sql') => {
         const requestId = `spoc-shot-${Date.now()}`;
         
         // Single-pass logic
@@ -588,7 +1074,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
               handleSseMessage({ phase: 'execute', call: toolCall, metrics });
               
               // Execute tool
-              const result = simulateToolCall(toolCall);
+              const result = simulateToolCall(toolCall, scenario);
               handleSseMessage({ phase: 'tool_result', result, metrics });
               
               if (result.ok) {
@@ -630,15 +1116,622 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       };
 
       // Simulate the tool execution client-side
-      const simulateToolCall = (toolCall) => {
-        const column = toolCall.args?.column || toolCall.arguments?.column;
+      const simulateToolCall = (toolCall, scenario = 'sql') => {
+        const args = toolCall.args || toolCall.arguments || {};
         
-        if (column === "conversions") {
-          return { ok: false, hint: "Did you mean 'convs'?" };
-        } else if (column === "convs") {
-          return { ok: true, data: 12345 };
+        if (scenario === 'sql') {
+          const column = args.column;
+          if (column === "conversions") {
+            return { ok: false, hint: "Did you mean 'convs'?" };
+          } else if (column === "convs") {
+            return { ok: true, data: 12345 };
+          } else {
+            return { ok: false, hint: `Column '${column}' not found.` };
+          }
+        } else if (scenario === 'research') {
+          const query = args.query || "";
+          if (query.toLowerCase().includes("climate change")) {
+            if (!query.toLowerCase().includes("recent")) {
+              return { ok: false, hint: "Try searching for 'recent climate change data' for more current results" };
+            } else {
+              return {
+                ok: true,
+                data: {
+                  results: [
+                    { title: "2024 Climate Report", snippet: "Global temperatures rose 1.2°C above pre-industrial levels" },
+                    { title: "Arctic Ice Data", snippet: "Sea ice extent decreased by 13% per decade since 1979" }
+                  ]
+                }
+              };
+            }
+          } else {
+            return { ok: false, hint: `No results found for '${query}'. Try more specific terms.` };
+          }
+        } else if (scenario === 'data_analysis') {
+          const dataset = args.dataset;
+          const operation = args.operation;
+          if (dataset === "user_metrics" && operation === "trend") {
+            return {
+              ok: true,
+              data: {
+                trend: "upward",
+                growth_rate: "15% monthly",
+                key_metric: "Daily Active Users: 50,000"
+              }
+            };
+          } else {
+            return { ok: false, hint: `Try 'trend' analysis for 'user_metrics' dataset` };
+          }
+        } else if (scenario === 'math_tutor') {
+          const equation = args.equation;
+          const step = args.step;
+          if (equation.includes("2x + 5 = 15")) {
+            if (step === "simplify") {
+              return {
+                ok: true,
+                data: {
+                  result: "2x = 10",
+                  explanation: "Subtracted 5 from both sides"
+                }
+              };
+            } else if (step === "calculate") {
+              return {
+                ok: true,
+                data: {
+                  result: "x = 5",
+                  explanation: "Divided both sides by 2"
+                }
+              };
+            } else {
+              return { ok: false, hint: "First 'simplify' the equation by moving constants" };
+            }
+          } else {
+            return { ok: false, hint: `Try breaking down the equation with steps like 'simplify' or 'calculate'` };
+          }
+        }
+        
+        return { ok: false, hint: "Unknown tool or scenario" };
+      };
+
+      // --- Racing Functionality ---
+      const startRace = async () => {
+        const prompt = promptInput.value;
+        const scenario = scenarioSelect.value;
+        
+        // Show racing panel, hide log panel
+        logPanel.style.display = 'none';
+        racingPanel.style.display = 'block';
+        raceResults.style.display = 'none';
+        
+        // Reset race state
+        resetRaceState();
+        
+        // Disable buttons during race
+        runButton.disabled = true;
+        raceButton.disabled = true;
+        
+        try {
+          // Start both agents simultaneously
+          const multiPassPromise = runRaceAgent(prompt, 'multi_pass', scenario);
+          const singlePassPromise = runRaceAgent(prompt, 'single_pass', scenario);
+          
+          const results = await Promise.allSettled([multiPassPromise, singlePassPromise]);
+          
+          // Display race results
+          showRaceResults(results);
+        } catch (error) {
+          console.error('Race error:', error);
+        } finally {
+          runButton.disabled = false;
+          raceButton.disabled = false;
+        }
+      };
+
+      const resetRaceState = () => {
+        // Reset multi-pass
+        document.getElementById('multi-pass-status').textContent = 'Starting...';
+        document.getElementById('multi-pass-progress').style.width = '0%';
+        document.getElementById('multi-pass-progress-text').textContent = '0%';
+        document.getElementById('multi-pass-log').innerHTML = '<div class="text-gray-500">Starting...</div>';
+        document.getElementById('multi-pass-time').textContent = '--';
+        document.getElementById('multi-pass-tokens').textContent = '--';
+        document.getElementById('multi-pass-calls').textContent = '--';
+        
+        // Reset single-pass
+        document.getElementById('single-pass-status').textContent = 'Starting...';
+        document.getElementById('single-pass-progress').style.width = '0%';
+        document.getElementById('single-pass-progress-text').textContent = '0%';
+        document.getElementById('single-pass-log').innerHTML = '<div class="text-gray-500">Starting...</div>';
+        document.getElementById('single-pass-time').textContent = '--';
+        document.getElementById('single-pass-tokens').textContent = '--';
+        document.getElementById('single-pass-calls').textContent = '--';
+      };
+
+      const runRaceAgent = async (prompt, mode, scenario) => {
+        const startTime = performance.now();
+        let metrics = { prompt_tokens: 0, completion_tokens: 0, latency: 0, llm_calls: 0 };
+        const prefix = mode === 'multi_pass' ? 'multi-pass' : 'single-pass';
+        
+        const statusEl = document.getElementById(`${prefix}-status`);
+        const progressEl = document.getElementById(`${prefix}-progress`);
+        const progressTextEl = document.getElementById(`${prefix}-progress-text`);
+        const logEl = document.getElementById(`${prefix}-log`);
+        const timeEl = document.getElementById(`${prefix}-time`);
+        const tokensEl = document.getElementById(`${prefix}-tokens`);
+        const callsEl = document.getElementById(`${prefix}-calls`);
+        
+        const updateRaceUI = (phase, data = {}) => {
+          const progress = Math.min(100, (metrics.llm_calls * 25) + (phase === 'success' ? 100 : 0));
+          progressEl.style.width = `${progress}%`;
+          progressTextEl.textContent = `${progress}%`;
+          
+          const elapsed = (performance.now() - startTime) / 1000;
+          timeEl.textContent = `${elapsed.toFixed(1)}s`;
+          tokensEl.textContent = metrics.prompt_tokens + metrics.completion_tokens;
+          callsEl.textContent = metrics.llm_calls;
+          
+          // Add log entry
+          const entry = document.createElement('div');
+          entry.className = 'mb-1 text-xs';
+          const timestamp = `[${elapsed.toFixed(1)}s]`;
+          
+          switch (phase) {
+            case 'propose':
+              entry.innerHTML = `${timestamp} 🧠 Thinking...`;
+              statusEl.textContent = 'Thinking';
+              break;
+            case 'execute':
+              entry.innerHTML = `${timestamp} ⚙️ Using tool: ${data.call?.name}`;
+              statusEl.textContent = 'Executing';
+              break;
+            case 'tool_result':
+              const resultClass = data.result?.ok ? 'text-green-300' : 'text-red-300';
+              entry.innerHTML = `${timestamp} <span class="${resultClass}">📦 Result: ${data.result?.ok ? 'Success' : 'Failed'}</span>`;
+              break;
+            case 'patch':
+              entry.innerHTML = `${timestamp} 🔧 Self-correcting...`;
+              statusEl.textContent = 'Patching';
+              break;
+            case 'success':
+              entry.innerHTML = `${timestamp} ✅ Complete!`;
+              statusEl.textContent = 'Complete';
+              statusEl.className = statusEl.className.replace('bg-gray-700', 'bg-green-700');
+              break;
+            case 'error':
+              entry.innerHTML = `${timestamp} ❌ Error: ${data.message}`;
+              statusEl.textContent = 'Error';
+              statusEl.className = statusEl.className.replace('bg-gray-700', 'bg-red-700');
+              break;
+          }
+          
+          logEl.appendChild(entry);
+          logEl.scrollTop = logEl.scrollHeight;
+        };
+        
+        try {
+          // Simulate the agent execution
+          if (mode === 'multi_pass') {
+            await simulateMultiPassRace(prompt, scenario, metrics, updateRaceUI);
+          } else {
+            await simulateSinglePassRace(prompt, scenario, metrics, updateRaceUI);
+          }
+          
+          metrics.latency = (performance.now() - startTime) / 1000;
+          return { mode, metrics, success: true };
+        } catch (error) {
+          updateRaceUI('error', { message: error.message });
+          return { mode, metrics, success: false, error };
+        }
+      };
+
+      const simulateMultiPassRace = async (prompt, scenario, metrics, updateUI) => {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          updateUI('propose');
+          await sleep(800 + Math.random() * 400); // Variable delay
+          metrics.llm_calls += 1;
+          metrics.prompt_tokens += 150;
+          metrics.completion_tokens += 50;
+          
+          const toolCall = { name: getToolForScenario(scenario), args: getArgsForScenario(scenario) };
+          updateUI('execute', { call: toolCall });
+          await sleep(500 + Math.random() * 300);
+          
+          const result = simulateToolCall(toolCall, scenario);
+          updateUI('tool_result', { result });
+          
+          if (result.ok) {
+            updateUI('propose');
+            await sleep(600 + Math.random() * 400);
+            metrics.llm_calls += 1; // Separate final call
+            metrics.prompt_tokens += 100;
+            metrics.completion_tokens += 30;
+            updateUI('success');
+            return;
+          } else {
+            await sleep(300);
+          }
+        }
+        throw new Error('Max attempts reached');
+      };
+
+      const simulateSinglePassRace = async (prompt, scenario, metrics, updateUI) => {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          updateUI('propose');
+          await sleep(600 + Math.random() * 200); // Faster due to KV cache
+          metrics.llm_calls += 1;
+          metrics.prompt_tokens += 120; // Lower due to context reuse
+          metrics.completion_tokens += 45;
+          
+          const toolCall = { name: getToolForScenario(scenario), args: getArgsForScenario(scenario) };
+          updateUI('execute', { call: toolCall });
+          await sleep(400 + Math.random() * 200);
+          
+          const result = simulateToolCall(toolCall, scenario);
+          updateUI('tool_result', { result });
+          
+          if (result.ok) {
+            // Single-pass continues in same context
+            await sleep(200);
+            metrics.completion_tokens += 25; // Less tokens for final answer
+            updateUI('success');
+            return;
+          } else {
+            updateUI('patch');
+            await sleep(100); // Faster recovery
+          }
+        }
+        throw new Error('Max attempts reached');
+      };
+
+      const getToolForScenario = (scenario) => {
+        const tools = {
+          sql: 'sql_query',
+          research: 'web_search',
+          data_analysis: 'analyze_data',
+          math_tutor: 'solve_equation'
+        };
+        return tools[scenario] || 'sql_query';
+      };
+
+      const getArgsForScenario = (scenario) => {
+        const args = {
+          sql: { column: 'conversions' },
+          research: { query: 'climate change' },
+          data_analysis: { dataset: 'user_metrics', operation: 'summary' },
+          math_tutor: { equation: '2x + 5 = 15', step: 'isolate' }
+        };
+        return args[scenario] || { column: 'conversions' };
+      };
+
+      const showRaceResults = (results) => {
+        raceResults.style.display = 'block';
+        
+        const multiResult = results[0].status === 'fulfilled' ? results[0].value : null;
+        const singleResult = results[1].status === 'fulfilled' ? results[1].value : null;
+        
+        if (multiResult && singleResult) {
+          const speedAdvantage = ((multiResult.metrics.latency - singleResult.metrics.latency) / multiResult.metrics.latency * 100).toFixed(1);
+          const tokenSavings = ((multiResult.metrics.prompt_tokens + multiResult.metrics.completion_tokens) - (singleResult.metrics.prompt_tokens + singleResult.metrics.completion_tokens));
+          const costSavings = (tokenSavings * 0.00001 * 1000).toFixed(2); // Rough cost estimate
+          
+          document.getElementById('winner-announcement').innerHTML = 
+            singleResult.metrics.latency < multiResult.metrics.latency 
+              ? '🚀 Single-Pass Wins!' 
+              : '🐌 Multi-Pass Wins!';
+          
+          document.getElementById('speed-advantage').textContent = `${speedAdvantage}% faster`;
+          document.getElementById('token-efficiency').textContent = `${tokenSavings} tokens saved`;
+          document.getElementById('cost-savings').textContent = `$${costSavings} saved per 1K runs`;
+        }
+      };
+
+      const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+      // --- Network Effect Simulation ---
+      const runNetworkSimulation = () => {
+        const userCount = parseInt(scaleSlider.value);
+        const scenario = scenarioSelect.value;
+        
+        // Disable button during simulation
+        simulateNetworkButton.disabled = true;
+        simulateNetworkButton.textContent = 'Simulating...';
+        
+        // Simulate the calculations
+        setTimeout(() => {
+          const results = calculateNetworkEffect(userCount, scenario);
+          displayNetworkResults(results);
+          
+          simulateNetworkButton.disabled = false;
+          simulateNetworkButton.textContent = 'Run Simulation';
+          savingsSummary.style.display = 'block';
+        }, 800);
+      };
+
+      const calculateNetworkEffect = (userCount, scenario) => {
+        // Base metrics per run (from our simulations)
+        const baseMetrics = {
+          sql: { multiTokens: 200, singleTokens: 165, multiLatency: 2.5, singleLatency: 1.8 },
+          research: { multiTokens: 350, singleTokens: 280, multiLatency: 4.2, singleLatency: 2.9 },
+          data_analysis: { multiTokens: 280, singleTokens: 220, multiLatency: 3.1, singleLatency: 2.2 },
+          math_tutor: { multiTokens: 180, singleTokens: 150, multiLatency: 2.0, singleLatency: 1.5 }
+        };
+
+        const metrics = baseMetrics[scenario] || baseMetrics.sql;
+        
+        // Assume each user runs 5 queries per day, 30 days per month
+        const runsPerMonth = userCount * 5 * 30;
+        
+        // Calculate multi-pass totals
+        const multiTotalTokens = runsPerMonth * metrics.multiTokens;
+        const multiTotalLatency = runsPerMonth * metrics.multiLatency;
+        const multiMonthlyCost = multiTotalTokens * 0.00003; // $0.03 per 1K tokens
+        const multiContextLoss = Math.min(95, 60 + (userCount / 1000) * 10); // Increases with scale
+        
+        // Calculate single-pass totals
+        const singleTotalTokens = runsPerMonth * metrics.singleTokens;
+        const singleTotalLatency = runsPerMonth * metrics.singleLatency;
+        const singleMonthlyCost = singleTotalTokens * 0.00003;
+        const singleContextRetention = Math.max(75, 90 - (userCount / 10000) * 5); // Decreases slightly with scale
+        
+        // Calculate savings
+        const costSavings = multiMonthlyCost - singleMonthlyCost;
+        const speedImprovement = ((multiTotalLatency - singleTotalLatency) / multiTotalLatency * 100);
+        const efficiencyGain = ((multiTotalTokens - singleTotalTokens) / multiTotalTokens * 100);
+        
+        return {
+          userCount,
+          multi: {
+            totalTokens: multiTotalTokens,
+            monthlyCost: multiMonthlyCost,
+            totalLatency: multiTotalLatency,
+            contextLoss: multiContextLoss
+          },
+          single: {
+            totalTokens: singleTotalTokens,
+            monthlyCost: singleMonthlyCost,
+            totalLatency: singleTotalLatency,
+            contextRetention: singleContextRetention
+          },
+          savings: {
+            costSavings,
+            speedImprovement,
+            efficiencyGain
+          }
+        };
+      };
+
+      const displayNetworkResults = (results) => {
+        // Format large numbers
+        const formatNumber = (num) => {
+          if (num >= 1000000) return `${(num/1000000).toFixed(1)}M`;
+          if (num >= 1000) return `${(num/1000).toFixed(1)}K`;
+          return num.toFixed(0);
+        };
+
+        const formatCost = (cost) => {
+          if (cost >= 1000) return `$${(cost/1000).toFixed(1)}K`;
+          return `$${cost.toFixed(2)}`;
+        };
+
+        const formatTime = (seconds) => {
+          const hours = seconds / 3600;
+          if (hours >= 24) return `${(hours/24).toFixed(1)} days`;
+          if (hours >= 1) return `${hours.toFixed(1)} hrs`;
+          return `${(seconds/60).toFixed(0)} mins`;
+        };
+
+        // Multi-pass results
+        document.getElementById('multi-total-tokens').textContent = formatNumber(results.multi.totalTokens);
+        document.getElementById('multi-monthly-cost').textContent = formatCost(results.multi.monthlyCost);
+        document.getElementById('multi-total-latency').textContent = formatTime(results.multi.totalLatency);
+        document.getElementById('multi-context-loss').textContent = `${results.multi.contextLoss.toFixed(0)}%`;
+
+        // Single-pass results
+        document.getElementById('single-total-tokens').textContent = formatNumber(results.single.totalTokens);
+        document.getElementById('single-monthly-cost').textContent = formatCost(results.single.monthlyCost);
+        document.getElementById('single-total-latency').textContent = formatTime(results.single.totalLatency);
+        document.getElementById('single-context-retention').textContent = `${results.single.contextRetention.toFixed(0)}%`;
+
+        // Savings summary
+        document.getElementById('cost-savings-amount').textContent = formatCost(results.savings.costSavings);
+        document.getElementById('speed-improvement').textContent = `${results.savings.speedImprovement.toFixed(1)}%`;
+        document.getElementById('efficiency-gain').textContent = `${results.savings.efficiencyGain.toFixed(1)}%`;
+      };
+
+      // --- 3D Context Flow Visualization ---
+      const enable3D = () => {
+        if (!window.THREE) {
+          console.warn('Three.js not loaded');
+          return;
+        }
+
+        is3DEnabled = true;
+        toggle3DButton.textContent = 'Disable 3D';
+        contextVizPlaceholder.style.display = 'none';
+        contextVizCanvas.style.display = 'block';
+
+        init3D();
+        animate3D();
+      };
+
+      const disable3D = () => {
+        is3DEnabled = false;
+        toggle3DButton.textContent = 'Enable 3D';
+        contextVizPlaceholder.style.display = 'flex';
+        contextVizCanvas.style.display = 'none';
+
+        if (animationId) cancelAnimationFrame(animationId);
+        if (renderer) renderer.dispose();
+        contextBubbles = [];
+      };
+
+      const init3D = () => {
+        const container = contextVizContainer;
+        const width = container.clientWidth || 400;
+        const height = container.clientHeight || 256;
+
+        // Scene setup
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x111827);
+
+        // Camera setup
+        camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+        camera.position.set(0, 0, 10);
+
+        // Renderer setup
+        renderer = new THREE.WebGLRenderer({ 
+          canvas: contextVizCanvas, 
+          antialias: true,
+          alpha: false,
+          powerPreference: "default"
+        });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        
+        // Ensure canvas fits container
+        contextVizCanvas.style.width = '100%';
+        contextVizCanvas.style.height = '100%';
+        contextVizCanvas.style.display = 'block';
+
+        // Create initial context bubbles
+        createContextBubbles();
+
+        // Handle window resize
+        window.addEventListener('resize', onWindowResize);
+      };
+
+      const createContextBubbles = () => {
+        // Clear existing bubbles
+        contextBubbles.forEach(bubble => scene.remove(bubble));
+        contextBubbles = [];
+
+        const mode = currentMode;
+        
+        if (mode === 'single_pass') {
+          // Create flowing river of context - connected spheres
+          const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+          const material = new THREE.MeshBasicMaterial({ 
+            color: 0x3b82f6, 
+            transparent: true, 
+            opacity: 0.8 
+          });
+
+          for (let i = 0; i < 20; i++) {
+            const bubble = new THREE.Mesh(geometry, material);
+            bubble.position.set(-8 + i * 0.8, Math.sin(i * 0.5) * 2, Math.cos(i * 0.3) * 2);
+            bubble.userData = { 
+              originalY: bubble.position.y, 
+              originalZ: bubble.position.z,
+              phase: i * 0.2,
+              connected: true
+            };
+            scene.add(bubble);
+            contextBubbles.push(bubble);
+          }
+
+          // Add connecting lines
+          const lineGeometry = new THREE.BufferGeometry();
+          const points = contextBubbles.map(bubble => bubble.position);
+          lineGeometry.setFromPoints(points);
+          const lineMaterial = new THREE.LineBasicMaterial({ 
+            color: 0x3b82f6, 
+            transparent: true, 
+            opacity: 0.4 
+          });
+          const line = new THREE.Line(lineGeometry, lineMaterial);
+          scene.add(line);
+          contextBubbles.push(line);
         } else {
-          return { ok: false, hint: `Column '${column}' not found.` };
+          // Create scattered fragments - disconnected spheres
+          const geometry = new THREE.SphereGeometry(0.2, 12, 12);
+          const material = new THREE.MeshBasicMaterial({ 
+            color: 0xef4444, 
+            transparent: true, 
+            opacity: 0.6 
+          });
+
+          for (let i = 0; i < 15; i++) {
+            const bubble = new THREE.Mesh(geometry, material);
+            bubble.position.set(
+              (Math.random() - 0.5) * 12,
+              (Math.random() - 0.5) * 6,
+              (Math.random() - 0.5) * 6
+            );
+            bubble.userData = { 
+              originalPosition: bubble.position.clone(),
+              phase: Math.random() * Math.PI * 2,
+              connected: false,
+              drift: new THREE.Vector3(
+                (Math.random() - 0.5) * 0.02,
+                (Math.random() - 0.5) * 0.02,
+                (Math.random() - 0.5) * 0.02
+              )
+            };
+            scene.add(bubble);
+            contextBubbles.push(bubble);
+          }
+        }
+      };
+
+      const animate3D = () => {
+        if (!is3DEnabled) return;
+
+        const time = Date.now() * 0.001;
+
+        contextBubbles.forEach((bubble, index) => {
+          if (!bubble.userData) return;
+
+          if (bubble.userData.connected) {
+            // Smooth flowing animation for single-pass
+            bubble.position.y = bubble.userData.originalY + Math.sin(time * 2 + bubble.userData.phase) * 0.5;
+            bubble.position.z = bubble.userData.originalZ + Math.cos(time * 1.5 + bubble.userData.phase) * 0.3;
+            
+            // Subtle pulsing
+            const scale = 1 + Math.sin(time * 3 + bubble.userData.phase) * 0.1;
+            bubble.scale.setScalar(scale);
+          } else if (bubble.userData.drift) {
+            // Chaotic drifting for multi-pass fragments
+            bubble.position.add(bubble.userData.drift);
+            
+            // Keep bubbles within bounds
+            if (Math.abs(bubble.position.x) > 8) bubble.userData.drift.x *= -1;
+            if (Math.abs(bubble.position.y) > 4) bubble.userData.drift.y *= -1;
+            if (Math.abs(bubble.position.z) > 4) bubble.userData.drift.z *= -1;
+            
+            // Flickering opacity
+            bubble.material.opacity = 0.3 + Math.sin(time * 5 + bubble.userData.phase) * 0.3;
+          }
+        });
+
+        // Rotate camera slightly for dynamic view
+        camera.position.x = Math.sin(time * 0.2) * 2;
+        camera.lookAt(0, 0, 0);
+
+        renderer.render(scene, camera);
+        animationId = requestAnimationFrame(animate3D);
+      };
+
+      const onWindowResize = () => {
+        if (!is3DEnabled || !renderer || !camera) return;
+        
+        const width = contextVizContainer.clientWidth || 400;
+        const height = contextVizContainer.clientHeight || 256;
+        
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height);
+        
+        // Ensure canvas stays properly sized
+        contextVizCanvas.style.width = '100%';
+        contextVizCanvas.style.height = '100%';
+      };
+
+      // Update 3D visualization when mode changes
+      const originalUpdateCodeView = updateCodeView;
+      updateCodeView = () => {
+        originalUpdateCodeView();
+        if (is3DEnabled) {
+          createContextBubbles();
         }
       };
 
@@ -826,6 +1919,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
       // --- Initial Setup ---
       updateCodeView();
+      initializeMemoryBlocks();
       
       // Check server configuration and initialize accordingly
       initializeApp();

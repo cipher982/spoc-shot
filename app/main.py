@@ -72,11 +72,12 @@ async def solve_sse(request: Request):
 
     prompt = data.get("prompt")
     mode = data.get("mode", "multi_pass")  # Default to multi_pass
+    scenario = data.get("scenario", "sql")  # Default to sql
 
     if not prompt:
         raise HTTPException(status_code=400, detail="Prompt not provided.")
 
-    logger.info(f"Received request for mode='{mode}' with prompt='{prompt}'")
+    logger.info(f"Received request for mode='{mode}', scenario='{scenario}' with prompt='{prompt}'")
     # Choose the solver based on the mode
     solver = solve_single_pass if mode == "single_pass" else solve_multi_pass
     logger.info(f"Using solver: {solver.__name__}")
@@ -86,7 +87,7 @@ async def solve_sse(request: Request):
         A generator function that yields server-sent events.
         """
         try:
-            async for row in solver(prompt):
+            async for row in solver(prompt, scenario=scenario):
                 yield {"data": json.dumps(row)}
         except Exception as e:
             logger.error(f"An unexpected error occurred in the event generator: {e}", exc_info=True)
