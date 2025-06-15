@@ -16,7 +16,7 @@ WEBLLM_MODE=webllm uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
 # Open http://localhost:8001
 ```
 
-The WebLLM model (Qwen2.5-0.5B-Instruct, ~500MB) downloads automatically on first use.
+The WebLLM model downloads automatically on first use.
 
 ## 🐋 Docker Deployment
 

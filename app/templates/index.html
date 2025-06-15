@@ -4,10 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SPOC-Shot Demo</title>
+  <script>
+    // Capture navigator.gpu BEFORE any other scripts can interfere
+    window._originalGPU = navigator.gpu;
+    console.log("🔧 Captured original navigator.gpu:", window._originalGPU);
+  </script>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script type="module">
-    import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+    import { CreateMLCEngine } from "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm";
     window.CreateMLCEngine = CreateMLCEngine;
   </script>
   <style>
@@ -53,7 +58,7 @@
           </div>
         </div>
         <p class="text-sm text-gray-400 text-center">
-          Loading Qwen2.5-0.5B-Instruct (~500MB)<br>
+          Loading Qwen3-0.6B (~300MB)<br>
           <span class="text-xs text-gray-500">This happens once and caches locally</span>
         </p>
       </div>
@@ -228,34 +233,103 @@ while retries < max_retries:
           modelLoadingPanel.style.display = 'block';
           runButton.disabled = true;
           
-          const selectedModel = "Qwen2.5-0.5B-Instruct-q4f32_1";
+          console.log("🔍 Starting WebLLM initialization...");
+          
+          // Use the exact Qwen3 model as intended
+          const selectedModel = "Qwen3-0.6B-q4f16_1-MLC";
           
           modelStatus.textContent = "Checking WebGPU support...";
           
-          // Check WebGPU support
-          if (!navigator.gpu) {
+          // Check WebGPU support using captured version
+          const gpu = window._originalGPU || navigator.gpu;
+          console.log("🔍 Checking GPU access:", { 
+            originalGPU: window._originalGPU, 
+            navigatorGPU: navigator.gpu,
+            using: gpu 
+          });
+          
+          if (!gpu) {
+            console.error("❌ navigator.gpu not available");
             throw new Error("WebGPU not supported in this browser");
           }
+          console.log("✅ GPU access available");
           
           // Test WebGPU adapter
-          const adapter = await navigator.gpu.requestAdapter();
+          const adapter = await gpu.requestAdapter();
           if (!adapter) {
+            console.error("❌ No WebGPU adapter found");
             throw new Error("No WebGPU adapter found");
+          }
+          console.log("✅ WebGPU adapter found:", adapter);
+
+          modelStatus.textContent = "Checking WebLLM library...";
+          
+          // Check if CreateMLCEngine is available
+          if (!window.CreateMLCEngine) {
+            console.error("❌ CreateMLCEngine not available");
+            throw new Error("WebLLM library failed to load");
+          }
+          console.log("✅ CreateMLCEngine available");
+          
+          // Wait for WebLLM to fully initialize before checking models
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Verify Qwen3 models are available (as suggested by coworker)
+          try {
+            if (window.CreateMLCEngine && window.CreateMLCEngine.prebuiltAppConfig) {
+              const availableModels = window.CreateMLCEngine.prebuiltAppConfig.model_list.map(m => m.model_id);
+              console.log("📋 All available models:", availableModels);
+              
+              const qwen3Models = availableModels.filter(id => id.startsWith("Qwen3"));
+              console.table(qwen3Models);
+              console.log("🎯 Looking for:", selectedModel);
+              console.log("✅ Model found:", availableModels.includes(selectedModel));
+              
+              if (!availableModels.includes(selectedModel)) {
+                throw new Error(`Model ${selectedModel} not found in available models`);
+              }
+            } else {
+              console.error("❌ prebuiltAppConfig not available");
+              throw new Error("WebLLM prebuilt config not loaded");
+            }
+          } catch (e) {
+            console.error("❌ Model verification failed:", e.message);
+            throw e;
           }
 
           modelStatus.textContent = "Initializing WebLLM engine...";
+          console.log("🔄 Creating MLC Engine with model:", selectedModel);
           
           const initProgressCallback = (report) => {
+            console.log("📊 Progress:", report);
             const progress = Math.round(report.progress * 100);
             modelProgressText.textContent = `${progress}%`;
             modelProgressBar.style.width = `${progress}%`;
-            modelStatus.textContent = report.text || "Loading model...";
+            
+            // More detailed status updates
+            let statusText = report.text || "Loading model...";
+            if (report.text?.includes("Loading")) {
+              statusText = `${report.text} (${progress}%)`;
+            } else if (progress === 0 && !report.text) {
+              statusText = "Connecting to model CDN...";
+            }
+            
+            modelStatus.textContent = statusText;
           };
 
-          webllmEngine = await window.CreateMLCEngine(
-            selectedModel,
-            { initProgressCallback }
-          );
+          // Add timeout to prevent infinite hanging
+          const createEngineWithTimeout = async () => {
+            return Promise.race([
+              window.CreateMLCEngine(selectedModel, { initProgressCallback }),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error("Model loading timeout after 5 minutes")), 300000)
+              )
+            ]);
+          };
+
+          webllmEngine = await createEngineWithTimeout();
+          
+          console.log("✅ WebLLM engine created successfully:", webllmEngine);
 
           modelStatus.textContent = "Model loaded successfully!";
           modelProgressText.textContent = "100%";
@@ -268,7 +342,13 @@ while retries < max_retries:
           }, 1000);
 
         } catch (error) {
-          console.error("WebLLM initialization failed:", error);
+          console.error("❌ WebLLM initialization failed:", error);
+          console.error("Error details:", {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          });
+          
           modelStatus.textContent = `Error: ${error.message}`;
           modelProgressBar.style.backgroundColor = '#dc2626';
           

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<h1>WebLLM quick-start — Qwen 3 0.6 B</h1>
+<button id="load">Load model</button>
+<pre id="log"></pre>
+
+<script type="module">
+  const log = (msg) => (document.getElementById('log').textContent += msg + '\n');
+
+  document.getElementById('load').onclick = async () => {
+    try {
+      /* 1️⃣  Dynamically pull the SDK (waits for network) */
+      const { CreateMLCEngine, prebuiltAppConfig } = await import(
+        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm'
+      );
+
+      log('✅ WebLLM 0.2.79 loaded');
+
+      /* 2️⃣  Check WebGPU */
+      if (!('gpu' in navigator)) throw new Error('WebGPU unavailable on this browser');
+      log('✅ WebGPU ready');
+
+      /* 3️⃣  Verify the model is in the embedded catalogue */
+      const MODEL_ID = 'Qwen3-0.6B-q4f16_1-MLC';      // no "mlc-ai/" prefix
+      const found = prebuiltAppConfig.model_list.some((m) => m.model_id === MODEL_ID);
+      if (!found) throw new Error(`${MODEL_ID} missing from catalogue`);
+      log(`✅ Model found in catalogue: ${MODEL_ID}`);
+
+      /* 4️⃣  Spin up the engine */
+      const engine = await CreateMLCEngine(MODEL_ID, {
+        initProgressCallback: (p) =>
+          log(`⬇️  ${Math.round((p.progress || 0) * 100)} % – ${p.text || ''}`)
+      });
+      log('🎉 Model fully loaded, running a test prompt …');
+
+      /* 5️⃣  Quick chat round-trip */
+      const reply = await engine.chat.completions.create({
+        messages: [
+          { role: 'system', content: 'You are a helpful assistant.' },
+          { role: 'user', content: 'Say hello in one short sentence.' }
+        ],
+        max_tokens: 32
+      });
+      log('🤖 ' + reply.choices[0].message.content.trim());
+    } catch (e) {
+      log('❌ ' + e.message);
+      console.error(e);
+    }
+  };
+</script>
