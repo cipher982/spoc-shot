@@ -11,10 +11,7 @@
   </script>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module">
-    import { CreateMLCEngine } from "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm";
-    window.CreateMLCEngine = CreateMLCEngine;
-  </script>
+  <!-- Remove the early import - we'll do dynamic import in the function -->
   <style>
     /* Custom styles for the toggle switch */
     .toggle-checkbox:checked {
@@ -235,99 +232,48 @@ while retries < max_retries:
           
           console.log("🔍 Starting WebLLM initialization...");
           
-          // Use the exact Qwen3 model as intended
-          const selectedModel = "Qwen3-0.6B-q4f16_1-MLC";
+          modelStatus.textContent = "Loading WebLLM library...";
           
+          // 1️⃣ Dynamically import WebLLM (fixes race condition)
+          const { CreateMLCEngine, prebuiltAppConfig } = await import(
+            'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm'
+          );
+          console.log("✅ WebLLM 0.2.79 loaded");
+
+          // 2️⃣ Check WebGPU
           modelStatus.textContent = "Checking WebGPU support...";
-          
-          // Check WebGPU support using captured version
-          const gpu = window._originalGPU || navigator.gpu;
-          console.log("🔍 Checking GPU access:", { 
-            originalGPU: window._originalGPU, 
-            navigatorGPU: navigator.gpu,
-            using: gpu 
-          });
-          
-          if (!gpu) {
-            console.error("❌ navigator.gpu not available");
-            throw new Error("WebGPU not supported in this browser");
+          if (!('gpu' in navigator)) {
+            throw new Error('WebGPU unavailable on this browser');
           }
-          console.log("✅ GPU access available");
-          
-          // Test WebGPU adapter
-          const adapter = await gpu.requestAdapter();
-          if (!adapter) {
-            console.error("❌ No WebGPU adapter found");
-            throw new Error("No WebGPU adapter found");
-          }
-          console.log("✅ WebGPU adapter found:", adapter);
+          console.log("✅ WebGPU ready");
 
-          modelStatus.textContent = "Checking WebLLM library...";
+          // 3️⃣ Verify model in catalogue
+          modelStatus.textContent = "Verifying model availability...";
+          const selectedModel = "Qwen3-0.6B-q4f16_1-MLC"; // No mlc-ai/ prefix
+          const found = prebuiltAppConfig.model_list.some((m) => m.model_id === selectedModel);
           
-          // Check if CreateMLCEngine is available
-          if (!window.CreateMLCEngine) {
-            console.error("❌ CreateMLCEngine not available");
-            throw new Error("WebLLM library failed to load");
+          if (!found) {
+            const qwen3Models = prebuiltAppConfig.model_list
+              .filter(m => m.model_id.startsWith("Qwen3"))
+              .map(m => m.model_id);
+            console.log("Available Qwen3 models:", qwen3Models);
+            throw new Error(`${selectedModel} missing from catalogue`);
           }
-          console.log("✅ CreateMLCEngine available");
-          
-          // Wait for WebLLM to fully initialize before checking models
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Verify Qwen3 models are available (as suggested by coworker)
-          try {
-            if (window.CreateMLCEngine && window.CreateMLCEngine.prebuiltAppConfig) {
-              const availableModels = window.CreateMLCEngine.prebuiltAppConfig.model_list.map(m => m.model_id);
-              console.log("📋 All available models:", availableModels);
-              
-              const qwen3Models = availableModels.filter(id => id.startsWith("Qwen3"));
-              console.table(qwen3Models);
-              console.log("🎯 Looking for:", selectedModel);
-              console.log("✅ Model found:", availableModels.includes(selectedModel));
-              
-              if (!availableModels.includes(selectedModel)) {
-                throw new Error(`Model ${selectedModel} not found in available models`);
-              }
-            } else {
-              console.error("❌ prebuiltAppConfig not available");
-              throw new Error("WebLLM prebuilt config not loaded");
-            }
-          } catch (e) {
-            console.error("❌ Model verification failed:", e.message);
-            throw e;
-          }
+          console.log(`✅ Model found in catalogue: ${selectedModel}`);
 
-          modelStatus.textContent = "Initializing WebLLM engine...";
+          // 4️⃣ Load the model
+          modelStatus.textContent = "Loading model...";
           console.log("🔄 Creating MLC Engine with model:", selectedModel);
           
           const initProgressCallback = (report) => {
             console.log("📊 Progress:", report);
-            const progress = Math.round(report.progress * 100);
+            const progress = Math.round((report.progress || 0) * 100);
             modelProgressText.textContent = `${progress}%`;
             modelProgressBar.style.width = `${progress}%`;
-            
-            // More detailed status updates
-            let statusText = report.text || "Loading model...";
-            if (report.text?.includes("Loading")) {
-              statusText = `${report.text} (${progress}%)`;
-            } else if (progress === 0 && !report.text) {
-              statusText = "Connecting to model CDN...";
-            }
-            
-            modelStatus.textContent = statusText;
+            modelStatus.textContent = report.text || `Loading model... ${progress}%`;
           };
 
-          // Add timeout to prevent infinite hanging
-          const createEngineWithTimeout = async () => {
-            return Promise.race([
-              window.CreateMLCEngine(selectedModel, { initProgressCallback }),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error("Model loading timeout after 5 minutes")), 300000)
-              )
-            ]);
-          };
-
-          webllmEngine = await createEngineWithTimeout();
+          webllmEngine = await CreateMLCEngine(selectedModel, { initProgressCallback });
           
           console.log("✅ WebLLM engine created successfully:", webllmEngine);
 

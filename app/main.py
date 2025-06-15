@@ -52,15 +52,29 @@ async def solve_sse(request: Request):
     """
     Handles the POST request to solve a prompt and streams the response.
     """
+    # ------------------------------------------------------------------
+    # HTMX submits forms as "application/x-www-form-urlencoded".  The original
+    # implementation only handled JSON and returned 400 errors when the UI
+    # tried to call this endpoint.  Support both encodings so the API works
+    # for browsers (form) and programmatic clients (JSON).
+    # ------------------------------------------------------------------
     try:
+        # Try JSON first – this will succeed for programmatic API usage.
         data = await request.json()
-        prompt = data.get("prompt")
-        mode = data.get("mode", "multi_pass") # Default to multi_pass
-        if not prompt:
-            raise HTTPException(status_code=400, detail="Prompt not provided.")
-    except json.JSONDecodeError:
-        logger.error("Failed to decode JSON from request.")
-        raise HTTPException(status_code=400, detail="Invalid JSON.")
+    except (json.JSONDecodeError, ValueError):
+        # Fall back to URL-encoded or multipart forms (HTMX default).
+        try:
+            form = await request.form()
+            data = dict(form)
+        except Exception as e:
+            logger.error("Failed to parse request body: %s", e, exc_info=True)
+            raise HTTPException(status_code=400, detail="Invalid request body.")
+
+    prompt = data.get("prompt")
+    mode = data.get("mode", "multi_pass")  # Default to multi_pass
+
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Prompt not provided.")
 
     logger.info(f"Received request for mode='{mode}' with prompt='{prompt}'")
     # Choose the solver based on the mode
@@ -102,3 +116,13 @@ async def read_index():
             return HTMLResponse(content=f.read(), status_code=200)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="index.html not found.")
+
+# ---------------------------------------------------------------------------
+# Optional favicon route
+# Browsers look for /favicon.ico automatically; we return 204 to avoid the
+# distracting 404 in the console.
+# ---------------------------------------------------------------------------
+
+@app.get("/favicon.ico")
+async def favicon():
+    return HTMLResponse(status_code=204)
