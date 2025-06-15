@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  spoc-shot:
+    build: .
+    ports:
+      - "8001:8001"
+    environment:
+      - WEBLLM_MODE=webllm  # webllm, hybrid, or server
+      - VLLM_BASE_URL=http://your-vllm-server:8000/v1  # Only needed for hybrid/server mode
+    volumes:
+      - ./app:/app/app  # For development - remove in production
+    restart: unless-stopped

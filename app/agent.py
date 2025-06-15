@@ -13,12 +13,27 @@ logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 VLLM_BASE_URL = os.environ.get("VLLM_BASE_URL", "http://cube:8000/v1")
-client = openai.AsyncOpenAI(
-    base_url=VLLM_BASE_URL,
-    api_key="none",
-)
-MODEL_NAME = "local-7b"
-logger.info(f"Connecting to vLLM server at: {client.base_url}")
+WEBLLM_MODE = os.environ.get("WEBLLM_MODE", "hybrid").lower()  # hybrid, server, webllm
+
+# Initialize OpenAI client for server mode
+client = None
+if WEBLLM_MODE in ["hybrid", "server"]:
+    try:
+        client = openai.AsyncOpenAI(
+            base_url=VLLM_BASE_URL,
+            api_key="none",
+        )
+        MODEL_NAME = "local-7b"
+        logger.info(f"Server mode enabled. Connecting to vLLM server at: {VLLM_BASE_URL}")
+    except Exception as e:
+        logger.warning(f"Failed to initialize vLLM client: {e}")
+        if WEBLLM_MODE == "server":
+            raise
+        logger.info("Falling back to WebLLM-only mode")
+        WEBLLM_MODE = "webllm"
+        
+if WEBLLM_MODE == "webllm":
+    logger.info("WebLLM-only mode enabled. Server-side inference disabled.")
 
 # --- Prompts ---
 SYSTEM_PROMPT_MULTI_PASS = """
@@ -61,6 +76,13 @@ def get_tool_args(call_data: Dict[str, Any]) -> Dict[str, Any]:
 
 # --- Multi-Pass Agent (Baseline) ---
 async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[Dict[str, Any], None]:
+    if WEBLLM_MODE == "webllm":
+        yield {"phase": "error", "message": "Server-side inference disabled. Please use WebLLM mode in the browser."}
+        return
+        
+    if not client:
+        yield {"phase": "error", "message": "vLLM client not initialized. Check server configuration."}
+        return
     req_id = f"spoc-shot-{uuid.uuid4()}"
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT_MULTI_PASS},
@@ -137,6 +159,13 @@ async def solve_multi_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[
 
 # --- Single-Pass Agent (SPOC) ---
 async def solve_single_pass(prompt: str, max_retries: int = 3) -> AsyncGenerator[Dict[str, Any], None]:
+    if WEBLLM_MODE == "webllm":
+        yield {"phase": "error", "message": "Server-side inference disabled. Please use WebLLM mode in the browser."}
+        return
+        
+    if not client:
+        yield {"phase": "error", "message": "vLLM client not initialized. Check server configuration."}
+        return
     req_id = f"spoc-shot-{uuid.uuid4()}"
     tool_signature = f"TOOL_SIGNATURE: {T.get_tool_signature()}"
     full_prompt = f"{tool_signature}\n\nUser Prompt: {prompt}"

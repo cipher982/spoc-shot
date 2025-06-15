@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException
 from sse_starlette.sse import EventSourceResponse
-from app.agent import solve_multi_pass, solve_single_pass
+from app.agent import solve_multi_pass, solve_single_pass, WEBLLM_MODE
 import json
 import asyncio
 import logging
@@ -79,6 +79,16 @@ async def solve_sse(request: Request):
             yield {"data": json.dumps({"phase": "error", "message": "An unexpected server error occurred."})}
 
     return EventSourceResponse(event_generator())
+
+@app.get("/api/config")
+async def get_config():
+    """
+    Returns the current server configuration.
+    """
+    return {
+        "webllm_mode": WEBLLM_MODE,
+        "server_available": WEBLLM_MODE in ["hybrid", "server"]
+    }
 
 from fastapi.responses import HTMLResponse
 
