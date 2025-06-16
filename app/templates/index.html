@@ -1340,12 +1340,14 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
               statusEl.textContent = 'Thinking';
               break;
             case 'execute':
-              entry.innerHTML = `${timestamp} ⚙️ Using tool: ${data.call?.name}`;
+              const toolArgs = JSON.stringify(data.call?.args || {});
+              entry.innerHTML = `${timestamp} ⚙️ <strong>TOOL CALL:</strong> ${data.call?.name}(${toolArgs})`;
               statusEl.textContent = 'Executing';
               break;
             case 'tool_result':
               const resultClass = data.result?.ok ? 'text-green-300' : 'text-red-300';
-              entry.innerHTML = `${timestamp} <span class="${resultClass}">📦 Result: ${data.result?.ok ? 'Success' : 'Failed'}</span>`;
+              const resultJson = JSON.stringify(data.result);
+              entry.innerHTML = `${timestamp} <span class="${resultClass}">📦 <strong>TOOL RESPONSE:</strong> ${resultJson}</span>`;
               break;
             case 'patch':
               entry.innerHTML = `${timestamp} 🔧 Self-correcting...`;
@@ -1387,9 +1389,13 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       };
 
       const simulateMultiPassRace = async (prompt, scenario, metrics, updateUI, abortSignal, incrementAttempt) => {
+        let attemptNumber = 0;
+        let lastHint = null;
+        
         while (true) {
           if (abortSignal?.aborted) throw new Error('Race cancelled');
           
+          attemptNumber++;
           incrementAttempt();
           updateUI('propose');
           await sleep(800 + Math.random() * 400); // Variable delay
@@ -1400,7 +1406,11 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
           metrics.prompt_tokens += 150;
           metrics.completion_tokens += 50;
           
-          const toolCall = { name: getToolForScenario(scenario), args: getArgsForScenario(scenario) };
+          // Learn from previous failures
+          const toolCall = { 
+            name: getToolForScenario(scenario), 
+            args: getSmartArgsForScenario(scenario, attemptNumber, lastHint) 
+          };
           updateUI('execute', { call: toolCall });
           await sleep(500 + Math.random() * 300);
           
@@ -1408,6 +1418,11 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
           
           const result = simulateToolCall(toolCall, scenario);
           updateUI('tool_result', { result });
+          
+          // Save hint for next attempt
+          if (!result.ok && result.hint) {
+            lastHint = result.hint;
+          }
           
           if (result.ok) {
             updateUI('propose');
@@ -1427,9 +1442,13 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       };
 
       const simulateSinglePassRace = async (prompt, scenario, metrics, updateUI, abortSignal, incrementAttempt) => {
+        let attemptNumber = 0;
+        let lastHint = null;
+        
         while (true) {
           if (abortSignal?.aborted) throw new Error('Race cancelled');
           
+          attemptNumber++;
           incrementAttempt();
           updateUI('propose');
           await sleep(600 + Math.random() * 200); // Faster due to KV cache
@@ -1440,7 +1459,11 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
           metrics.prompt_tokens += 120; // Lower due to context reuse
           metrics.completion_tokens += 45;
           
-          const toolCall = { name: getToolForScenario(scenario), args: getArgsForScenario(scenario) };
+          // Learn from previous failures
+          const toolCall = { 
+            name: getToolForScenario(scenario), 
+            args: getSmartArgsForScenario(scenario, attemptNumber, lastHint) 
+          };
           updateUI('execute', { call: toolCall });
           await sleep(400 + Math.random() * 200);
           
@@ -1448,6 +1471,11 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
           
           const result = simulateToolCall(toolCall, scenario);
           updateUI('tool_result', { result });
+          
+          // Save hint for next attempt
+          if (!result.ok && result.hint) {
+            lastHint = result.hint;
+          }
           
           if (result.ok) {
             // Single-pass continues in same context
@@ -1483,6 +1511,46 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
           math_tutor: { equation: '2x + 5 = 15', step: 'isolate' }
         };
         return args[scenario] || { column: 'conversions' };
+      };
+
+      // Smart version that learns from hints
+      const getSmartArgsForScenario = (scenario, attemptNumber, lastHint) => {
+        if (scenario === 'sql') {
+          if (attemptNumber === 1) {
+            return { column: 'conversions' }; // First attempt - will fail
+          } else if (lastHint && lastHint.includes("'convs'")) {
+            return { column: 'convs' }; // Learn from hint
+          } else {
+            return { column: 'conversions' }; // Fallback
+          }
+        } else if (scenario === 'research') {
+          if (attemptNumber === 1) {
+            return { query: 'climate change' }; // First attempt - will fail
+          } else if (lastHint && lastHint.includes('recent')) {
+            return { query: 'recent climate change data' }; // Learn from hint
+          } else {
+            return { query: 'climate change' }; // Fallback
+          }
+        } else if (scenario === 'data_analysis') {
+          if (attemptNumber === 1) {
+            return { dataset: 'user_metrics', operation: 'summary' }; // First attempt - will fail
+          } else if (lastHint && lastHint.includes('trend')) {
+            return { dataset: 'user_metrics', operation: 'trend' }; // Learn from hint
+          } else {
+            return { dataset: 'user_metrics', operation: 'summary' }; // Fallback
+          }
+        } else if (scenario === 'math_tutor') {
+          if (attemptNumber === 1) {
+            return { equation: '2x + 5 = 15', step: 'isolate' }; // First attempt - will fail
+          } else if (lastHint && lastHint.includes('simplify')) {
+            return { equation: '2x + 5 = 15', step: 'simplify' }; // Learn from hint
+          } else {
+            return { equation: '2x + 5 = 15', step: 'isolate' }; // Fallback
+          }
+        }
+        
+        // Default fallback
+        return getArgsForScenario(scenario);
       };
 
       const showRaceResults = (results) => {
@@ -1653,12 +1721,16 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
             updateExecutionDetails('Generated Response', null, data.metrics);
             break;
           case 'execute':
-            content = `<span class="font-bold text-purple-400">EXECUTE</span>: Calling tool <code class="text-white">${data.call.name}</code> with args <code class="text-white">${JSON.stringify(data.call.args)}</code>`;
+            const attemptInfo = data.debug ? ` (Attempt ${data.debug.attempt})` : '';
+            content = `<span class="font-bold text-purple-400">EXECUTE${attemptInfo}</span>: Calling tool <code class="text-white bg-gray-800 px-1 rounded">${data.call.name}</code><br>
+                       <span class="text-gray-400">Args:</span> <code class="text-white bg-gray-800 px-2 py-1 rounded block mt-1">${JSON.stringify(data.call.args, null, 2)}</code>`;
             updateExecutionDetails('Executing Tool', data.call, data.metrics);
             break;
           case 'tool_result':
             const resultClass = data.result.ok ? 'text-green-400' : 'text-red-400';
-            content = `<span class="font-bold ${resultClass}">RESULT</span>: <pre class="inline-block whitespace-pre-wrap">${JSON.stringify(data.result)}</pre>`;
+            const verifiedInfo = data.debug ? ` | Verified: ${data.debug.verified}` : '';
+            content = `<span class="font-bold ${resultClass}">RESULT</span>: <span class="text-gray-400">Status: ${data.result.ok ? 'SUCCESS' : 'FAILED'}${verifiedInfo}</span><br>
+                       <code class="text-white bg-gray-800 px-2 py-1 rounded block mt-1">${JSON.stringify(data.result, null, 2)}</code>`;
             updateExecutionDetails(data.result.ok ? 'Tool Success' : 'Tool Failed', null, data.metrics);
             break;
           case 'failure':
@@ -1731,11 +1803,15 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
             content = `<span class="font-bold text-gray-400">MODEL</span>: <pre class="inline-block whitespace-pre-wrap">${data.content}</pre>`;
             break;
           case 'execute':
-            content = `<span class="font-bold text-purple-400">EXECUTE</span>: Calling tool <code class="text-white">${data.call.name}</code> with args <code class="text-white">${JSON.stringify(data.call.args)}</code>`;
+            const attemptInfo = data.debug ? ` (Attempt ${data.debug.attempt})` : '';
+            content = `<span class="font-bold text-purple-400">EXECUTE${attemptInfo}</span>: Calling tool <code class="text-white bg-gray-800 px-1 rounded">${data.call.name}</code><br>
+                       <span class="text-gray-400">Args:</span> <code class="text-white bg-gray-800 px-2 py-1 rounded block mt-1">${JSON.stringify(data.call.args, null, 2)}</code>`;
             break;
           case 'tool_result':
             const resultClass = data.result.ok ? 'text-green-400' : 'text-red-400';
-            content = `<span class="font-bold ${resultClass}">RESULT</span>: <pre class="inline-block whitespace-pre-wrap">${JSON.stringify(data.result)}</pre>`;
+            const verifiedInfo = data.debug ? ` | Verified: ${data.debug.verified}` : '';
+            content = `<span class="font-bold ${resultClass}">RESULT</span>: <span class="text-gray-400">Status: ${data.result.ok ? 'SUCCESS' : 'FAILED'}${verifiedInfo}</span><br>
+                       <code class="text-white bg-gray-800 px-2 py-1 rounded block mt-1">${JSON.stringify(data.result, null, 2)}</code>`;
             break;
           case 'failure':
              content = `<span class="font-bold text-red-500">FAILURE</span>: ${data.message}`;

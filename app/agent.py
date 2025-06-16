@@ -42,26 +42,42 @@ if WEBLLM_MODE == "webllm":
 # --- Prompts ---
 SYSTEM_PROMPT_MULTI_PASS = """
 You are an agent designed for a specific demo. Your ONLY purpose is to answer the user's question about "conversions".
+
+CRITICAL: You MUST learn from tool failures and use the hints provided!
+
 1.  You MUST use the `sql_query` tool. It is the only tool available.
 2.  The `sql_query` tool takes a single argument: `column`.
 3.  The user's question is "How many conversions did we get this week?". You should infer the correct column name from this.
 4.  Your first action MUST be to call the tool with what you think the column name is. Output a `TOOL_CALL` in JSON format.
-5.  After you receive the `EXEC_RESULT`, if it failed, analyze the 'hint' and call the tool again with the corrected column name.
-6.  If the result is successful, provide a one-sentence answer summarizing the data.
-Example of a tool call:
-TOOL_CALL: {"name": "sql_query", "args": {"column": "your_best_guess"}}
+5.  After you receive the tool result, if it failed (ok: false), READ THE HINT CAREFULLY and use it to correct your next tool call.
+6.  If the result is successful (ok: true), provide a one-sentence answer summarizing the data.
+
+Example flow:
+- First try: TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}
+- If you get {"ok": false, "hint": "Did you mean 'convs'?"} then your next call should be:
+- TOOL_CALL: {"name": "sql_query", "args": {"column": "convs"}}
+
+DO NOT repeat the same failed tool call! Always learn from the hint!
 """
 
 SYSTEM_PROMPT_SINGLE_PASS = """
 You are an agent designed for a specific demo. Your ONLY purpose is to answer the user's question about "conversions".
+
+CRITICAL: You MUST learn from tool failures and use the hints provided!
+
 1.  You will be given a `TOOL_SIGNATURE` for the `sql_query` tool. It is the only tool you can use.
 2.  The tool takes a single argument: `column`.
 3.  The user's question is "How many conversions did we get this week?". Infer the column name from this question.
 4.  Your first action MUST be to call the tool. Output a `TOOL_CALL` in JSON format.
-5.  If the `EXEC_RESULT` you receive is a failure, you MUST use the 'hint' to immediately try a new `TOOL_CALL` with the corrected column name.
-6.  If the `EXEC_RESULT` is successful, provide a one-sentence answer summarizing the data.
-Example of a tool call:
-TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}
+5.  If the tool result is a failure (ok: false), you MUST READ THE HINT and use it to correct your next tool call.
+6.  If the tool result is successful (ok: true), provide a one-sentence answer summarizing the data.
+
+Example flow:
+- First try: TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}
+- If you get {"ok": false, "hint": "Did you mean 'convs'?"} then your next call should be:
+- TOOL_CALL: {"name": "sql_query", "args": {"column": "convs"}}
+
+DO NOT repeat the same failed tool call! Always learn from the hint!
 """
 
 # --- Metrics Tracking ---
@@ -94,8 +110,14 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
     ]
     start_time = time.perf_counter()
     metrics = {"prompt_tokens": 0, "completion_tokens": 0, "latency": 0, "llm_calls": 0}
+    attempt = 0
 
     while True:
+        attempt += 1
+        logger.info(f"[Multi-Pass] Attempt {attempt}")
+        logger.info(f"[Multi-Pass] Sending {len(messages)} messages to model")
+        for i, msg in enumerate(messages):
+            logger.info(f"  Message {i}: {msg['role']} = {repr(msg['content'][:200])}")
         yield {"phase": "propose", "metrics": metrics}
         
         try:
@@ -113,6 +135,7 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
             metrics["prompt_tokens"] += token_counts["prompt"]
             metrics["completion_tokens"] += token_counts["completion"]
             response_text = completion.choices[0].message.content
+            logger.info(f"Model response: {repr(response_text)}")
             messages.append({"role": "assistant", "content": response_text})
             yield {"phase": "model_response", "content": response_text, "metrics": metrics}
 
@@ -125,10 +148,14 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
             try:
                 call_data = json.loads(tool_call_str)
                 call_data["args"] = get_tool_args(call_data) # Standardize the args key
-                yield {"phase": "execute", "call": call_data, "metrics": metrics}
+                logger.info(f"[Multi-Pass] Tool call: {call_data}")
+                yield {"phase": "execute", "call": call_data, "metrics": metrics, "debug": {"attempt": attempt, "call_data": call_data}}
                 result = T.run_tool(call_data)
-                yield {"phase": "tool_result", "result": result, "metrics": metrics}
+                logger.info(f"[Multi-Pass] Tool result: {result}")
+                yield {"phase": "tool_result", "result": result, "metrics": metrics, "debug": {"attempt": attempt, "verified": V.verify(result)}}
                 messages.append({"role": "tool", "content": json.dumps(result)})
+                logger.info(f"[Multi-Pass] Conversation history now has {len(messages)} messages")
+                logger.info(f"[Multi-Pass] Last message: {messages[-1]}")
 
                 if V.verify(result):
                     yield {"phase": "propose", "metrics": metrics}
@@ -149,7 +176,7 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
                     yield {"phase": "success", "answer": final_answer, "metrics": metrics}
                     return
                 else:
-                    yield {"phase": "failure", "message": "Tool execution failed verification.", "metrics": metrics}
+                    yield {"phase": "failure", "message": f"Tool execution failed verification. Attempt {attempt}", "metrics": metrics}
             except (json.JSONDecodeError, KeyError) as e:
                 yield {"phase": "failure", "message": f"Invalid tool call format: {e}", "metrics": metrics}
                 messages.append({"role": "tool", "content": json.dumps({"error": "Invalid tool call format"})})
@@ -177,8 +204,11 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
     ]
     start_time = time.perf_counter()
     metrics = {"prompt_tokens": 0, "completion_tokens": 0, "latency": 0, "llm_calls": 0}
+    attempt = 0
 
     while True:
+        attempt += 1
+        logger.info(f"[Single-Pass] Attempt {attempt}")
         yield {"phase": "propose", "metrics": metrics}
         
         try:
@@ -198,6 +228,7 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
             metrics["prompt_tokens"] += token_counts["prompt"]
             metrics["completion_tokens"] += token_counts["completion"]
             response_text = completion.choices[0].message.content
+            logger.info(f"Model response: {repr(response_text)}")
             messages.append({"role": "assistant", "content": response_text})
             yield {"phase": "model_response", "content": response_text, "metrics": metrics}
 
@@ -210,9 +241,11 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
             try:
                 call_data = json.loads(tool_call_str)
                 call_data["args"] = get_tool_args(call_data) # Standardize the args key
-                yield {"phase": "execute", "call": call_data, "metrics": metrics}
+                logger.info(f"[Single-Pass] Tool call: {call_data}")
+                yield {"phase": "execute", "call": call_data, "metrics": metrics, "debug": {"attempt": attempt, "call_data": call_data}}
                 result = T.run_tool(call_data)
-                yield {"phase": "tool_result", "result": result, "metrics": metrics}
+                logger.info(f"[Single-Pass] Tool result: {result}")
+                yield {"phase": "tool_result", "result": result, "metrics": metrics, "debug": {"attempt": attempt, "verified": V.verify(result)}}
                 messages.append({"role": "tool", "content": json.dumps(result)})
 
                 if V.verify(result):
@@ -238,7 +271,7 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
                     yield {"phase": "success", "answer": final_answer, "metrics": metrics}
                     return
                 else:
-                    yield {"phase": "patch", "message": "Tool execution failed. Attempting to self-patch.", "metrics": metrics}
+                    yield {"phase": "patch", "message": f"Tool execution failed. Attempting to self-patch. Attempt {attempt}", "metrics": metrics}
             except (json.JSONDecodeError, KeyError) as e:
                 yield {"phase": "failure", "message": f"Invalid tool call format: {e}", "metrics": metrics}
                 messages.append({"role": "tool", "content": json.dumps({"error": "Invalid tool call format"})})
