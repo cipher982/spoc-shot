@@ -4,6 +4,11 @@ from app.agent import solve_multi_pass, solve_single_pass, WEBLLM_MODE
 import json
 import asyncio
 import logging
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # --- Logging Setup ---
 # This is the proper way to configure logging for the whole application

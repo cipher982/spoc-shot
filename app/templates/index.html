@@ -11,7 +11,6 @@
   </script>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
   <!-- Remove the early import - we'll do dynamic import in the function -->
   <style>
     /* Reset and base styles */
@@ -57,11 +56,6 @@
       }
     }
     
-    /* Prevent canvas from causing overflow */
-    canvas {
-      max-width: 100%;
-      height: auto;
-    }
   </style>
 </head>
 <body class="min-h-full bg-gray-900 text-white font-sans p-4 sm:p-6 lg:p-8">
@@ -223,39 +217,45 @@
 
       <!-- Right Column -->
       <div class="flex flex-col gap-6">
-        <!-- 3D Context Flow Visualization -->
-        <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
-          <h2 class="text-xl font-semibold mb-4 flex items-center">
-            🌊 Context Flow Visualization
-            <button id="toggle-3d" class="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm">
-              Enable 3D
-            </button>
-          </h2>
-          <div id="context-viz-container" class="h-64 bg-gray-900 rounded-md relative overflow-hidden">
-            <!-- 3D visualization will be rendered here -->
-            <div id="context-viz-placeholder" class="flex items-center justify-center h-full text-gray-500">
-              Click "Enable 3D" to visualize context flow
-            </div>
-            <canvas id="context-viz-canvas" style="display: none;"></canvas>
-          </div>
-          <div class="mt-3 flex justify-between text-xs text-gray-400">
-            <div class="flex items-center">
-              <div class="w-3 h-3 bg-blue-500 rounded mr-2"></div>
-              <span>Single-Pass Flow</span>
-            </div>
-            <div class="flex items-center">
-              <div class="w-3 h-3 bg-red-500 rounded mr-2"></div>
-              <span>Multi-Pass Fragments</span>
-            </div>
-          </div>
-        </div>
-
         <!-- Code View Panel -->
         <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
           <h2 class="text-xl font-semibold mb-4">Agent Logic</h2>
           <div id="code-view" class="bg-gray-900 p-4 rounded-md text-xs font-mono">
             <!-- Pseudo-code will be injected here -->
           </div>
+        </div>
+
+        <!-- Live Execution Details -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
+          <h2 class="text-xl font-semibold mb-4">🔍 Execution Details</h2>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <div class="text-gray-400 mb-2">Current Phase</div>
+              <div id="current-phase" class="font-mono text-cyan-400">Ready</div>
+            </div>
+            <div>
+              <div class="text-gray-400 mb-2">Last Tool Call</div>
+              <div id="last-tool" class="font-mono text-purple-400">None</div>
+            </div>
+            <div>
+              <div class="text-gray-400 mb-2">Context Size</div>
+              <div id="context-size" class="font-mono text-blue-400">0 tokens</div>
+            </div>
+            <div>
+              <div class="text-gray-400 mb-2">Efficiency</div>
+              <div id="efficiency-ratio" class="font-mono text-green-400">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Log Stream Panel -->
+    <div id="log-panel" class="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl">
+      <h2 class="text-xl font-semibold mb-4">🔄 Live Agent Execution</h2>
+      <div id="log-container" class="h-96 overflow-y-auto bg-gray-900 p-4 rounded-md">
+        <div id="log" class="space-y-2 text-sm font-mono">
+          <div class="text-gray-500">Run an agent to see live execution details...</div>
         </div>
       </div>
     </div>
@@ -446,15 +446,6 @@
       </div>
     </div>
 
-    <!-- Log Stream Panel -->
-    <div id="log-panel" class="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl">
-      <h2 class="text-xl font-semibold mb-4">Log Stream</h2>
-      <div id="log-container" class="h-96 overflow-y-auto bg-gray-900 p-4 rounded-md">
-        <div id="log" class="space-y-2 text-sm font-mono">
-          <!-- Log entries will be appended here -->
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Pseudo-code templates -->
@@ -523,13 +514,11 @@ while retries < max_retries:
       const scaleValue = document.getElementById('scale-value');
       const savingsSummary = document.getElementById('savings-summary');
 
-      // 3D visualization elements
-      const toggle3DButton = document.getElementById('toggle-3d');
-      const contextVizContainer = document.getElementById('context-viz-container');
-      const contextVizPlaceholder = document.getElementById('context-viz-placeholder');
-      const contextVizCanvas = document.getElementById('context-viz-canvas');
-      let scene, camera, renderer, contextBubbles = [], animationId;
-      let is3DEnabled = false;
+      // Execution details elements
+      const currentPhaseEl = document.getElementById('current-phase');
+      const lastToolEl = document.getElementById('last-tool');
+      const contextSizeEl = document.getElementById('context-size');
+      const efficiencyRatioEl = document.getElementById('efficiency-ratio');
 
       const latencyEl = document.getElementById('metric-latency');
       const promptTokensEl = document.getElementById('metric-prompt-tokens');
@@ -583,6 +572,9 @@ while retries < max_retries:
         document.getElementById('cost-per-run').textContent = '$0.000';
         document.getElementById('cost-1k').textContent = '$0.00';
         document.getElementById('cost-monthly').textContent = '$0.00';
+        
+        // Reset execution details
+        updateExecutionDetails('Ready', null, null);
         
         // Reset memory blocks
         initializeMemoryBlocks();
@@ -813,13 +805,19 @@ while retries < max_retries:
         runNetworkSimulation();
       });
 
-      toggle3DButton.addEventListener('click', () => {
-        if (is3DEnabled) {
-          disable3D();
+      // Update execution details in real-time
+      const updateExecutionDetails = (phase, toolCall, metrics) => {
+        currentPhaseEl.textContent = phase || 'Ready';
+        lastToolEl.textContent = toolCall ? `${toolCall.name}(${JSON.stringify(toolCall.args).slice(0, 20)}...)` : 'None';
+        contextSizeEl.textContent = metrics ? `${(metrics.prompt_tokens || 0)} tokens` : '0 tokens';
+        
+        if (metrics && metrics.llm_calls > 0) {
+          const efficiency = ((metrics.prompt_tokens + metrics.completion_tokens) / metrics.llm_calls).toFixed(0);
+          efficiencyRatioEl.textContent = `${efficiency} tok/call`;
         } else {
-          enable3D();
+          efficiencyRatioEl.textContent = '--';
         }
-      });
+      };
 
       form.addEventListener('htmx:beforeRequest', (e) => {
         log.innerHTML = '<div class="text-gray-500">Waiting for agent...</div>';
@@ -935,7 +933,7 @@ while retries < max_retries:
         const requestId = `spoc-shot-${Date.now()}`;
         
         // Simulate the multi-pass logic
-        for (let attempt = 0; attempt < 3; attempt++) {
+        while (true) {
           handleSseMessage({ phase: 'propose', metrics });
           
           // First LLM call
@@ -1014,14 +1012,14 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "your_best_guess"}}`;
           }
         }
         
-        handleSseMessage({ phase: 'error', message: 'Agent failed after multiple attempts', metrics });
+        // Continue loop - no max attempts
       };
 
       const runSinglePassWebLLM = async (prompt, metrics, startTime, scenario = 'sql') => {
         const requestId = `spoc-shot-${Date.now()}`;
         
         // Single-pass logic
-        for (let attempt = 0; attempt < 3; attempt++) {
+        while (true) {
           handleSseMessage({ phase: 'propose', metrics });
           
           const systemPrompt = `You are an agent designed for a specific demo. Your ONLY purpose is to answer the user's question about "conversions".
@@ -1112,7 +1110,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
           }
         }
         
-        handleSseMessage({ phase: 'error', message: 'Agent failed to self-patch after multiple attempts', metrics });
+        // Continue loop - no max attempts
       };
 
       // Simulate the tool execution client-side
@@ -1325,7 +1323,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       };
 
       const simulateMultiPassRace = async (prompt, scenario, metrics, updateUI) => {
-        for (let attempt = 0; attempt < 3; attempt++) {
+        while (true) {
           updateUI('propose');
           await sleep(800 + Math.random() * 400); // Variable delay
           metrics.llm_calls += 1;
@@ -1351,11 +1349,11 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
             await sleep(300);
           }
         }
-        throw new Error('Max attempts reached');
+        // Continue loop - no max attempts
       };
 
       const simulateSinglePassRace = async (prompt, scenario, metrics, updateUI) => {
-        for (let attempt = 0; attempt < 3; attempt++) {
+        while (true) {
           updateUI('propose');
           await sleep(600 + Math.random() * 200); // Faster due to KV cache
           metrics.llm_calls += 1;
@@ -1380,7 +1378,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
             await sleep(100); // Faster recovery
           }
         }
-        throw new Error('Max attempts reached');
+        // Continue loop - no max attempts
       };
 
       const getToolForScenario = (scenario) => {
@@ -1538,202 +1536,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
         document.getElementById('efficiency-gain').textContent = `${results.savings.efficiencyGain.toFixed(1)}%`;
       };
 
-      // --- 3D Context Flow Visualization ---
-      const enable3D = () => {
-        if (!window.THREE) {
-          console.warn('Three.js not loaded');
-          return;
-        }
-
-        is3DEnabled = true;
-        toggle3DButton.textContent = 'Disable 3D';
-        contextVizPlaceholder.style.display = 'none';
-        contextVizCanvas.style.display = 'block';
-
-        init3D();
-        animate3D();
-      };
-
-      const disable3D = () => {
-        is3DEnabled = false;
-        toggle3DButton.textContent = 'Enable 3D';
-        contextVizPlaceholder.style.display = 'flex';
-        contextVizCanvas.style.display = 'none';
-
-        if (animationId) cancelAnimationFrame(animationId);
-        if (renderer) renderer.dispose();
-        contextBubbles = [];
-      };
-
-      const init3D = () => {
-        const container = contextVizContainer;
-        const width = container.clientWidth || 400;
-        const height = container.clientHeight || 256;
-
-        // Scene setup
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x111827);
-
-        // Camera setup
-        camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-        camera.position.set(0, 0, 10);
-
-        // Renderer setup
-        renderer = new THREE.WebGLRenderer({ 
-          canvas: contextVizCanvas, 
-          antialias: true,
-          alpha: false,
-          powerPreference: "default"
-        });
-        renderer.setSize(width, height);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        
-        // Ensure canvas fits container
-        contextVizCanvas.style.width = '100%';
-        contextVizCanvas.style.height = '100%';
-        contextVizCanvas.style.display = 'block';
-
-        // Create initial context bubbles
-        createContextBubbles();
-
-        // Handle window resize
-        window.addEventListener('resize', onWindowResize);
-      };
-
-      const createContextBubbles = () => {
-        // Clear existing bubbles
-        contextBubbles.forEach(bubble => scene.remove(bubble));
-        contextBubbles = [];
-
-        const mode = currentMode;
-        
-        if (mode === 'single_pass') {
-          // Create flowing river of context - connected spheres
-          const geometry = new THREE.SphereGeometry(0.3, 16, 16);
-          const material = new THREE.MeshBasicMaterial({ 
-            color: 0x3b82f6, 
-            transparent: true, 
-            opacity: 0.8 
-          });
-
-          for (let i = 0; i < 20; i++) {
-            const bubble = new THREE.Mesh(geometry, material);
-            bubble.position.set(-8 + i * 0.8, Math.sin(i * 0.5) * 2, Math.cos(i * 0.3) * 2);
-            bubble.userData = { 
-              originalY: bubble.position.y, 
-              originalZ: bubble.position.z,
-              phase: i * 0.2,
-              connected: true
-            };
-            scene.add(bubble);
-            contextBubbles.push(bubble);
-          }
-
-          // Add connecting lines
-          const lineGeometry = new THREE.BufferGeometry();
-          const points = contextBubbles.map(bubble => bubble.position);
-          lineGeometry.setFromPoints(points);
-          const lineMaterial = new THREE.LineBasicMaterial({ 
-            color: 0x3b82f6, 
-            transparent: true, 
-            opacity: 0.4 
-          });
-          const line = new THREE.Line(lineGeometry, lineMaterial);
-          scene.add(line);
-          contextBubbles.push(line);
-        } else {
-          // Create scattered fragments - disconnected spheres
-          const geometry = new THREE.SphereGeometry(0.2, 12, 12);
-          const material = new THREE.MeshBasicMaterial({ 
-            color: 0xef4444, 
-            transparent: true, 
-            opacity: 0.6 
-          });
-
-          for (let i = 0; i < 15; i++) {
-            const bubble = new THREE.Mesh(geometry, material);
-            bubble.position.set(
-              (Math.random() - 0.5) * 12,
-              (Math.random() - 0.5) * 6,
-              (Math.random() - 0.5) * 6
-            );
-            bubble.userData = { 
-              originalPosition: bubble.position.clone(),
-              phase: Math.random() * Math.PI * 2,
-              connected: false,
-              drift: new THREE.Vector3(
-                (Math.random() - 0.5) * 0.02,
-                (Math.random() - 0.5) * 0.02,
-                (Math.random() - 0.5) * 0.02
-              )
-            };
-            scene.add(bubble);
-            contextBubbles.push(bubble);
-          }
-        }
-      };
-
-      const animate3D = () => {
-        if (!is3DEnabled) return;
-
-        const time = Date.now() * 0.001;
-
-        contextBubbles.forEach((bubble, index) => {
-          if (!bubble.userData) return;
-
-          if (bubble.userData.connected) {
-            // Smooth flowing animation for single-pass
-            bubble.position.y = bubble.userData.originalY + Math.sin(time * 2 + bubble.userData.phase) * 0.5;
-            bubble.position.z = bubble.userData.originalZ + Math.cos(time * 1.5 + bubble.userData.phase) * 0.3;
-            
-            // Subtle pulsing
-            const scale = 1 + Math.sin(time * 3 + bubble.userData.phase) * 0.1;
-            bubble.scale.setScalar(scale);
-          } else if (bubble.userData.drift) {
-            // Chaotic drifting for multi-pass fragments
-            bubble.position.add(bubble.userData.drift);
-            
-            // Keep bubbles within bounds
-            if (Math.abs(bubble.position.x) > 8) bubble.userData.drift.x *= -1;
-            if (Math.abs(bubble.position.y) > 4) bubble.userData.drift.y *= -1;
-            if (Math.abs(bubble.position.z) > 4) bubble.userData.drift.z *= -1;
-            
-            // Flickering opacity
-            bubble.material.opacity = 0.3 + Math.sin(time * 5 + bubble.userData.phase) * 0.3;
-          }
-        });
-
-        // Rotate camera slightly for dynamic view
-        camera.position.x = Math.sin(time * 0.2) * 2;
-        camera.lookAt(0, 0, 0);
-
-        renderer.render(scene, camera);
-        animationId = requestAnimationFrame(animate3D);
-      };
-
-      const onWindowResize = () => {
-        if (!is3DEnabled || !renderer || !camera) return;
-        
-        const width = contextVizContainer.clientWidth || 400;
-        const height = contextVizContainer.clientHeight || 256;
-        
-        camera.aspect = width / height;
-        camera.updateProjectionMatrix();
-        renderer.setSize(width, height);
-        
-        // Ensure canvas stays properly sized
-        contextVizCanvas.style.width = '100%';
-        contextVizCanvas.style.height = '100%';
-      };
-
-      // Update 3D visualization when mode changes
-      const originalUpdateCodeView = updateCodeView;
-      updateCodeView = () => {
-        originalUpdateCodeView();
-        if (is3DEnabled) {
-          createContextBubbles();
-        }
-      };
 
       function handleSseMessage(data) {
         const entry = document.createElement('div');
@@ -1760,32 +1562,40 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
         switch (data.phase) {
           case 'propose':
             content = `<span class="font-bold text-cyan-400">PROPOSE</span>: Agent is thinking...`;
+            updateExecutionDetails('Thinking', null, data.metrics);
             break;
           case 'model_response':
             content = `<span class="font-bold text-gray-400">MODEL</span>: <pre class="inline-block whitespace-pre-wrap">${data.content}</pre>`;
+            updateExecutionDetails('Generated Response', null, data.metrics);
             break;
           case 'execute':
             content = `<span class="font-bold text-purple-400">EXECUTE</span>: Calling tool <code class="text-white">${data.call.name}</code> with args <code class="text-white">${JSON.stringify(data.call.args)}</code>`;
+            updateExecutionDetails('Executing Tool', data.call, data.metrics);
             break;
           case 'tool_result':
             const resultClass = data.result.ok ? 'text-green-400' : 'text-red-400';
             content = `<span class="font-bold ${resultClass}">RESULT</span>: <pre class="inline-block whitespace-pre-wrap">${JSON.stringify(data.result)}</pre>`;
+            updateExecutionDetails(data.result.ok ? 'Tool Success' : 'Tool Failed', null, data.metrics);
             break;
           case 'failure':
              content = `<span class="font-bold text-red-500">FAILURE</span>: ${data.message}`;
              colorClass = 'bg-red-900/30';
+             updateExecutionDetails('Failed', null, data.metrics);
              break;
           case 'patch':
             content = `<span class="font-bold text-yellow-400">PATCH</span>: Tool failed. Attempting to self-correct...`;
             colorClass = 'bg-yellow-900/30';
+            updateExecutionDetails('Self-Correcting', null, data.metrics);
             break;
           case 'success':
             content = `<span class="font-bold text-green-400">SUCCESS</span>: <pre class="inline-block whitespace-pre-wrap">${data.answer}</pre>`;
             colorClass = 'bg-green-900/30';
+            updateExecutionDetails('Completed', null, data.metrics);
             break;
           case 'error':
             content = `<span class="font-bold text-red-500">ERROR</span>: ${data.message}`;
             colorClass = 'bg-red-900/50 border border-red-700';
+            updateExecutionDetails('Error', null, data.metrics);
             break;
         }
         

@@ -75,7 +75,7 @@ def get_tool_args(call_data: Dict[str, Any]) -> Dict[str, Any]:
     return call_data.get("args", call_data.get("arguments", {}))
 
 # --- Multi-Pass Agent (Baseline) ---
-async def solve_multi_pass(prompt: str, max_retries: int = 3, scenario: str = "sql") -> AsyncGenerator[Dict[str, Any], None]:
+async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator[Dict[str, Any], None]:
     if WEBLLM_MODE == "webllm":
         yield {"phase": "error", "message": "Server-side inference disabled. Please use WebLLM mode in the browser."}
         return
@@ -91,7 +91,7 @@ async def solve_multi_pass(prompt: str, max_retries: int = 3, scenario: str = "s
     start_time = time.perf_counter()
     metrics = {"prompt_tokens": 0, "completion_tokens": 0, "latency": 0, "llm_calls": 0}
 
-    for attempt in range(max_retries):
+    while True:
         yield {"phase": "propose", "metrics": metrics}
         
         try:
@@ -154,11 +154,9 @@ async def solve_multi_pass(prompt: str, max_retries: int = 3, scenario: str = "s
             yield {"phase": "success", "answer": response_text, "metrics": metrics}
             return
 
-    yield {"phase": "error", "message": "Agent failed after multiple attempts."}
-
 
 # --- Single-Pass Agent (SPOC) ---
-async def solve_single_pass(prompt: str, max_retries: int = 3, scenario: str = "sql") -> AsyncGenerator[Dict[str, Any], None]:
+async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator[Dict[str, Any], None]:
     if WEBLLM_MODE == "webllm":
         yield {"phase": "error", "message": "Server-side inference disabled. Please use WebLLM mode in the browser."}
         return
@@ -176,11 +174,11 @@ async def solve_single_pass(prompt: str, max_retries: int = 3, scenario: str = "
     start_time = time.perf_counter()
     metrics = {"prompt_tokens": 0, "completion_tokens": 0, "latency": 0, "llm_calls": 0}
 
-    for attempt in range(max_retries):
+    while True:
         yield {"phase": "propose", "metrics": metrics}
         
         try:
-            logger.info(f"[Single-Pass] Attempt {attempt + 1}/{max_retries}")
+            logger.info("[Single-Pass] Processing request...")
             logger.info("[Single-Pass] Simulating network latency...")
             await asyncio.sleep(2)
             logger.info("[Single-Pass] Calling OpenAI API...")
@@ -244,5 +242,3 @@ async def solve_single_pass(prompt: str, max_retries: int = 3, scenario: str = "
             metrics["latency"] = time.perf_counter() - start_time
             yield {"phase": "success", "answer": response_text, "metrics": metrics}
             return
-
-    yield {"phase": "error", "message": "Agent failed to self-patch after multiple attempts."}
