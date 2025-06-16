@@ -15,12 +15,14 @@ RUN uv sync --frozen
 COPY app/ ./app/
 COPY main.py ./
 
-# Set environment variables
+# Set default environment variables
+ENV HOST=0.0.0.0
+ENV PORT=8004
 ENV WEBLLM_MODE=webllm
 ENV PYTHONPATH=/app
 
-# Expose port
-EXPOSE 8001
+# Expose port (will be overridden by ENV)
+EXPOSE ${PORT}
 
-# Run the application
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001"]
+# Run the application with environment variables
+CMD ["sh", "-c", "uv run uvicorn app.main:app --host $HOST --port $PORT"]

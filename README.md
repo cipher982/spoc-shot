@@ -2,18 +2,48 @@
 
 This project demonstrates a dashboard comparing traditional multi-pass agent loops against single-pass (SPOC-style) loops, now **deployable as a web demo** with client-side WebLLM inference!
 
-## 🚀 Quick Start (WebLLM Mode)
+## ⚙️ Configuration
 
-The easiest way to run the demo - no GPU server required!
+SPOC-Shot uses environment variables for configuration. Get started quickly:
 
 ```bash
-# Test setup
-uv run python test_setup.py
+# Initialize configuration
+./config.sh init
+
+# Set up for development (recommended)
+./config.sh dev
 
 # Run the demo
-WEBLLM_MODE=webllm uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
+./run_demo.sh
+```
 
-# Open http://localhost:8001
+### Configuration Options
+
+- **Development**: WebLLM mode, port 8004, auto-reload
+- **Production**: Server mode, port 80, no reload  
+- **Hybrid**: Both WebLLM and server support
+
+```bash
+# Quick configuration commands
+./config.sh dev      # Development setup
+./config.sh prod     # Production setup  
+./config.sh hybrid   # Hybrid mode
+./config.sh port 3000  # Change port
+./config.sh show     # Show current config
+```
+
+## 🚀 Quick Start
+
+```bash
+# 1. Initialize and configure
+./config.sh init
+./config.sh dev
+
+# 2. Test setup
+uv run python test_setup.py
+
+# 3. Run the demo
+./run_demo.sh
 ```
 
 The WebLLM model downloads automatically on first use.

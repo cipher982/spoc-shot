@@ -49,8 +49,10 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def startup_event():
+    host = os.getenv("HOST", "127.0.0.1")
+    port = os.getenv("PORT", "8004")
     logger.info("Application startup complete. All logs should now be visible.")
-    logger.info("Open http://127.0.0.1:8001 to view the demo.")
+    logger.info(f"Open http://{host}:{port} to view the demo.")
 
 @app.post("/solve")
 async def solve_sse(request: Request):

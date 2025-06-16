@@ -8,12 +8,16 @@ import os
 from typing import List, Dict, Any, AsyncGenerator
 import logging
 import asyncio
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---
-VLLM_BASE_URL = os.environ.get("VLLM_BASE_URL", "http://cube:8000/v1")
-WEBLLM_MODE = os.environ.get("WEBLLM_MODE", "hybrid").lower()  # hybrid, server, webllm
+VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://cube:8000/v1")
+WEBLLM_MODE = os.getenv("WEBLLM_MODE", "hybrid").lower()  # hybrid, server, webllm
 
 # Initialize OpenAI client for server mode
 client = None
@@ -23,7 +27,7 @@ if WEBLLM_MODE in ["hybrid", "server"]:
             base_url=VLLM_BASE_URL,
             api_key="none",
         )
-        MODEL_NAME = "local-7b"
+        MODEL_NAME = os.getenv("MODEL_NAME", "local-7b")
         logger.info(f"Server mode enabled. Connecting to vLLM server at: {VLLM_BASE_URL}")
     except Exception as e:
         logger.warning(f"Failed to initialize vLLM client: {e}")
