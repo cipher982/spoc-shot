@@ -8,13 +8,13 @@ SPOC-Shot uses environment variables for configuration. Get started quickly:
 
 ```bash
 # Initialize configuration
-./config.sh init
+make init
 
 # Set up for development (recommended)
-./config.sh dev
+make dev
 
 # Run the demo
-./run_demo.sh
+make run
 ```
 
 ### Configuration Options
@@ -25,25 +25,26 @@ SPOC-Shot uses environment variables for configuration. Get started quickly:
 
 ```bash
 # Quick configuration commands
-./config.sh dev      # Development setup
-./config.sh prod     # Production setup  
-./config.sh hybrid   # Hybrid mode
-./config.sh port 3000  # Change port
-./config.sh show     # Show current config
+make dev              # Development setup
+make prod             # Production setup  
+make hybrid           # Hybrid mode
+make port PORT=3000   # Change port
+make show             # Show current config
 ```
 
 ## 🚀 Quick Start
 
 ```bash
 # 1. Initialize and configure
-./config.sh init
-./config.sh dev
+make init
+make dev
 
-# 2. Test setup
-uv run python test_setup.py
+# 2. Install dependencies and test setup
+make install
+make test
 
 # 3. Run the demo
-./run_demo.sh
+make run
 ```
 
 The WebLLM model downloads automatically on first use.
@@ -51,12 +52,15 @@ The WebLLM model downloads automatically on first use.
 ## 🐋 Docker Deployment
 
 ```bash
-# Build and run
-docker-compose up --build
+# Build and run with Make
+make docker-run
+
+# Or build image only
+make docker-build
 
 # Or with Docker directly
 docker build -t spoc-shot .
-docker run -p 8001:8001 -e WEBLLM_MODE=webllm spoc-shot
+docker run -p 8004:8004 -e WEBLLM_MODE=webllm spoc-shot
 ```
 
 ## ⚙️ Deployment Modes
@@ -68,7 +72,7 @@ docker run -p 8001:8001 -e WEBLLM_MODE=webllm spoc-shot
 - Model runs entirely in the user's browser
 
 ```bash
-WEBLLM_MODE=webllm uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
+make dev && make run
 ```
 
 ### Hybrid Mode (Legacy + WebLLM)
@@ -76,7 +80,7 @@ WEBLLM_MODE=webllm uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
 - Falls back gracefully if vLLM server unavailable
 
 ```bash
-WEBLLM_MODE=hybrid VLLM_BASE_URL=http://your-server:8000/v1 uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
+make hybrid && make run
 ```
 
 ### Server Mode (Original)
@@ -84,7 +88,7 @@ WEBLLM_MODE=hybrid VLLM_BASE_URL=http://your-server:8000/v1 uv run uvicorn app.m
 - Uses your specified model and hardware
 
 ```bash
-WEBLLM_MODE=server VLLM_BASE_URL=http://cube:8000/v1 uv run uvicorn app.main:app --host 0.0.0.0 --port 8001
+make prod && make run
 ```
 
 ## 🧠 How It Works
@@ -110,10 +114,11 @@ For WebLLM mode:
 ## 🧪 Testing
 
 ```bash
-# Run setup verification
-uv run python test_setup.py
+# Run setup verification and tests
+make test
 
-# Run agent tests (requires vLLM server)
+# Or run individually
+uv run python test_setup.py
 pytest -q
 ```
 

@@ -8,22 +8,23 @@ import importlib
 def test_imports():
     """Test that all required modules can be imported"""
     required_modules = [
-        'fastapi',
-        'openai', 
-        'sse_starlette',
-        'uvicorn',
-        'dotenv'
+        ('fastapi', 'fastapi'),
+        ('openai', 'openai'), 
+        ('sse_starlette', 'sse_starlette'),
+        ('uvicorn', 'uvicorn'),
+        ('dotenv', 'dotenv')
     ]
     
     print("Testing imports...")
-    for module in required_modules:
+    for display_name, import_name in required_modules:
         try:
-            importlib.import_module(module.replace('-', '_'))
-            print(f"✅ {module}")
+            importlib.import_module(import_name)
+            print(f"✅ {display_name}")
         except ImportError as e:
-            print(f"❌ {module}: {e}")
-            return False
-    return True
+            print(f"❌ {display_name}: {e}")
+            assert False, f"Failed to import {display_name}: {e}"
+    print("All imports successful")
+    assert True
 
 def test_app_structure():
     """Test that the app structure is correct"""
@@ -40,13 +41,17 @@ def test_app_structure():
         'docker-compose.yml'
     ]
     
+    missing_files = []
     for file_path in required_files:
         if os.path.exists(file_path):
             print(f"✅ {file_path}")
         else:
             print(f"❌ {file_path}")
-            return False
-    return True
+            missing_files.append(file_path)
+    
+    assert not missing_files, f"Missing required files: {missing_files}"
+    print("All required files present")
+    assert True
 
 def test_webllm_mode():
     """Test WebLLM mode configuration"""
@@ -59,15 +64,18 @@ def test_webllm_mode():
         from app.agent import WEBLLM_MODE, client
         print(f"✅ WEBLLM_MODE = {WEBLLM_MODE}")
         
+        assert WEBLLM_MODE == 'webllm', f"Expected WEBLLM_MODE to be 'webllm', got {WEBLLM_MODE}"
+        
         if WEBLLM_MODE == 'webllm' and client is None:
             print("✅ Client correctly disabled in WebLLM mode")
         else:
             print(f"⚠️  Client state: {client}")
             
-        return True
+        print("WebLLM mode test passed")
+        assert True
     except Exception as e:
         print(f"❌ WebLLM mode test failed: {e}")
-        return False
+        assert False, f"WebLLM mode test failed: {e}"
 
 def main():
     print("🧠 SPOC-Shot Setup Test\n")
@@ -78,26 +86,21 @@ def main():
         test_webllm_mode
     ]
     
-    results = []
     for test in tests:
-        results.append(test())
+        test()
         print()
     
-    if all(results):
-        print("🎉 All tests passed! Your SPOC-Shot setup is ready for deployment.")
-        print("\nNext steps:")
-        print("1. Run: WEBLLM_MODE=webllm uv run uvicorn app.main:app --host 0.0.0.0 --port 8001")
-        print("2. Open: http://localhost:8001")
-        print("3. WebLLM will initialize automatically (requires WebGPU browser)")
-        print("\n🔧 Recent fixes:")
-        print("• Removed annoying popup dialogs")
-        print("• Fixed model loading panel positioning")
-        print("• Added graceful degradation with demo mode")
-        print("• Better error messaging and retry options")
-        return 0
-    else:
-        print("❌ Some tests failed. Please check the setup.")
-        return 1
+    print("🎉 All tests passed! Your SPOC-Shot setup is ready for deployment.")
+    print("\nNext steps:")
+    print("1. Run: WEBLLM_MODE=webllm uv run uvicorn app.main:app --host 0.0.0.0 --port 8001")
+    print("2. Open: http://localhost:8001")
+    print("3. WebLLM will initialize automatically (requires WebGPU browser)")
+    print("\n🔧 Recent fixes:")
+    print("• Removed annoying popup dialogs")
+    print("• Fixed model loading panel positioning")
+    print("• Added graceful degradation with demo mode")
+    print("• Better error messaging and retry options")
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())

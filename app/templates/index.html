@@ -264,6 +264,7 @@
     <div id="racing-panel" class="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl" style="display: none;">
       <h2 class="text-xl font-semibold mb-4 flex items-center">
         🏁 Agent Racing Arena
+        <button id="stop-race" class="ml-4 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm" style="display: none;">Stop Race</button>
         <button id="close-race" class="ml-auto text-gray-400 hover:text-white">✕</button>
       </h2>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -505,6 +506,7 @@ while retries < max_retries:
       // Racing elements
       const racingPanel = document.getElementById('racing-panel');
       const logPanel = document.getElementById('log-panel');
+      const stopRaceButton = document.getElementById('stop-race');
       const closeRaceButton = document.getElementById('close-race');
       const raceResults = document.getElementById('race-results');
 
@@ -789,6 +791,10 @@ while retries < max_retries:
       raceButton.addEventListener('click', (e) => {
         e.preventDefault();
         startRace();
+      });
+
+      stopRaceButton.addEventListener('click', () => {
+        stopRace();
       });
 
       closeRaceButton.addEventListener('click', () => {
@@ -1192,6 +1198,9 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       };
 
       // --- Racing Functionality ---
+      let raceControllers = { multiPass: null, singlePass: null };
+      let isRacing = false;
+      
       const startRace = async () => {
         const prompt = promptInput.value;
         const scenario = scenarioSelect.value;
@@ -1204,25 +1213,57 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
         // Reset race state
         resetRaceState();
         
-        // Disable buttons during race
+        // Update UI for racing state
+        isRacing = true;
         runButton.disabled = true;
         raceButton.disabled = true;
+        stopRaceButton.style.display = 'inline-block';
+        
+        // Create abort controllers for cancellation
+        raceControllers.multiPass = new AbortController();
+        raceControllers.singlePass = new AbortController();
         
         try {
           // Start both agents simultaneously
-          const multiPassPromise = runRaceAgent(prompt, 'multi_pass', scenario);
-          const singlePassPromise = runRaceAgent(prompt, 'single_pass', scenario);
+          const multiPassPromise = runRaceAgent(prompt, 'multi_pass', scenario, raceControllers.multiPass.signal);
+          const singlePassPromise = runRaceAgent(prompt, 'single_pass', scenario, raceControllers.singlePass.signal);
           
           const results = await Promise.allSettled([multiPassPromise, singlePassPromise]);
           
-          // Display race results
-          showRaceResults(results);
+          // Only show results if race wasn't cancelled
+          if (isRacing) {
+            showRaceResults(results);
+          }
         } catch (error) {
-          console.error('Race error:', error);
+          if (error.name !== 'AbortError') {
+            console.error('Race error:', error);
+          }
         } finally {
-          runButton.disabled = false;
-          raceButton.disabled = false;
+          stopRace();
         }
+      };
+      
+      const stopRace = () => {
+        if (isRacing) {
+          // Cancel both agents
+          if (raceControllers.multiPass) raceControllers.multiPass.abort();
+          if (raceControllers.singlePass) raceControllers.singlePass.abort();
+          
+          // Update status to cancelled
+          document.getElementById('multi-pass-status').textContent = 'Cancelled';
+          document.getElementById('multi-pass-status').className = document.getElementById('multi-pass-status').className.replace('bg-gray-700', 'bg-yellow-700');
+          document.getElementById('single-pass-status').textContent = 'Cancelled';
+          document.getElementById('single-pass-status').className = document.getElementById('single-pass-status').className.replace('bg-gray-700', 'bg-yellow-700');
+        }
+        
+        // Reset UI state
+        isRacing = false;
+        runButton.disabled = false;
+        raceButton.disabled = false;
+        stopRaceButton.style.display = 'none';
+        
+        // Reset controllers
+        raceControllers = { multiPass: null, singlePass: null };
       };
 
       const resetRaceState = () => {
@@ -1245,10 +1286,12 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
         document.getElementById('single-pass-calls').textContent = '--';
       };
 
-      const runRaceAgent = async (prompt, mode, scenario) => {
+      const runRaceAgent = async (prompt, mode, scenario, abortSignal) => {
         const startTime = performance.now();
         let metrics = { prompt_tokens: 0, completion_tokens: 0, latency: 0, llm_calls: 0 };
         const prefix = mode === 'multi_pass' ? 'multi-pass' : 'single-pass';
+        let attemptCount = 0;
+        let isComplete = false;
         
         const statusEl = document.getElementById(`${prefix}-status`);
         const progressEl = document.getElementById(`${prefix}-progress`);
@@ -1259,7 +1302,25 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
         const callsEl = document.getElementById(`${prefix}-calls`);
         
         const updateRaceUI = (phase, data = {}) => {
-          const progress = Math.min(100, (metrics.llm_calls * 25) + (phase === 'success' ? 100 : 0));
+          // Check if cancelled
+          if (abortSignal?.aborted) {
+            throw new Error('Race cancelled');
+          }
+          
+          // Better progress calculation based on actual progress
+          let progress = 0;
+          if (phase === 'success') {
+            progress = 100;
+            isComplete = true;
+          } else if (phase === 'execute' || phase === 'tool_result') {
+            // Each attempt represents progress towards solution
+            progress = Math.min(80, attemptCount * 15 + 10);
+          } else if (phase === 'propose') {
+            progress = Math.min(70, attemptCount * 15);
+          } else if (phase === 'patch') {
+            progress = Math.min(85, attemptCount * 15 + 5);
+          }
+          
           progressEl.style.width = `${progress}%`;
           progressTextEl.textContent = `${progress}%`;
           
@@ -1309,23 +1370,32 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
         try {
           // Simulate the agent execution
           if (mode === 'multi_pass') {
-            await simulateMultiPassRace(prompt, scenario, metrics, updateRaceUI);
+            await simulateMultiPassRace(prompt, scenario, metrics, updateRaceUI, abortSignal, () => attemptCount++);
           } else {
-            await simulateSinglePassRace(prompt, scenario, metrics, updateRaceUI);
+            await simulateSinglePassRace(prompt, scenario, metrics, updateRaceUI, abortSignal, () => attemptCount++);
           }
           
           metrics.latency = (performance.now() - startTime) / 1000;
           return { mode, metrics, success: true };
         } catch (error) {
+          if (error.message === 'Race cancelled' || abortSignal?.aborted) {
+            return { mode, metrics, success: false, cancelled: true };
+          }
           updateRaceUI('error', { message: error.message });
           return { mode, metrics, success: false, error };
         }
       };
 
-      const simulateMultiPassRace = async (prompt, scenario, metrics, updateUI) => {
+      const simulateMultiPassRace = async (prompt, scenario, metrics, updateUI, abortSignal, incrementAttempt) => {
         while (true) {
+          if (abortSignal?.aborted) throw new Error('Race cancelled');
+          
+          incrementAttempt();
           updateUI('propose');
           await sleep(800 + Math.random() * 400); // Variable delay
+          
+          if (abortSignal?.aborted) throw new Error('Race cancelled');
+          
           metrics.llm_calls += 1;
           metrics.prompt_tokens += 150;
           metrics.completion_tokens += 50;
@@ -1334,12 +1404,17 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
           updateUI('execute', { call: toolCall });
           await sleep(500 + Math.random() * 300);
           
+          if (abortSignal?.aborted) throw new Error('Race cancelled');
+          
           const result = simulateToolCall(toolCall, scenario);
           updateUI('tool_result', { result });
           
           if (result.ok) {
             updateUI('propose');
             await sleep(600 + Math.random() * 400);
+            
+            if (abortSignal?.aborted) throw new Error('Race cancelled');
+            
             metrics.llm_calls += 1; // Separate final call
             metrics.prompt_tokens += 100;
             metrics.completion_tokens += 30;
@@ -1349,13 +1424,18 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
             await sleep(300);
           }
         }
-        // Continue loop - no max attempts
       };
 
-      const simulateSinglePassRace = async (prompt, scenario, metrics, updateUI) => {
+      const simulateSinglePassRace = async (prompt, scenario, metrics, updateUI, abortSignal, incrementAttempt) => {
         while (true) {
+          if (abortSignal?.aborted) throw new Error('Race cancelled');
+          
+          incrementAttempt();
           updateUI('propose');
           await sleep(600 + Math.random() * 200); // Faster due to KV cache
+          
+          if (abortSignal?.aborted) throw new Error('Race cancelled');
+          
           metrics.llm_calls += 1;
           metrics.prompt_tokens += 120; // Lower due to context reuse
           metrics.completion_tokens += 45;
@@ -1364,12 +1444,17 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
           updateUI('execute', { call: toolCall });
           await sleep(400 + Math.random() * 200);
           
+          if (abortSignal?.aborted) throw new Error('Race cancelled');
+          
           const result = simulateToolCall(toolCall, scenario);
           updateUI('tool_result', { result });
           
           if (result.ok) {
             // Single-pass continues in same context
             await sleep(200);
+            
+            if (abortSignal?.aborted) throw new Error('Race cancelled');
+            
             metrics.completion_tokens += 25; // Less tokens for final answer
             updateUI('success');
             return;
@@ -1378,7 +1463,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
             await sleep(100); // Faster recovery
           }
         }
-        // Continue loop - no max attempts
       };
 
       const getToolForScenario = (scenario) => {
