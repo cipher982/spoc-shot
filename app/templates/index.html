@@ -58,12 +58,12 @@
     
   </style>
 </head>
-<body class="min-h-full bg-gray-900 text-white font-sans p-4 sm:p-6 lg:p-8">
+<body class="min-h-full bg-gray-900 text-white font-sans p-2 sm:p-3 lg:p-4">
 
   <div class="main-container w-full max-w-7xl mx-auto">
-    <header class="text-center mb-8 py-6">
-      <h1 class="text-4xl sm:text-5xl font-bold text-white">SPOC-Shot</h1>
-      <p class="text-gray-400 mt-2">A Live Demo of Single-Pass Self-Correcting Agent Loops</p>
+    <header class="text-center mb-4 py-3">
+      <h1 class="text-2xl sm:text-3xl font-bold text-white">SPOC-Shot</h1>
+      <p class="text-gray-400 mt-1 text-sm">A Live Demo of Single-Pass Self-Correcting Agent Loops</p>
     </header>
 
     <!-- Model Loading Overlay (initially hidden) -->
@@ -88,12 +88,12 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
       <!-- Left Column -->
-      <div class="flex flex-col gap-6">
+      <div class="flex flex-col gap-4">
         <!-- Controls Panel -->
-        <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
-          <h2 class="text-xl font-semibold mb-4">Agent Configuration</h2>
+        <div class="bg-gray-800 p-4 rounded-lg shadow-2xl">
+          <h2 class="text-lg font-semibold mb-3">Agent Configuration</h2>
           <form id="prompt-form"
                 hx-post="/solve"
                 hx-trigger="submit"
@@ -216,19 +216,19 @@
       </div>
 
       <!-- Right Column -->
-      <div class="flex flex-col gap-6">
+      <div class="flex flex-col gap-4">
         <!-- Code View Panel -->
-        <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
-          <h2 class="text-xl font-semibold mb-4">Agent Logic</h2>
-          <div id="code-view" class="bg-gray-900 p-4 rounded-md text-xs font-mono">
+        <div class="bg-gray-800 p-4 rounded-lg shadow-2xl">
+          <h2 class="text-lg font-semibold mb-3">Agent Logic</h2>
+          <div id="code-view" class="bg-gray-900 p-3 rounded-md text-xs font-mono">
             <!-- Pseudo-code will be injected here -->
           </div>
         </div>
 
         <!-- Live Execution Details -->
-        <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
-          <h2 class="text-xl font-semibold mb-4">🔍 Execution Details</h2>
-          <div class="grid grid-cols-2 gap-4 text-sm">
+        <div class="bg-gray-800 p-4 rounded-lg shadow-2xl">
+          <h2 class="text-lg font-semibold mb-3">🔍 Execution Details</h2>
+          <div class="grid grid-cols-2 gap-3 text-sm">
             <div>
               <div class="text-gray-400 mb-2">Current Phase</div>
               <div id="current-phase" class="font-mono text-cyan-400">Ready</div>
@@ -247,27 +247,45 @@
             </div>
           </div>
         </div>
+
+        <!-- RESULT Panel (hidden by default) -->
+        <div id="result-panel" class="bg-gradient-to-r from-green-900/50 to-green-800/50 border border-green-600 p-4 rounded-lg shadow-2xl" style="display: none;">
+          <h2 class="text-lg font-semibold mb-3 flex items-center">
+            <span id="result-icon">✅</span>
+            <span id="result-title" class="ml-2">Agent Completed Successfully</span>
+          </h2>
+          <div class="bg-gray-900/50 p-4 rounded-md">
+            <div class="text-gray-400 text-sm mb-2">Final Answer:</div>
+            <div id="final-answer" class="text-white font-semibold text-lg">
+              <!-- Final answer will be displayed here -->
+            </div>
+          </div>
+          <div class="mt-3 flex gap-4 text-sm">
+            <span class="text-gray-400">Completed in <span id="completion-time" class="text-cyan-400 font-mono">--</span></span>
+            <span class="text-gray-400">Total attempts: <span id="total-attempts" class="text-purple-400 font-mono">--</span></span>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Log Stream Panel -->
-    <div id="log-panel" class="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl">
-      <h2 class="text-xl font-semibold mb-4">🔄 Live Agent Execution</h2>
-      <div id="log-container" class="h-96 overflow-y-auto bg-gray-900 p-4 rounded-md">
-        <div id="log" class="space-y-2 text-sm font-mono">
+    <div id="log-panel" class="mt-4 bg-gray-800 p-4 rounded-lg shadow-2xl">
+      <h2 class="text-lg font-semibold mb-2">🔄 Live Agent Execution</h2>
+      <div id="log-container" class="h-48 overflow-y-auto bg-gray-900 p-3 rounded-md">
+        <div id="log" class="space-y-1 text-xs font-mono">
           <div class="text-gray-500">Run an agent to see live execution details...</div>
         </div>
       </div>
     </div>
 
     <!-- Racing Panel (hidden by default) -->
-    <div id="racing-panel" class="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl" style="display: none;">
-      <h2 class="text-xl font-semibold mb-4 flex items-center">
+    <div id="racing-panel" class="mt-4 bg-gray-800 p-4 rounded-lg shadow-2xl" style="display: none;">
+      <h2 class="text-lg font-semibold mb-3 flex items-center">
         🏁 Agent Racing Arena
         <button id="stop-race" class="ml-4 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm" style="display: none;">Stop Race</button>
         <button id="close-race" class="ml-auto text-gray-400 hover:text-white">✕</button>
       </h2>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- Multi-Pass Lane -->
         <div class="bg-red-900/20 border border-red-700 p-4 rounded-lg">
           <h3 class="text-lg font-semibold text-red-300 mb-3 flex items-center">
@@ -283,7 +301,7 @@
               <div id="multi-pass-progress" class="bg-red-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
             </div>
           </div>
-          <div id="multi-pass-log" class="h-48 overflow-y-auto bg-gray-900/50 p-3 rounded text-xs font-mono">
+          <div id="multi-pass-log" class="h-32 overflow-y-auto bg-gray-900/50 p-3 rounded text-xs font-mono">
             <div class="text-gray-500">Waiting to start...</div>
           </div>
           <div class="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
@@ -317,7 +335,7 @@
               <div id="single-pass-progress" class="bg-green-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
             </div>
           </div>
-          <div id="single-pass-log" class="h-48 overflow-y-auto bg-gray-900/50 p-3 rounded text-xs font-mono">
+          <div id="single-pass-log" class="h-32 overflow-y-auto bg-gray-900/50 p-3 rounded text-xs font-mono">
             <div class="text-gray-500">Waiting to start...</div>
           </div>
           <div class="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
@@ -490,11 +508,21 @@ while retries < max_retries:
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const form = document.getElementById('prompt-form');
-      const log = document.getElementById('log');
-      const runButton = document.getElementById('run-button');
-      const raceButton = document.getElementById('race-button');
-      const modeSelect = document.getElementById('agent-mode');
+      console.log('🚀 DOMContentLoaded fired - initializing SPOC-Shot');
+      
+      try {
+        const form = document.getElementById('prompt-form');
+        const log = document.getElementById('log');
+        const runButton = document.getElementById('run-button');
+        const raceButton = document.getElementById('race-button');
+        const modeSelect = document.getElementById('agent-mode');
+        
+        console.log('🔍 Element check:', {
+          form: !!form,
+          log: !!log, 
+          runButton: !!runButton,
+          modeSelect: !!modeSelect
+        });
       const scenarioSelect = document.getElementById('scenario-select');
       const complexitySlider = document.getElementById('complexity-slider');
       const complexityValue = document.getElementById('complexity-value');
@@ -826,6 +854,7 @@ while retries < max_retries:
       };
 
       form.addEventListener('htmx:beforeRequest', (e) => {
+        console.log('🎯 Form submission triggered!', e);
         log.innerHTML = '<div class="text-gray-500">Waiting for agent...</div>';
         runButton.disabled = true;
         runButton.textContent = 'Running...';
@@ -939,24 +968,50 @@ while retries < max_retries:
         const requestId = `spoc-shot-${Date.now()}`;
         
         // Simulate the multi-pass logic
+        let attempt = 0;
+        
+        // First LLM call - MOVE MESSAGES OUTSIDE LOOP!
+        const systemPrompt = `You are an intelligent agent that learns from your mistakes and applies learned patterns.
+
+CRITICAL RULES:
+1. Look at your conversation history BEFORE making tool calls
+2. If you see a previous tool failure with a hint, USE THAT HINT in your next attempt
+3. Never repeat the exact same failed tool call
+4. Learn from patterns and apply them consistently
+
+Your task: Answer "How many conversions did we get this week?" using the sql_query tool.
+- The tool takes a single argument: column
+- Tool results come back as "TOOL_RESULT: {json data}"
+- If you get a hint like "Did you mean 'convs'?", use 'convs' in your next tool call
+- Format: TOOL_CALL: {"name": "sql_query", "args": {"column": "your_guess"}}
+
+DO NOT repeat failed attempts! Always learn from the conversation history.`;
+
+        const messages = [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ];
+
         while (true) {
+          attempt++;
           handleSseMessage({ phase: 'propose', metrics });
           
-          // First LLM call
-          const systemPrompt = `You are an agent designed for a specific demo. Your ONLY purpose is to answer the user's question about "conversions".
-1. You MUST use the sql_query tool. It is the only tool available.
-2. The sql_query tool takes a single argument: column.
-3. The user's question is "How many conversions did we get this week?". You should infer the correct column name from this.
-4. Your first action MUST be to call the tool with what you think the column name is. Output a TOOL_CALL in JSON format.
-5. After you receive the EXEC_RESULT, if it failed, analyze the 'hint' and call the tool again with the corrected column name.
-6. If the result is successful, provide a one-sentence answer summarizing the data.
-Example of a tool call:
-TOOL_CALL: {"name": "sql_query", "args": {"column": "your_best_guess"}}`;
+          // DEBUG: Log attempt number
+          console.log(`🔄 Starting Multi-Pass attempt ${attempt}`);
 
-          const messages = [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt }
-          ];
+          // DEBUG: Compact logging
+          console.log(`🔍 Attempt ${attempt}: ${messages.length} messages`);
+          if (messages.length > 3) {
+            const lastMsg = messages[messages.length-1];
+            if (lastMsg.content.startsWith('TOOL_RESULT:')) {
+              try {
+                const result = JSON.parse(lastMsg.content.replace('TOOL_RESULT: ', ''));
+                console.log(`   Last hint: ${result.hint || 'none'}`);
+              } catch (e) {
+                console.log(`   Last hint: none`);
+              }
+            }
+          }
 
           const completion = await webllmEngine.chat.completions.create({
             messages,
@@ -985,7 +1040,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "your_best_guess"}}`;
               if (result.ok) {
                 // Success - make final LLM call for answer
                 messages.push({ role: 'assistant', content: response });
-                messages.push({ role: 'tool', content: JSON.stringify(result) });
+                messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
                 
                 handleSseMessage({ phase: 'propose', metrics });
                 const finalCompletion = await webllmEngine.chat.completions.create({
@@ -999,12 +1054,16 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "your_best_guess"}}`;
                 
                 const finalAnswer = finalCompletion.choices[0].message.content;
                 metrics.latency = (performance.now() - startTime) / 1000;
-                handleSseMessage({ phase: 'success', answer: finalAnswer, metrics });
+                handleSseMessage({ phase: 'success', answer: finalAnswer, metrics, debug: { attempt } });
                 return;
               } else {
                 // Tool failed, continue loop
                 messages.push({ role: 'assistant', content: response });
-                messages.push({ role: 'tool', content: JSON.stringify(result) });
+                messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
+                
+                // DEBUG: Compact failure logging
+                console.log(`❌ Attempt ${attempt} failed. Added hint: ${result.hint || 'none'}`);
+                
                 handleSseMessage({ phase: 'failure', message: 'Tool execution failed. Retrying...', metrics });
               }
             } catch (e) {
@@ -1023,9 +1082,12 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "your_best_guess"}}`;
 
       const runSinglePassWebLLM = async (prompt, metrics, startTime, scenario = 'sql') => {
         const requestId = `spoc-shot-${Date.now()}`;
+        let attempt = 0;
         
         // Single-pass logic
         while (true) {
+          attempt++;
+          console.log(`🔄 Starting Single-Pass attempt ${attempt}`);
           handleSseMessage({ phase: 'propose', metrics });
           
           const systemPrompt = `You are an agent designed for a specific demo. Your ONLY purpose is to answer the user's question about "conversions".
@@ -1084,7 +1146,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
               if (result.ok) {
                 // Success - generate final answer (simulating continued generation)
                 messages.push({ role: 'assistant', content: response });
-                messages.push({ role: 'tool', content: JSON.stringify(result) });
+                messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
                 
                 const finalCompletion = await webllmEngine.chat.completions.create({
                   messages,
@@ -1097,13 +1159,13 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
                 
                 const finalAnswer = finalCompletion.choices[0].message.content;
                 metrics.latency = (performance.now() - startTime) / 1000;
-                handleSseMessage({ phase: 'success', answer: finalAnswer, metrics });
+                handleSseMessage({ phase: 'success', answer: finalAnswer, metrics, debug: { attempt } });
                 return;
               } else {
                 // Tool failed - show patch phase and continue
                 handleSseMessage({ phase: 'patch', message: 'Tool execution failed. Attempting to self-patch.', metrics });
                 messages.push({ role: 'assistant', content: response });
-                messages.push({ role: 'tool', content: JSON.stringify(result) });
+                messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
               }
             } catch (e) {
               handleSseMessage({ phase: 'failure', message: `Invalid tool call: ${e.message}`, metrics });
@@ -1710,11 +1772,28 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
         let icon = ICONS[data.phase] || '➡️';
         let content = '';
         let colorClass = 'bg-gray-700/50';
+        
+        // Get result panel elements once at the top to avoid redeclaration
+        const resultPanel = document.getElementById('result-panel');
+        const resultIcon = document.getElementById('result-icon');
+        const resultTitle = document.getElementById('result-title');
+        const finalAnswer = document.getElementById('final-answer');
+        const completionTime = document.getElementById('completion-time');
+        const totalAttempts = document.getElementById('total-attempts');
 
         switch (data.phase) {
           case 'propose':
             content = `<span class="font-bold text-cyan-400">PROPOSE</span>: Agent is thinking...`;
             updateExecutionDetails('Thinking', null, data.metrics);
+            
+            // Hide result panel when new execution starts
+            if (resultPanel) {
+              resultPanel.style.display = 'none';
+              // Reset to success styling for next execution
+              resultPanel.className = 'bg-gradient-to-r from-green-900/50 to-green-800/50 border border-green-600 p-4 rounded-lg shadow-2xl';
+              if (resultIcon) resultIcon.textContent = '✅';
+              if (resultTitle) resultTitle.textContent = 'Agent Completed Successfully';
+            }
             break;
           case 'model_response':
             content = `<span class="font-bold text-gray-400">MODEL</span>: <pre class="inline-block whitespace-pre-wrap">${data.content}</pre>`;
@@ -1747,11 +1826,37 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
             content = `<span class="font-bold text-green-400">SUCCESS</span>: <pre class="inline-block whitespace-pre-wrap">${data.answer}</pre>`;
             colorClass = 'bg-green-900/30';
             updateExecutionDetails('Completed', null, data.metrics);
+            
+            // Show and populate the result panel
+            if (resultPanel && finalAnswer) {
+              resultPanel.style.display = 'block';
+              finalAnswer.textContent = data.answer || 'Task completed successfully';
+              
+              // Update completion metrics
+              if (completionTime && data.metrics?.latency) {
+                completionTime.textContent = `${data.metrics.latency.toFixed(2)}s`;
+              }
+              if (totalAttempts) {
+                // Try to estimate attempts from metrics or default to 1
+                const attempts = data.debug?.attempt || data.metrics?.attempts || 1;
+                totalAttempts.textContent = attempts.toString();
+              }
+            }
             break;
           case 'error':
             content = `<span class="font-bold text-red-500">ERROR</span>: ${data.message}`;
             colorClass = 'bg-red-900/50 border border-red-700';
             updateExecutionDetails('Error', null, data.metrics);
+            
+            // Show result panel for errors too
+            if (resultPanel && finalAnswer) {
+              // Change to error styling
+              resultPanel.className = 'bg-gradient-to-r from-red-900/50 to-red-800/50 border border-red-600 p-4 rounded-lg shadow-2xl';
+              resultPanel.style.display = 'block';
+              if (resultIcon) resultIcon.textContent = '❌';
+              if (resultTitle) resultTitle.textContent = 'Agent Failed';
+              finalAnswer.textContent = data.message || 'Agent execution failed';
+            }
             break;
         }
         
@@ -1891,8 +1996,26 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       updateCodeView();
       initializeMemoryBlocks();
       
-      // Check server configuration and initialize accordingly
-      initializeApp();
+        // Check server configuration and initialize accordingly
+        initializeApp();
+        
+      } catch (error) {
+        console.error('❌ Error during SPOC-Shot initialization:', error);
+        console.error('📍 Stack trace:', error.stack);
+        
+        // Show error to user
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'bg-red-900/50 border border-red-600 p-4 rounded-lg text-red-200 mb-4';
+        errorMsg.innerHTML = `
+          <h3 class="font-bold text-red-400 mb-2">⚠️ Initialization Error</h3>
+          <p class="text-sm">Something went wrong while loading SPOC-Shot. Please refresh the page.</p>
+          <details class="mt-2">
+            <summary class="cursor-pointer text-xs text-red-300">Technical Details</summary>
+            <pre class="text-xs mt-1 text-red-200">${error.message}\n\n${error.stack}</pre>
+          </details>
+        `;
+        document.body.insertBefore(errorMsg, document.body.firstChild);
+      }
     });
   </script>
 

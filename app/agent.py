@@ -52,6 +52,9 @@ CRITICAL: You MUST learn from tool failures and use the hints provided!
 5.  After you receive the tool result, if it failed (ok: false), READ THE HINT CAREFULLY and use it to correct your next tool call.
 6.  If the result is successful (ok: true), provide a one-sentence answer summarizing the data.
 
+IMPORTANT: Look at the conversation history! If you see previous failed attempts, learn from them.
+If you see a hint like "Did you mean 'convs'?", use that exact suggestion in your next tool call.
+
 Example flow:
 - First try: TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}
 - If you get {"ok": false, "hint": "Did you mean 'convs'?"} then your next call should be:
@@ -71,6 +74,9 @@ CRITICAL: You MUST learn from tool failures and use the hints provided!
 4.  Your first action MUST be to call the tool. Output a `TOOL_CALL` in JSON format.
 5.  If the tool result is a failure (ok: false), you MUST READ THE HINT and use it to correct your next tool call.
 6.  If the tool result is successful (ok: true), provide a one-sentence answer summarizing the data.
+
+IMPORTANT: Look at the conversation history! If you see previous failed attempts, learn from them.
+If you see a hint like "Did you mean 'convs'?", use that exact suggestion in your next tool call.
 
 Example flow:
 - First try: TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}
@@ -103,7 +109,7 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
     if not client:
         yield {"phase": "error", "message": "vLLM client not initialized. Check server configuration."}
         return
-    req_id = f"spoc-shot-{uuid.uuid4()}"
+    base_req_id = f"spoc-shot-{uuid.uuid4()}"
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT_MULTI_PASS},
         {"role": "user", "content": prompt}
@@ -114,6 +120,8 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
 
     while True:
         attempt += 1
+        # Use unique request ID for each attempt to avoid context confusion
+        req_id = f"{base_req_id}-attempt-{attempt}"
         logger.info(f"[Multi-Pass] Attempt {attempt}")
         logger.info(f"[Multi-Pass] Sending {len(messages)} messages to model")
         for i, msg in enumerate(messages):
@@ -149,6 +157,17 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
                 call_data = json.loads(tool_call_str)
                 call_data["args"] = get_tool_args(call_data) # Standardize the args key
                 logger.info(f"[Multi-Pass] Tool call: {call_data}")
+                
+                # Check if we're repeating the same failed call
+                if attempt > 1:
+                    last_tool_msg = None
+                    for msg in reversed(messages):
+                        if msg.get("role") == "tool":
+                            last_tool_msg = msg
+                            break
+                    if last_tool_msg and "hint" in last_tool_msg.get("content", ""):
+                        logger.warning(f"[Multi-Pass] Agent may be ignoring hint from previous attempt: {last_tool_msg['content']}")
+                
                 yield {"phase": "execute", "call": call_data, "metrics": metrics, "debug": {"attempt": attempt, "call_data": call_data}}
                 result = T.run_tool(call_data)
                 logger.info(f"[Multi-Pass] Tool result: {result}")
@@ -164,7 +183,7 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
                     final_completion = await client.chat.completions.create(
                         model=MODEL_NAME,
                         messages=messages,
-                        extra_body={"request_id": req_id},
+                        extra_body={"request_id": f"{req_id}-final"},
                     )
                     # This call reuses the same request_id to resume generation
                     # so we don't count it as a new LLM call for the metrics.
@@ -195,7 +214,7 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
     if not client:
         yield {"phase": "error", "message": "vLLM client not initialized. Check server configuration."}
         return
-    req_id = f"spoc-shot-{uuid.uuid4()}"
+    base_req_id = f"spoc-shot-{uuid.uuid4()}"
     tool_signature = f"TOOL_SIGNATURE: {T.get_tool_signature(scenario)}"
     full_prompt = f"{tool_signature}\n\nUser Prompt: {prompt}"
     messages = [
@@ -208,6 +227,8 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
 
     while True:
         attempt += 1
+        # Use unique request ID for each attempt to avoid context confusion
+        req_id = f"{base_req_id}-attempt-{attempt}"
         logger.info(f"[Single-Pass] Attempt {attempt}")
         yield {"phase": "propose", "metrics": metrics}
         
@@ -258,7 +279,7 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
                     final_completion = await client.chat.completions.create(
                         model=MODEL_NAME,
                         messages=messages,
-                        extra_body={"request_id": req_id},
+                        extra_body={"request_id": f"{req_id}-final"},
                     )
                     # This call reuses the same request_id to resume generation,
                     # so we treat it as a continuation rather than a new LLM
