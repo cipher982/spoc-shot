@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  spoc-shot:
+    build: .
+    ports:
+      - "${PORT:-8004}:${PORT:-8004}"
+    environment:
+      - HOST=${HOST:-0.0.0.0}
+      - PORT=${PORT:-8004}
+      - WEBLLM_MODE=${WEBLLM_MODE:-webllm}
+      - VLLM_BASE_URL=${VLLM_BASE_URL:-http://cube:8000/v1}
+      - MODEL_NAME=${MODEL_NAME:-local-7b}
+      - DEBUG=${DEBUG:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app  # For development - remove in production
+    restart: unless-stopped

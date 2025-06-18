@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebLLM Model Test - Qwen3-0.6B</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 50px auto; 
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .pass { background: #1a4a1a; border-color: #4a8a4a; }
+        .fail { background: #4a1a1a; border-color: #8a4a4a; }
+        .info { background: #1a1a4a; border-color: #4a4a8a; }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #4a8a4a;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        code { 
+            background: #333; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-family: monospace;
+        }
+        button {
+            background: #4a8a4a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover { background: #5a9a5a; }
+        button:disabled { background: #666; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <h1>🧠 WebLLM Qwen3-0.6B Test</h1>
+    <p>Minimal test to verify Qwen3-0.6B model loading with WebLLM 0.2.79</p>
+    
+    <div id="results"></div>
+    
+    <div class="test info">
+        <h3>Progress</h3>
+        <div id="status">Ready to test...</div>
+        <div class="progress">
+            <div id="progress-bar" class="progress-bar"></div>
+        </div>
+        <div id="progress-text">0%</div>
+    </div>
+    
+    <button id="test-btn" onclick="runWebLLMTest()">🚀 Test Qwen3-0.6B Loading</button>
+    <button id="chat-btn" onclick="testChat()" disabled>💬 Test Chat</button>
+
+    <script type="module">
+        // Import WebLLM 0.2.79
+        import { CreateMLCEngine } from "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm";
+        window.CreateMLCEngine = CreateMLCEngine;
+        
+        console.log("✅ WebLLM 0.2.79 loaded");
+    </script>
+
+    <script>
+        const results = document.getElementById('results');
+        const status = document.getElementById('status');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const testBtn = document.getElementById('test-btn');
+        const chatBtn = document.getElementById('chat-btn');
+        
+        let engine = null;
+        
+        function addResult(title, success, message, isInfo = false) {
+            const div = document.createElement('div');
+            div.className = `test ${isInfo ? 'info' : (success ? 'pass' : 'fail')}`;
+            div.innerHTML = `
+                <h3>${success ? '✅' : '❌'} ${title}</h3>
+                <p>${message}</p>
+            `;
+            results.appendChild(div);
+        }
+        
+        async function runWebLLMTest() {
+            testBtn.disabled = true;
+            results.innerHTML = '';
+            
+            try {
+                // Test 1: WebGPU
+                status.textContent = "Checking WebGPU...";
+                const hasWebGPU = 'gpu' in navigator;
+                addResult('WebGPU Available', hasWebGPU, 
+                    hasWebGPU ? 'navigator.gpu is available' : 'WebGPU not supported');
+                
+                if (!hasWebGPU) {
+                    throw new Error('WebGPU required');
+                }
+                
+                // Test 2: WebLLM Library
+                status.textContent = "Checking WebLLM library...";
+                await new Promise(resolve => setTimeout(resolve, 500)); // Wait for import
+                
+                const hasWebLLM = !!window.CreateMLCEngine;
+                addResult('WebLLM Library', hasWebLLM,
+                    hasWebLLM ? 'CreateMLCEngine available' : 'WebLLM library not loaded');
+                
+                if (!hasWebLLM) {
+                    throw new Error('WebLLM library not available');
+                }
+                
+                // Test 3: Model Availability
+                status.textContent = "Checking model availability...";
+                const modelId = "Qwen3-0.6B-q4f16_1-MLC";
+                
+                if (window.CreateMLCEngine.prebuiltAppConfig) {
+                    const availableModels = window.CreateMLCEngine.prebuiltAppConfig.model_list.map(m => m.model_id);
+                    console.log("📋 Available models:", availableModels);
+                    
+                    const qwen3Models = availableModels.filter(id => id.startsWith("Qwen3"));
+                    console.log("🎯 Qwen3 models:", qwen3Models);
+                    
+                    const modelFound = availableModels.includes(modelId);
+                    addResult('Model Available', modelFound,
+                        modelFound ? `Found: ${modelId}` : `Not found: ${modelId}. Available Qwen3: ${qwen3Models.join(', ')}`);
+                    
+                    if (!modelFound) {
+                        throw new Error(`Model ${modelId} not in catalog`);
+                    }
+                } else {
+                    throw new Error('prebuiltAppConfig not available');
+                }
+                
+                // Test 4: Model Loading
+                status.textContent = "Loading model... This will take a few minutes.";
+                addResult('Model Loading', true, 'Starting download...', true);
+                
+                const progressCallback = (report) => {
+                    console.log("📊 Progress:", report);
+                    const progress = Math.round((report.progress || 0) * 100);
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `${progress}%`;
+                    status.textContent = report.text || `Loading model... ${progress}%`;
+                };
+                
+                // Load with 10 minute timeout
+                engine = await Promise.race([
+                    window.CreateMLCEngine(modelId, { initProgressCallback: progressCallback }),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error("Timeout after 10 minutes")), 600000)
+                    )
+                ]);
+                
+                addResult('Model Loaded', true, 'Qwen3-0.6B successfully loaded and ready!');
+                status.textContent = "✅ Model loaded successfully!";
+                progressBar.style.width = "100%";
+                progressText.textContent = "100%";
+                
+                // Enable chat test
+                chatBtn.disabled = false;
+                
+            } catch (error) {
+                console.error("❌ Test failed:", error);
+                addResult('Test Failed', false, `Error: ${error.message}`);
+                status.textContent = `❌ Failed: ${error.message}`;
+            } finally {
+                testBtn.disabled = false;
+            }
+        }
+        
+        async function testChat() {
+            if (!engine) {
+                addResult('Chat Test', false, 'No engine loaded');
+                return;
+            }
+            
+            try {
+                chatBtn.disabled = true;
+                status.textContent = "Testing chat...";
+                
+                const response = await engine.chat.completions.create({
+                    messages: [
+                        { role: "system", content: "You are a helpful assistant." },
+                        { role: "user", content: "Say hello and tell me you're working!" }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 50
+                });
+                
+                const reply = response.choices[0].message.content;
+                addResult('Chat Test', true, `Model response: "${reply}"`);
+                status.textContent = "✅ Chat test successful!";
+                
+            } catch (error) {
+                console.error("❌ Chat failed:", error);
+                addResult('Chat Test', false, `Chat error: ${error.message}`);
+                status.textContent = `❌ Chat failed: ${error.message}`;
+            } finally {
+                chatBtn.disabled = false;
+            }
+        }
+        
+        // Auto-run on page load
+        window.addEventListener('load', () => {
+            console.log("🔍 WebLLM Qwen3-0.6B Test Ready");
+        });
+    </script>
+</body>
+</html>

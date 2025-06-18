@@ -1,9 +1,14 @@
 from fastapi import FastAPI, Request, HTTPException
 from sse_starlette.sse import EventSourceResponse
-from app.agent import solve_multi_pass, solve_single_pass
+from app.agent import solve_multi_pass, solve_single_pass, WEBLLM_MODE
 import json
 import asyncio
 import logging
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # --- Logging Setup ---
 # This is the proper way to configure logging for the whole application
@@ -44,25 +49,42 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def startup_event():
+    host = os.getenv("HOST", "127.0.0.1")
+    port = os.getenv("PORT", "8004")
     logger.info("Application startup complete. All logs should now be visible.")
-    logger.info("Open http://127.0.0.1:8001 to view the demo.")
+    logger.info(f"Open http://{host}:{port} to view the demo.")
 
 @app.post("/solve")
 async def solve_sse(request: Request):
     """
     Handles the POST request to solve a prompt and streams the response.
     """
+    # ------------------------------------------------------------------
+    # HTMX submits forms as "application/x-www-form-urlencoded".  The original
+    # implementation only handled JSON and returned 400 errors when the UI
+    # tried to call this endpoint.  Support both encodings so the API works
+    # for browsers (form) and programmatic clients (JSON).
+    # ------------------------------------------------------------------
     try:
+        # Try JSON first – this will succeed for programmatic API usage.
         data = await request.json()
-        prompt = data.get("prompt")
-        mode = data.get("mode", "multi_pass") # Default to multi_pass
-        if not prompt:
-            raise HTTPException(status_code=400, detail="Prompt not provided.")
-    except json.JSONDecodeError:
-        logger.error("Failed to decode JSON from request.")
-        raise HTTPException(status_code=400, detail="Invalid JSON.")
+    except (json.JSONDecodeError, ValueError):
+        # Fall back to URL-encoded or multipart forms (HTMX default).
+        try:
+            form = await request.form()
+            data = dict(form)
+        except Exception as e:
+            logger.error("Failed to parse request body: %s", e, exc_info=True)
+            raise HTTPException(status_code=400, detail="Invalid request body.")
 
-    logger.info(f"Received request for mode='{mode}' with prompt='{prompt}'")
+    prompt = data.get("prompt")
+    mode = data.get("mode", "multi_pass")  # Default to multi_pass
+    scenario = data.get("scenario", "sql")  # Default to sql
+
+    if not prompt:
+        raise HTTPException(status_code=400, detail="Prompt not provided.")
+
+    logger.info(f"Received request for mode='{mode}', scenario='{scenario}' with prompt='{prompt}'")
     # Choose the solver based on the mode
     solver = solve_single_pass if mode == "single_pass" else solve_multi_pass
     logger.info(f"Using solver: {solver.__name__}")
@@ -72,13 +94,23 @@ async def solve_sse(request: Request):
         A generator function that yields server-sent events.
         """
         try:
-            async for row in solver(prompt):
+            async for row in solver(prompt, scenario=scenario):
                 yield {"data": json.dumps(row)}
         except Exception as e:
             logger.error(f"An unexpected error occurred in the event generator: {e}", exc_info=True)
             yield {"data": json.dumps({"phase": "error", "message": "An unexpected server error occurred."})}
 
     return EventSourceResponse(event_generator())
+
+@app.get("/api/config")
+async def get_config():
+    """
+    Returns the current server configuration.
+    """
+    return {
+        "webllm_mode": WEBLLM_MODE,
+        "server_available": WEBLLM_MODE in ["hybrid", "server"]
+    }
 
 from fastapi.responses import HTMLResponse
 
@@ -92,3 +124,13 @@ async def read_index():
             return HTMLResponse(content=f.read(), status_code=200)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="index.html not found.")
+
+# ---------------------------------------------------------------------------
+# Optional favicon route
+# Browsers look for /favicon.ico automatically; we return 204 to avoid the
+# distracting 404 in the console.
+# ---------------------------------------------------------------------------
+
+@app.get("/favicon.ico")
+async def favicon():
+    return HTMLResponse(status_code=204)

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebGPU Debug Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 50px auto; 
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        .pass { background: #1a4a1a; border-color: #4a8a4a; }
+        .fail { background: #4a1a1a; border-color: #8a4a4a; }
+        .info { background: #1a1a4a; border-color: #4a4a8a; }
+        code { 
+            background: #333; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 WebGPU Debug Test</h1>
+    <p>This will help diagnose WebGPU issues on your system.</p>
+    
+    <div id="results"></div>
+    
+    <div class="test info">
+        <h3>Manual Steps to Enable WebGPU in Chrome:</h3>
+        <ol>
+            <li>Open Chrome and go to: <code>chrome://flags</code></li>
+            <li>Search for: <code>webgpu</code></li>
+            <li>Enable: <code>#enable-unsafe-webgpu</code></li>
+            <li>Restart Chrome</li>
+            <li>Refresh this page</li>
+        </ol>
+    </div>
+
+    <script>
+        const results = document.getElementById('results');
+        
+        function addResult(title, status, message, isInfo = false) {
+            const div = document.createElement('div');
+            div.className = `test ${isInfo ? 'info' : (status ? 'pass' : 'fail')}`;
+            div.innerHTML = `
+                <h3>${status ? '✅' : '❌'} ${title}</h3>
+                <p>${message}</p>
+            `;
+            results.appendChild(div);
+        }
+        
+        async function runTests() {
+            // Test 1: Basic WebGPU availability
+            const hasWebGPU = 'gpu' in navigator;
+            addResult(
+                'WebGPU API Available', 
+                hasWebGPU,
+                hasWebGPU 
+                    ? 'navigator.gpu is available in this browser'
+                    : 'navigator.gpu is not available. WebGPU is not supported or enabled.'
+            );
+            
+            if (!hasWebGPU) {
+                addResult('Browser Info', true, `
+                    User Agent: ${navigator.userAgent}<br>
+                    Chrome Version: ${navigator.userAgent.match(/Chrome\/(\d+)/)?.[1] || 'Not Chrome'}<br>
+                    <strong>Solution:</strong> Enable WebGPU in chrome://flags
+                `, true);
+                return;
+            }
+            
+            // Test 2: Request adapter
+            try {
+                const adapter = await navigator.gpu.requestAdapter();
+                addResult(
+                    'WebGPU Adapter',
+                    !!adapter,
+                    adapter 
+                        ? `Adapter found: ${adapter.info?.vendor || 'Unknown vendor'}`
+                        : 'No WebGPU adapter available'
+                );
+                
+                if (adapter) {
+                    // Test 3: Get device info
+                    try {
+                        const device = await adapter.requestDevice();
+                        addResult(
+                            'WebGPU Device',
+                            !!device,
+                            `Device created successfully. Limits: ${JSON.stringify(device.limits, null, 2)}`
+                        );
+                    } catch (e) {
+                        addResult('WebGPU Device', false, `Failed to create device: ${e.message}`);
+                    }
+                }
+                
+            } catch (e) {
+                addResult('WebGPU Adapter', false, `Failed to request adapter: ${e.message}`);
+            }
+            
+            // Test 4: Memory info
+            addResult('System Info', true, `
+                Platform: ${navigator.platform}<br>
+                Hardware Concurrency: ${navigator.hardwareConcurrency} cores<br>
+                Memory: ${navigator.deviceMemory ? navigator.deviceMemory + 'GB' : 'Unknown'}<br>
+                <strong>Your M3 Max should easily support WebGPU once enabled!</strong>
+            `, true);
+        }
+        
+        runTests();
+    </script>
+</body>
+</html>
