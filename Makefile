@@ -1,15 +1,16 @@
 # SPOC-Shot Demo Makefile
 # =======================
 
-.PHONY: help install dev docker test clean
+.PHONY: help install dev docker docker-prod test clean
 
 # Default target
 help:
 	@echo "🚀 SPOC-Shot Demo"
 	@echo "================="
 	@echo ""
-	@echo "🐋 Docker (Primary):"
-	@echo "  make docker        Build and run web demo with Docker"
+	@echo "🐋 Docker:"
+	@echo "  make docker        Build and run web demo (local)"
+	@echo "  make docker-prod   Build and run for production (no exposed ports)"
 	@echo ""
 	@echo "💻 Local Development:"
 	@echo "  make dev           Run local development server"
@@ -19,10 +20,15 @@ help:
 	@echo "🧹 Maintenance:"
 	@echo "  make clean         Clean temporary files"
 
-# Docker web demo (primary use case)
+# Docker web demo (local development)
 docker:
-	@echo "🐋 Building and running SPOC-Shot web demo..."
-	@docker-compose up --build
+	@echo "🐋 Building and running SPOC-Shot web demo (local)..."
+	@docker compose up --build
+
+# Docker production (no exposed ports)
+docker-prod:
+	@echo "🐋 Building and running SPOC-Shot for production..."
+	@docker compose -f docker-compose.prod.yml up --build -d
 
 # Install dependencies
 install:
