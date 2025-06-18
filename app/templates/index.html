@@ -61,9 +61,9 @@
 <body class="min-h-full bg-gray-900 text-white font-sans p-2 sm:p-3 lg:p-4">
 
   <div class="main-container w-full max-w-7xl mx-auto">
-    <header class="text-center mb-4 py-3">
-      <h1 class="text-2xl sm:text-3xl font-bold text-white">SPOC-Shot</h1>
-      <p class="text-gray-400 mt-1 text-sm">A Live Demo of Single-Pass Self-Correcting Agent Loops</p>
+    <header class="text-center mb-3 py-2">
+      <h1 class="text-xl sm:text-2xl font-bold text-white">SPOC-Shot</h1>
+      <p class="text-gray-400 mt-1 text-xs">A Live Demo of Single-Pass Self-Correcting Agent Loops</p>
     </header>
 
     <!-- Model Loading Overlay (initially hidden) -->
@@ -88,12 +88,12 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
       <!-- Left Column -->
-      <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-3">
         <!-- Controls Panel -->
-        <div class="bg-gray-800 p-4 rounded-lg shadow-2xl">
-          <h2 class="text-lg font-semibold mb-3">Agent Configuration</h2>
+        <div class="bg-gray-800 p-3 rounded-lg shadow-2xl">
+          <h2 class="text-base font-semibold mb-2">Agent Configuration</h2>
           <form id="prompt-form"
                 hx-post="/solve"
                 hx-trigger="submit"
@@ -141,108 +141,91 @@
         </div>
 
         <!-- Enhanced Metrics Panel -->
-        <div class="bg-gray-800 p-6 rounded-lg shadow-2xl">
-          <h2 class="text-xl font-semibold mb-4">Real-Time Performance</h2>
+        <div class="bg-gray-800 p-4 rounded-lg shadow-2xl">
+          <h2 class="text-lg font-semibold mb-3">Real-Time Performance</h2>
           
-          <!-- Token Burn Meter -->
-          <div class="mb-6">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-sm font-medium text-gray-300">Token Burn Rate</span>
-              <span id="burn-rate" class="text-sm text-orange-400">0 tok/s</span>
+          <!-- Token & Memory Row -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <!-- Token Burn Meter -->
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-medium text-gray-300">Token Burn</span>
+                <span id="burn-rate" class="text-xs text-orange-400">0 tok/s</span>
+              </div>
+              <div class="w-full bg-gray-700 rounded-full h-2 relative overflow-hidden">
+                <div id="token-burn-bar" class="h-2 rounded-full transition-all duration-300 bg-gradient-to-r from-orange-500 to-red-500" style="width: 0%"></div>
+                <div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+                  <span id="total-tokens">0</span>
+                </div>
+              </div>
             </div>
-            <div class="w-full bg-gray-700 rounded-full h-3 relative overflow-hidden">
-              <div id="token-burn-bar" class="h-3 rounded-full transition-all duration-300 bg-gradient-to-r from-orange-500 to-red-500" style="width: 0%"></div>
-              <div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
-                <span id="total-tokens">0 tokens</span>
+
+            <!-- Memory Visualization -->
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-medium text-gray-300">Memory</span>
+                <span id="memory-efficiency" class="text-xs text-blue-400">100%</span>
+              </div>
+              <div class="grid grid-cols-10 gap-px h-2">
+                <div id="memory-blocks" class="contents">
+                  <!-- Memory blocks will be generated here -->
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Memory Visualization -->
-          <div class="mb-6">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-sm font-medium text-gray-300">Context Memory</span>
-              <span id="memory-efficiency" class="text-sm text-blue-400">100% retained</span>
+          <!-- Core Metrics Row -->
+          <div class="grid grid-cols-4 gap-2 text-center mb-3">
+            <div>
+              <p class="text-gray-400 text-xs">Latency</p>
+              <p id="metric-latency" class="text-lg font-bold">0.00s</p>
             </div>
-            <div class="grid grid-cols-10 gap-1 h-4">
-              <div id="memory-blocks" class="contents">
-                <!-- Memory blocks will be generated here -->
-              </div>
+            <div>
+              <p class="text-gray-400 text-xs">Calls</p>
+              <p id="metric-llm-calls" class="text-lg font-bold">0</p>
             </div>
-            <div class="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Fresh</span>
-              <span>Cached</span>
+            <div>
+              <p class="text-gray-400 text-xs">Input</p>
+              <p id="metric-prompt-tokens" class="text-lg font-bold">0</p>
+            </div>
+            <div>
+              <p class="text-gray-400 text-xs">Output</p>
+              <p id="metric-completion-tokens" class="text-lg font-bold">0</p>
             </div>
           </div>
 
-          <!-- Cost Calculator -->
-          <div class="mb-6 p-3 bg-gray-900/50 rounded-lg">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-sm font-medium text-gray-300">💰 Cost Analysis</span>
-              <span id="cost-per-run" class="text-sm text-green-400">$0.000</span>
-            </div>
-            <div class="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <div class="text-gray-400">Per 1K runs:</div>
-                <div id="cost-1k" class="font-bold text-green-300">$0.00</div>
-              </div>
-              <div>
-                <div class="text-gray-400">Monthly (10K):</div>
-                <div id="cost-monthly" class="font-bold text-blue-300">$0.00</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Core Metrics -->
-          <div class="grid grid-cols-2 gap-4 text-center">
-            <div>
-              <p class="text-gray-400 text-sm">Latency</p>
-              <p id="metric-latency" class="text-2xl font-bold">0.00s</p>
-            </div>
-            <div>
-              <p class="text-gray-400 text-sm">LLM Calls</p>
-              <p id="metric-llm-calls" class="text-2xl font-bold">0</p>
-            </div>
-            <div>
-              <p class="text-gray-400 text-sm">Input Tokens</p>
-              <p id="metric-prompt-tokens" class="text-xl font-bold">0</p>
-            </div>
-            <div>
-              <p class="text-gray-400 text-sm">Output Tokens</p>
-              <p id="metric-completion-tokens" class="text-xl font-bold">0</p>
+          <!-- Cost Summary Row -->
+          <div class="flex justify-between items-center p-2 bg-gray-900/50 rounded text-xs">
+            <span class="text-gray-300">💰 Cost:</span>
+            <div class="flex gap-3">
+              <span>Run: <span id="cost-per-run" class="text-green-400 font-medium">$0.000</span></span>
+              <span>1K: <span id="cost-1k" class="text-green-300 font-medium">$0.00</span></span>
+              <span>Monthly: <span id="cost-monthly" class="text-blue-300 font-medium">$0.00</span></span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Right Column -->
-      <div class="flex flex-col gap-4">
-        <!-- Code View Panel -->
-        <div class="bg-gray-800 p-4 rounded-lg shadow-2xl">
-          <h2 class="text-lg font-semibold mb-3">Agent Logic</h2>
-          <div id="code-view" class="bg-gray-900 p-3 rounded-md text-xs font-mono">
-            <!-- Pseudo-code will be injected here -->
-          </div>
-        </div>
-
+      <div class="flex flex-col gap-3">
         <!-- Live Execution Details -->
-        <div class="bg-gray-800 p-4 rounded-lg shadow-2xl">
-          <h2 class="text-lg font-semibold mb-3">🔍 Execution Details</h2>
-          <div class="grid grid-cols-2 gap-3 text-sm">
+        <div class="bg-gray-800 p-3 rounded-lg shadow-2xl">
+          <h2 class="text-base font-semibold mb-2">🔍 Execution Details</h2>
+          <div class="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <div class="text-gray-400 mb-2">Current Phase</div>
+              <div class="text-gray-400 mb-1">Phase</div>
               <div id="current-phase" class="font-mono text-cyan-400">Ready</div>
             </div>
             <div>
-              <div class="text-gray-400 mb-2">Last Tool Call</div>
+              <div class="text-gray-400 mb-1">Tool Call</div>
               <div id="last-tool" class="font-mono text-purple-400">None</div>
             </div>
             <div>
-              <div class="text-gray-400 mb-2">Context Size</div>
+              <div class="text-gray-400 mb-1">Context</div>
               <div id="context-size" class="font-mono text-blue-400">0 tokens</div>
             </div>
             <div>
-              <div class="text-gray-400 mb-2">Efficiency</div>
+              <div class="text-gray-400 mb-1">Efficiency</div>
               <div id="efficiency-ratio" class="font-mono text-green-400">--</div>
             </div>
           </div>
@@ -269,26 +252,40 @@
     </div>
 
     <!-- Log Stream Panel -->
-    <div id="log-panel" class="mt-4 bg-gray-800 p-4 rounded-lg shadow-2xl">
-      <h2 class="text-lg font-semibold mb-2">🔄 Live Agent Execution</h2>
-      <div id="log-container" class="h-48 overflow-y-auto bg-gray-900 p-3 rounded-md">
+    <div id="log-panel" class="mt-3 bg-gray-800 p-3 rounded-lg shadow-2xl">
+      <h2 class="text-base font-semibold mb-2">🔄 Live Agent Execution</h2>
+      <div id="log-container" class="h-36 overflow-y-auto bg-gray-900 p-2 rounded-md">
         <div id="log" class="space-y-1 text-xs font-mono">
           <div class="text-gray-500">Run an agent to see live execution details...</div>
         </div>
       </div>
     </div>
 
+    <!-- Agent Logic - Collapsible Section -->
+    <details class="mt-2 bg-gray-800 p-3 rounded-lg shadow-2xl">
+      <summary class="cursor-pointer text-base font-semibold text-gray-300 hover:text-white flex items-center">
+        <span class="mr-2">🤖</span>
+        Agent Logic & Pseudo-code
+        <span class="ml-auto text-xs text-gray-500">(click to expand)</span>
+      </summary>
+      <div class="mt-2 pt-2 border-t border-gray-700">
+        <div id="code-view" class="bg-gray-900 p-2 rounded-md text-xs font-mono">
+          <!-- Pseudo-code will be injected here -->
+        </div>
+      </div>
+    </details>
+
     <!-- Racing Panel (hidden by default) -->
-    <div id="racing-panel" class="mt-4 bg-gray-800 p-4 rounded-lg shadow-2xl" style="display: none;">
-      <h2 class="text-lg font-semibold mb-3 flex items-center">
+    <div id="racing-panel" class="mt-3 bg-gray-800 p-3 rounded-lg shadow-2xl" style="display: none;">
+      <h2 class="text-base font-semibold mb-2 flex items-center">
         🏁 Agent Racing Arena
         <button id="stop-race" class="ml-4 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm" style="display: none;">Stop Race</button>
         <button id="close-race" class="ml-auto text-gray-400 hover:text-white">✕</button>
       </h2>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <!-- Multi-Pass Lane -->
-        <div class="bg-red-900/20 border border-red-700 p-4 rounded-lg">
-          <h3 class="text-lg font-semibold text-red-300 mb-3 flex items-center">
+        <div class="bg-red-900/20 border border-red-700 p-3 rounded-lg">
+          <h3 class="text-base font-semibold text-red-300 mb-2 flex items-center">
             🐌 Multi-Pass Agent
             <span id="multi-pass-status" class="ml-auto text-sm px-2 py-1 bg-gray-700 rounded">Ready</span>
           </h3>
@@ -321,8 +318,8 @@
         </div>
 
         <!-- Single-Pass Lane -->
-        <div class="bg-green-900/20 border border-green-700 p-4 rounded-lg">
-          <h3 class="text-lg font-semibold text-green-300 mb-3 flex items-center">
+        <div class="bg-green-900/20 border border-green-700 p-3 rounded-lg">
+          <h3 class="text-base font-semibold text-green-300 mb-2 flex items-center">
             🚀 Single-Pass Agent
             <span id="single-pass-status" class="ml-auto text-sm px-2 py-1 bg-gray-700 rounded">Ready</span>
           </h3>
