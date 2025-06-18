@@ -1,9 +1,6 @@
-version: '3.8'
-
 services:
   spoc-shot:
     build: .
-    # No ports exposed - Caddy connects via Docker network
     environment:
       - HOST=${HOST:-0.0.0.0}
       - PORT=${PORT:-8004}
@@ -15,9 +12,3 @@ services:
     env_file:
       - .env
     restart: unless-stopped
-    networks:
-      - caddy_network
-
-networks:
-  caddy_network:
-    external: true
