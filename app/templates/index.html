@@ -88,175 +88,134 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
-      <!-- Left Column -->
-      <div class="flex flex-col gap-3">
-        <!-- Controls Panel -->
-        <div class="bg-gray-800 p-3 rounded-lg shadow-2xl">
-          <h2 class="text-base font-semibold mb-2">Agent Configuration</h2>
-          <form id="prompt-form"
-                hx-post="/solve"
-                hx-trigger="submit"
-                hx-ext="sse"
-                hx-swap="none">
-            <div class="mb-4">
-              <label for="scenario-select" class="block text-sm font-medium text-gray-300 mb-2">Agent Scenario</label>
-              <select id="scenario-select" name="scenario" class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="sql" selected>🗃️ SQL Query Agent</option>
-                <option value="research">🔍 Research Agent</option>
-                <option value="data_analysis">📊 Data Analyst</option>
-                <option value="math_tutor">🧮 Math Tutor</option>
-              </select>
-            </div>
-            <div class="mb-4">
-              <label for="agent-mode" class="block text-sm font-medium text-gray-300 mb-2">Agent Mode</label>
-              <div class="relative inline-block w-full text-sm">
-                  <select id="agent-mode" name="mode" class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="multi_pass" selected>Multi-Pass (Baseline)</option>
-                      <option value="single_pass">Single-Pass (SPOC)</option>
-                  </select>
-              </div>
-            </div>
-            <div class="mb-4">
-              <label for="complexity-slider" class="block text-sm font-medium text-gray-300 mb-2">Complexity Level: <span id="complexity-value">3</span></label>
-              <input type="range" id="complexity-slider" min="1" max="5" value="3" class="w-full bg-gray-700 rounded-lg appearance-none cursor-pointer">
-              <div class="flex justify-between text-xs text-gray-400 mt-1">
-                <span>Simple</span>
-                <span>Complex</span>
-              </div>
-            </div>
-            <div class="mb-4">
-              <label for="prompt-input" class="block text-sm font-medium text-gray-300 mb-2">Prompt</label>
-              <textarea id="prompt-input" name="prompt" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your prompt here...">How many conversions did we get this week?</textarea>
-            </div>
-            <div class="flex gap-2">
-              <button id="run-button" type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-500">
-                Run Agent
-              </button>
-              <button id="race-button" type="button" class="bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-4 rounded-md transition-colors disabled:bg-gray-500">
-                🏁 Race
-              </button>
-            </div>
-          </form>
+    <!-- Compact Control Panel -->
+    <div class="bg-gray-800 p-3 rounded-lg shadow-2xl mb-3">
+      <div class="flex flex-wrap items-center gap-4">
+        <div class="flex-1 min-w-64">
+          <label for="scenario-select" class="block text-xs font-medium text-gray-300 mb-1">Scenario</label>
+          <select id="scenario-select" name="scenario" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="sql" selected>🗃️ SQL Query Agent</option>
+            <option value="research">🔍 Research Agent</option>
+            <option value="data_analysis">📊 Data Analyst</option>
+            <option value="math_tutor">🧮 Math Tutor</option>
+          </select>
         </div>
+        <div class="flex-2 min-w-80">
+          <label for="prompt-input" class="block text-xs font-medium text-gray-300 mb-1">Prompt</label>
+          <textarea id="prompt-input" name="prompt" rows="2" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your prompt here...">How many conversions did we get this week?</textarea>
+        </div>
+        <div class="flex-shrink-0">
+          <label class="block text-xs font-medium text-gray-300 mb-1">&nbsp;</label>
+          <button id="run-button" type="button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-md transition-colors disabled:bg-gray-500">
+            🏁 Race Agents
+          </button>
+        </div>
+      </div>
+    </div>
 
-        <!-- Enhanced Metrics Panel -->
-        <div class="bg-gray-800 p-4 rounded-lg shadow-2xl">
-          <h2 class="text-lg font-semibold mb-3">Real-Time Performance</h2>
-          
-          <!-- Token & Memory Row -->
-          <div class="grid grid-cols-2 gap-3 mb-3">
-            <!-- Token Burn Meter -->
-            <div>
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-xs font-medium text-gray-300">Token Burn</span>
-                <span id="burn-rate" class="text-xs text-orange-400">0 tok/s</span>
-              </div>
-              <div class="w-full bg-gray-700 rounded-full h-2 relative overflow-hidden">
-                <div id="token-burn-bar" class="h-2 rounded-full transition-all duration-300 bg-gradient-to-r from-orange-500 to-red-500" style="width: 0%"></div>
-                <div class="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
-                  <span id="total-tokens">0</span>
-                </div>
-              </div>
+    <!-- Side-by-Side Agent Comparison -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
+      <!-- Multi-Pass Agent -->
+      <div class="bg-red-900/20 border border-red-700 rounded-lg">
+        <div class="p-3 border-b border-red-700">
+          <h3 class="text-base font-semibold text-red-300 flex items-center">
+            🐌 Multi-Pass Agent (Baseline)
+            <span id="multi-pass-status" class="ml-auto text-sm px-2 py-1 bg-gray-700 rounded">Ready</span>
+          </h3>
+          <div class="mt-2">
+            <div class="flex justify-between text-sm text-gray-300 mb-1">
+              <span>Progress</span>
+              <span id="multi-pass-progress-text">0%</span>
             </div>
-
-            <!-- Memory Visualization -->
-            <div>
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-xs font-medium text-gray-300">Memory</span>
-                <span id="memory-efficiency" class="text-xs text-blue-400">100%</span>
-              </div>
-              <div class="grid grid-cols-10 gap-px h-2">
-                <div id="memory-blocks" class="contents">
-                  <!-- Memory blocks will be generated here -->
-                </div>
-              </div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div id="multi-pass-progress" class="bg-red-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
             </div>
           </div>
-
-          <!-- Core Metrics Row -->
-          <div class="grid grid-cols-4 gap-2 text-center mb-3">
+        </div>
+        <div class="p-3">
+          <div class="grid grid-cols-4 gap-2 text-center text-xs mb-3">
             <div>
-              <p class="text-gray-400 text-xs">Latency</p>
-              <p id="metric-latency" class="text-lg font-bold">0.00s</p>
+              <div class="text-gray-400">Time</div>
+              <div id="multi-pass-time" class="font-bold text-red-300">--</div>
             </div>
             <div>
-              <p class="text-gray-400 text-xs">Calls</p>
-              <p id="metric-llm-calls" class="text-lg font-bold">0</p>
+              <div class="text-gray-400">Tokens</div>
+              <div id="multi-pass-tokens" class="font-bold text-red-300">--</div>
             </div>
             <div>
-              <p class="text-gray-400 text-xs">Input</p>
-              <p id="metric-prompt-tokens" class="text-lg font-bold">0</p>
+              <div class="text-gray-400">Calls</div>
+              <div id="multi-pass-calls" class="font-bold text-red-300">--</div>
             </div>
             <div>
-              <p class="text-gray-400 text-xs">Output</p>
-              <p id="metric-completion-tokens" class="text-lg font-bold">0</p>
+              <div class="text-gray-400">Cost</div>
+              <div id="multi-pass-cost" class="font-bold text-red-300">--</div>
             </div>
           </div>
-
-          <!-- Cost Summary Row -->
-          <div class="flex justify-between items-center p-2 bg-gray-900/50 rounded text-xs">
-            <span class="text-gray-300">💰 Cost:</span>
-            <div class="flex gap-3">
-              <span>Run: <span id="cost-per-run" class="text-green-400 font-medium">$0.000</span></span>
-              <span>1K: <span id="cost-1k" class="text-green-300 font-medium">$0.00</span></span>
-              <span>Monthly: <span id="cost-monthly" class="text-blue-300 font-medium">$0.00</span></span>
-            </div>
+          <div id="multi-pass-log" class="h-32 overflow-y-auto bg-gray-900/50 p-2 rounded text-xs font-mono">
+            <div class="text-gray-500">Ready to race...</div>
           </div>
         </div>
       </div>
 
-      <!-- Right Column -->
-      <div class="flex flex-col gap-3">
-        <!-- Live Execution Details -->
-        <div class="bg-gray-800 p-3 rounded-lg shadow-2xl">
-          <h2 class="text-base font-semibold mb-2">🔍 Execution Details</h2>
-          <div class="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <div class="text-gray-400 mb-1">Phase</div>
-              <div id="current-phase" class="font-mono text-cyan-400">Ready</div>
+      <!-- Single-Pass Agent -->
+      <div class="bg-green-900/20 border border-green-700 rounded-lg">
+        <div class="p-3 border-b border-green-700">
+          <h3 class="text-base font-semibold text-green-300 flex items-center">
+            🚀 Single-Pass Agent (SPOC)
+            <span id="single-pass-status" class="ml-auto text-sm px-2 py-1 bg-gray-700 rounded">Ready</span>
+          </h3>
+          <div class="mt-2">
+            <div class="flex justify-between text-sm text-gray-300 mb-1">
+              <span>Progress</span>
+              <span id="single-pass-progress-text">0%</span>
             </div>
-            <div>
-              <div class="text-gray-400 mb-1">Tool Call</div>
-              <div id="last-tool" class="font-mono text-purple-400">None</div>
-            </div>
-            <div>
-              <div class="text-gray-400 mb-1">Context</div>
-              <div id="context-size" class="font-mono text-blue-400">0 tokens</div>
-            </div>
-            <div>
-              <div class="text-gray-400 mb-1">Efficiency</div>
-              <div id="efficiency-ratio" class="font-mono text-green-400">--</div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div id="single-pass-progress" class="bg-green-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
             </div>
           </div>
         </div>
-
-        <!-- RESULT Panel (hidden by default) -->
-        <div id="result-panel" class="bg-gradient-to-r from-green-900/50 to-green-800/50 border border-green-600 p-4 rounded-lg shadow-2xl" style="display: none;">
-          <h2 class="text-lg font-semibold mb-3 flex items-center">
-            <span id="result-icon">✅</span>
-            <span id="result-title" class="ml-2">Agent Completed Successfully</span>
-          </h2>
-          <div class="bg-gray-900/50 p-4 rounded-md">
-            <div class="text-gray-400 text-sm mb-2">Final Answer:</div>
-            <div id="final-answer" class="text-white font-semibold text-lg">
-              <!-- Final answer will be displayed here -->
+        <div class="p-3">
+          <div class="grid grid-cols-4 gap-2 text-center text-xs mb-3">
+            <div>
+              <div class="text-gray-400">Time</div>
+              <div id="single-pass-time" class="font-bold text-green-300">--</div>
+            </div>
+            <div>
+              <div class="text-gray-400">Tokens</div>
+              <div id="single-pass-tokens" class="font-bold text-green-300">--</div>
+            </div>
+            <div>
+              <div class="text-gray-400">Calls</div>
+              <div id="single-pass-calls" class="font-bold text-green-300">--</div>
+            </div>
+            <div>
+              <div class="text-gray-400">Cost</div>
+              <div id="single-pass-cost" class="font-bold text-green-300">--</div>
             </div>
           </div>
-          <div class="mt-3 flex gap-4 text-sm">
-            <span class="text-gray-400">Completed in <span id="completion-time" class="text-cyan-400 font-mono">--</span></span>
-            <span class="text-gray-400">Total attempts: <span id="total-attempts" class="text-purple-400 font-mono">--</span></span>
+          <div id="single-pass-log" class="h-32 overflow-y-auto bg-gray-900/50 p-2 rounded text-xs font-mono">
+            <div class="text-gray-500">Ready to race...</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Log Stream Panel -->
-    <div id="log-panel" class="mt-3 bg-gray-800 p-3 rounded-lg shadow-2xl">
-      <h2 class="text-base font-semibold mb-2">🔄 Live Agent Execution</h2>
-      <div id="log-container" class="h-36 overflow-y-auto bg-gray-900 p-2 rounded-md">
-        <div id="log" class="space-y-1 text-xs font-mono">
-          <div class="text-gray-500">Run an agent to see live execution details...</div>
+    <!-- Race Results Summary -->
+    <div id="race-results" class="bg-gray-800 p-3 rounded-lg shadow-2xl" style="display: none;">
+      <h3 class="text-base font-semibold mb-3 text-center">🏆 Race Results</h3>
+      <div id="winner-announcement" class="text-center text-xl font-bold mb-3"></div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center text-sm">
+        <div>
+          <div class="text-gray-400">Speed Advantage</div>
+          <div id="speed-advantage" class="text-lg font-bold"></div>
+        </div>
+        <div>
+          <div class="text-gray-400">Token Efficiency</div>
+          <div id="token-efficiency" class="text-lg font-bold"></div>
+        </div>
+        <div>
+          <div class="text-gray-400">Cost Savings</div>
+          <div id="cost-savings" class="text-lg font-bold"></div>
         </div>
       </div>
     </div>
@@ -274,193 +233,6 @@
         </div>
       </div>
     </details>
-
-    <!-- Racing Panel (hidden by default) -->
-    <div id="racing-panel" class="mt-3 bg-gray-800 p-3 rounded-lg shadow-2xl" style="display: none;">
-      <h2 class="text-base font-semibold mb-2 flex items-center">
-        🏁 Agent Racing Arena
-        <button id="stop-race" class="ml-4 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm" style="display: none;">Stop Race</button>
-        <button id="close-race" class="ml-auto text-gray-400 hover:text-white">✕</button>
-      </h2>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <!-- Multi-Pass Lane -->
-        <div class="bg-red-900/20 border border-red-700 p-3 rounded-lg">
-          <h3 class="text-base font-semibold text-red-300 mb-2 flex items-center">
-            🐌 Multi-Pass Agent
-            <span id="multi-pass-status" class="ml-auto text-sm px-2 py-1 bg-gray-700 rounded">Ready</span>
-          </h3>
-          <div class="mb-3">
-            <div class="flex justify-between text-sm text-gray-300 mb-1">
-              <span>Progress</span>
-              <span id="multi-pass-progress-text">0%</span>
-            </div>
-            <div class="w-full bg-gray-700 rounded-full h-2">
-              <div id="multi-pass-progress" class="bg-red-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
-            </div>
-          </div>
-          <div id="multi-pass-log" class="h-32 overflow-y-auto bg-gray-900/50 p-3 rounded text-xs font-mono">
-            <div class="text-gray-500">Waiting to start...</div>
-          </div>
-          <div class="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-            <div>
-              <div class="text-gray-400">Time</div>
-              <div id="multi-pass-time" class="font-bold">--</div>
-            </div>
-            <div>
-              <div class="text-gray-400">Tokens</div>
-              <div id="multi-pass-tokens" class="font-bold">--</div>
-            </div>
-            <div>
-              <div class="text-gray-400">Calls</div>
-              <div id="multi-pass-calls" class="font-bold">--</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Single-Pass Lane -->
-        <div class="bg-green-900/20 border border-green-700 p-3 rounded-lg">
-          <h3 class="text-base font-semibold text-green-300 mb-2 flex items-center">
-            🚀 Single-Pass Agent
-            <span id="single-pass-status" class="ml-auto text-sm px-2 py-1 bg-gray-700 rounded">Ready</span>
-          </h3>
-          <div class="mb-3">
-            <div class="flex justify-between text-sm text-gray-300 mb-1">
-              <span>Progress</span>
-              <span id="single-pass-progress-text">0%</span>
-            </div>
-            <div class="w-full bg-gray-700 rounded-full h-2">
-              <div id="single-pass-progress" class="bg-green-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
-            </div>
-          </div>
-          <div id="single-pass-log" class="h-32 overflow-y-auto bg-gray-900/50 p-3 rounded text-xs font-mono">
-            <div class="text-gray-500">Waiting to start...</div>
-          </div>
-          <div class="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-            <div>
-              <div class="text-gray-400">Time</div>
-              <div id="single-pass-time" class="font-bold">--</div>
-            </div>
-            <div>
-              <div class="text-gray-400">Tokens</div>
-              <div id="single-pass-tokens" class="font-bold">--</div>
-            </div>
-            <div>
-              <div class="text-gray-400">Calls</div>
-              <div id="single-pass-calls" class="font-bold">--</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Race Results -->
-      <div id="race-results" class="mt-6 p-4 bg-gray-900/50 rounded-lg" style="display: none;">
-        <h3 class="text-lg font-semibold mb-3 text-center">🏆 Race Results</h3>
-        <div id="winner-announcement" class="text-center text-2xl font-bold mb-4"></div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-          <div>
-            <div class="text-gray-400 text-sm">Speed Advantage</div>
-            <div id="speed-advantage" class="text-xl font-bold"></div>
-          </div>
-          <div>
-            <div class="text-gray-400 text-sm">Token Efficiency</div>
-            <div id="token-efficiency" class="text-xl font-bold"></div>
-          </div>
-          <div>
-            <div class="text-gray-400 text-sm">Cost Savings</div>
-            <div id="cost-savings" class="text-xl font-bold"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Network Effect Simulation -->
-    <div class="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl">
-      <h2 class="text-xl font-semibold mb-4 flex items-center">
-        📈 Network Effect Simulation
-        <button id="simulate-network" class="ml-auto bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm">
-          Run Simulation
-        </button>
-      </h2>
-      
-      <div class="mb-6">
-        <label for="scale-slider" class="block text-sm font-medium text-gray-300 mb-2">
-          User Scale: <span id="scale-value">1,000</span> users
-        </label>
-        <input type="range" id="scale-slider" min="10" max="100000" value="1000" step="10" 
-               class="w-full bg-gray-700 rounded-lg appearance-none cursor-pointer">
-        <div class="flex justify-between text-xs text-gray-400 mt-1">
-          <span>10 users</span>
-          <span>100K users</span>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Multi-Pass Impact -->
-        <div class="bg-red-900/20 border border-red-700 p-4 rounded-lg">
-          <h3 class="text-lg font-semibold text-red-300 mb-3">🐌 Multi-Pass Impact</h3>
-          <div class="space-y-3">
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-300">Total Tokens:</span>
-              <span id="multi-total-tokens" class="font-bold text-red-400">--</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-300">Monthly Cost:</span>
-              <span id="multi-monthly-cost" class="font-bold text-red-400">--</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-300">Latency:</span>
-              <span id="multi-total-latency" class="font-bold text-red-400">--</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-300">Context Loss:</span>
-              <span id="multi-context-loss" class="font-bold text-red-400">--</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Single-Pass Impact -->
-        <div class="bg-green-900/20 border border-green-700 p-4 rounded-lg">
-          <h3 class="text-lg font-semibold text-green-300 mb-3">🚀 Single-Pass Impact</h3>
-          <div class="space-y-3">
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-300">Total Tokens:</span>
-              <span id="single-total-tokens" class="font-bold text-green-400">--</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-300">Monthly Cost:</span>
-              <span id="single-monthly-cost" class="font-bold text-green-400">--</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-300">Latency:</span>
-              <span id="single-total-latency" class="font-bold text-green-400">--</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-sm text-gray-300">Context Retention:</span>
-              <span id="single-context-retention" class="font-bold text-green-400">--</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Savings Summary -->
-      <div id="savings-summary" class="mt-6 p-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-700 rounded-lg" style="display: none;">
-        <h3 class="text-lg font-semibold text-center mb-4">💰 Potential Savings</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-          <div>
-            <div class="text-2xl font-bold text-green-400" id="cost-savings-amount">--</div>
-            <div class="text-sm text-gray-300">Monthly Savings</div>
-          </div>
-          <div>
-            <div class="text-2xl font-bold text-blue-400" id="speed-improvement">--</div>
-            <div class="text-sm text-gray-300">Speed Improvement</div>
-          </div>
-          <div>
-            <div class="text-2xl font-bold text-purple-400" id="efficiency-gain">--</div>
-            <div class="text-sm text-gray-300">Efficiency Gain</div>
-          </div>
-        </div>
-      </div>
-    </div>
 
   </div>
 
@@ -508,49 +280,21 @@ while retries < max_retries:
       console.log('🚀 DOMContentLoaded fired - initializing SPOC-Shot');
       
       try {
-        const form = document.getElementById('prompt-form');
-        const log = document.getElementById('log');
         const runButton = document.getElementById('run-button');
-        const raceButton = document.getElementById('race-button');
-        const modeSelect = document.getElementById('agent-mode');
         
         console.log('🔍 Element check:', {
-          form: !!form,
-          log: !!log, 
-          runButton: !!runButton,
-          modeSelect: !!modeSelect
+          runButton: !!runButton
         });
       const scenarioSelect = document.getElementById('scenario-select');
-      const complexitySlider = document.getElementById('complexity-slider');
-      const complexityValue = document.getElementById('complexity-value');
       const promptInput = document.getElementById('prompt-input');
       const codeView = document.getElementById('code-view');
       const multiPassTemplate = document.getElementById('multi-pass-code');
       const singlePassTemplate = document.getElementById('single-pass-code');
 
-      // Racing elements
-      const racingPanel = document.getElementById('racing-panel');
-      const logPanel = document.getElementById('log-panel');
-      const stopRaceButton = document.getElementById('stop-race');
-      const closeRaceButton = document.getElementById('close-race');
+      // Race results
       const raceResults = document.getElementById('race-results');
 
-      // Network simulation elements
-      const simulateNetworkButton = document.getElementById('simulate-network');
-      const scaleSlider = document.getElementById('scale-slider');
-      const scaleValue = document.getElementById('scale-value');
-      const savingsSummary = document.getElementById('savings-summary');
-
-      // Execution details elements
-      const currentPhaseEl = document.getElementById('current-phase');
-      const lastToolEl = document.getElementById('last-tool');
-      const contextSizeEl = document.getElementById('context-size');
-      const efficiencyRatioEl = document.getElementById('efficiency-ratio');
-
-      const latencyEl = document.getElementById('metric-latency');
-      const promptTokensEl = document.getElementById('metric-prompt-tokens');
-      const completionTokensEl = document.getElementById('metric-completion-tokens');
-      const llmCallsEl = document.getElementById('metric-llm-calls');
+      // No additional elements needed for simplified layout
 
       // WebLLM elements
       const modelLoadingPanel = document.getElementById('model-loading-panel');
@@ -559,7 +303,6 @@ while retries < max_retries:
       const modelProgressBar = document.getElementById('model-progress-bar');
 
       // --- State Management ---
-      let currentMode = 'multi_pass';
       let currentScenario = 'sql';
       let webllmEngine = null;
       let modelLoaded = false;
@@ -572,123 +315,35 @@ while retries < max_retries:
         math_tutor: "Solve the equation: 2x + 5 = 15"
       };
 
-      const scenarioDescriptions = {
-        sql: "Query company databases for business metrics",
-        research: "Multi-step web search and synthesis",
-        data_analysis: "Complex data pipeline analysis",
-        math_tutor: "Step-by-step problem solving"
-      };
-
       const updateCodeView = () => {
-        codeView.innerHTML = currentMode === 'single_pass'
-          ? singlePassTemplate.innerHTML
-          : multiPassTemplate.innerHTML;
+        // Show multi-pass by default
+        codeView.innerHTML = multiPassTemplate.innerHTML;
       };
 
-      const resetMetrics = () => {
-        latencyEl.textContent = '0.00s';
-        promptTokensEl.textContent = '0';
-        completionTokensEl.textContent = '0';
-        llmCallsEl.textContent = '0';
+      // Simplified functions for new layout
+      const resetRaceState = () => {
+        // Reset multi-pass
+        document.getElementById('multi-pass-status').textContent = 'Ready';
+        document.getElementById('multi-pass-progress').style.width = '0%';
+        document.getElementById('multi-pass-progress-text').textContent = '0%';
+        document.getElementById('multi-pass-log').innerHTML = '<div class="text-gray-500">Ready to race...</div>';
+        document.getElementById('multi-pass-time').textContent = '--';
+        document.getElementById('multi-pass-tokens').textContent = '--';
+        document.getElementById('multi-pass-calls').textContent = '--';
+        document.getElementById('multi-pass-cost').textContent = '--';
         
-        // Reset enhanced metrics
-        document.getElementById('burn-rate').textContent = '0 tok/s';
-        document.getElementById('token-burn-bar').style.width = '0%';
-        document.getElementById('total-tokens').textContent = '0 tokens';
-        document.getElementById('memory-efficiency').textContent = '100% retained';
-        document.getElementById('cost-per-run').textContent = '$0.000';
-        document.getElementById('cost-1k').textContent = '$0.00';
-        document.getElementById('cost-monthly').textContent = '$0.00';
+        // Reset single-pass
+        document.getElementById('single-pass-status').textContent = 'Ready';
+        document.getElementById('single-pass-progress').style.width = '0%';
+        document.getElementById('single-pass-progress-text').textContent = '0%';
+        document.getElementById('single-pass-log').innerHTML = '<div class="text-gray-500">Ready to race...</div>';
+        document.getElementById('single-pass-time').textContent = '--';
+        document.getElementById('single-pass-tokens').textContent = '--';
+        document.getElementById('single-pass-calls').textContent = '--';
+        document.getElementById('single-pass-cost').textContent = '--';
         
-        // Reset execution details
-        updateExecutionDetails('Ready', null, null);
-        
-        // Reset memory blocks
-        initializeMemoryBlocks();
-      };
-
-      const updateMetrics = (metrics) => {
-        if (!metrics) return;
-        
-        // Update basic metrics
-        latencyEl.textContent = `${(metrics.latency || 0).toFixed(2)}s`;
-        promptTokensEl.textContent = metrics.prompt_tokens || 0;
-        completionTokensEl.textContent = metrics.completion_tokens || 0;
-        llmCallsEl.textContent = metrics.llm_calls || 0;
-        
-        // Update enhanced metrics
-        updateEnhancedMetrics(metrics);
-      };
-
-      const updateEnhancedMetrics = (metrics) => {
-        const totalTokens = (metrics.prompt_tokens || 0) + (metrics.completion_tokens || 0);
-        const latency = metrics.latency || 0;
-        const burnRate = latency > 0 ? (totalTokens / latency).toFixed(0) : 0;
-        
-        // Update token burn meter
-        document.getElementById('burn-rate').textContent = `${burnRate} tok/s`;
-        document.getElementById('total-tokens').textContent = `${totalTokens} tokens`;
-        const burnPercentage = Math.min(100, (totalTokens / 500) * 100); // Scale to 500 tokens max
-        document.getElementById('token-burn-bar').style.width = `${burnPercentage}%`;
-        
-        // Update memory visualization
-        updateMemoryVisualization(metrics);
-        
-        // Update cost calculator
-        updateCostCalculator(totalTokens);
-      };
-
-      const initializeMemoryBlocks = () => {
-        const memoryBlocks = document.getElementById('memory-blocks');
-        memoryBlocks.innerHTML = '';
-        for (let i = 0; i < 10; i++) {
-          const block = document.createElement('div');
-          block.className = 'bg-gray-600 rounded-sm h-full';
-          block.id = `memory-block-${i}`;
-          memoryBlocks.appendChild(block);
-        }
-      };
-
-      const updateMemoryVisualization = (metrics) => {
-        const mode = currentMode;
-        const llmCalls = metrics.llm_calls || 0;
-        
-        if (mode === 'single_pass') {
-          // Single-pass retains context - show cached blocks
-          const cachedBlocks = Math.min(10, llmCalls * 3);
-          for (let i = 0; i < 10; i++) {
-            const block = document.getElementById(`memory-block-${i}`);
-            if (i < cachedBlocks) {
-              block.className = 'bg-blue-500 rounded-sm h-full transition-colors duration-500';
-            } else {
-              block.className = 'bg-gray-600 rounded-sm h-full';
-            }
-          }
-          document.getElementById('memory-efficiency').textContent = `${Math.max(70, 100 - llmCalls * 5)}% retained`;
-        } else {
-          // Multi-pass loses context - show fresh blocks each time
-          for (let i = 0; i < 10; i++) {
-            const block = document.getElementById(`memory-block-${i}`);
-            if (i < 3) {
-              block.className = 'bg-orange-500 rounded-sm h-full transition-colors duration-500';
-            } else {
-              block.className = 'bg-gray-600 rounded-sm h-full';
-            }
-          }
-          document.getElementById('memory-efficiency').textContent = `${Math.max(20, 50 - llmCalls * 10)}% retained`;
-        }
-      };
-
-      const updateCostCalculator = (totalTokens) => {
-        // Rough cost estimates (GPT-4 pricing: ~$0.03 per 1K tokens)
-        const costPerToken = 0.00003;
-        const costPerRun = (totalTokens * costPerToken).toFixed(5);
-        const cost1K = (totalTokens * costPerToken * 1000).toFixed(2);
-        const costMonthly = (totalTokens * costPerToken * 10000).toFixed(2);
-        
-        document.getElementById('cost-per-run').textContent = `$${costPerRun}`;
-        document.getElementById('cost-1k').textContent = `$${cost1K}`;
-        document.getElementById('cost-monthly').textContent = `$${costMonthly}`;
+        // Hide results
+        raceResults.style.display = 'none';
       };
 
       // --- WebLLM Initialization ---
@@ -799,137 +454,17 @@ while retries < max_retries:
       };
 
       // --- Event Listeners ---
-      modeSelect.addEventListener('change', (e) => {
-        currentMode = e.target.value;
-        updateCodeView();
-      });
-
       scenarioSelect.addEventListener('change', (e) => {
         currentScenario = e.target.value;
         promptInput.value = scenarioPrompts[currentScenario];
       });
 
-      complexitySlider.addEventListener('input', (e) => {
-        complexityValue.textContent = e.target.value;
-      });
-
-      raceButton.addEventListener('click', (e) => {
+      runButton.addEventListener('click', (e) => {
         e.preventDefault();
         startRace();
       });
 
-      stopRaceButton.addEventListener('click', () => {
-        stopRace();
-      });
-
-      closeRaceButton.addEventListener('click', () => {
-        racingPanel.style.display = 'none';
-        logPanel.style.display = 'block';
-      });
-
-      scaleSlider.addEventListener('input', (e) => {
-        const value = parseInt(e.target.value);
-        scaleValue.textContent = value >= 1000 ? `${(value/1000).toFixed(0)}K` : value.toString();
-      });
-
-      simulateNetworkButton.addEventListener('click', () => {
-        runNetworkSimulation();
-      });
-
-      // Update execution details in real-time
-      const updateExecutionDetails = (phase, toolCall, metrics) => {
-        currentPhaseEl.textContent = phase || 'Ready';
-        lastToolEl.textContent = toolCall ? `${toolCall.name}(${JSON.stringify(toolCall.args).slice(0, 20)}...)` : 'None';
-        contextSizeEl.textContent = metrics ? `${(metrics.prompt_tokens || 0)} tokens` : '0 tokens';
-        
-        if (metrics && metrics.llm_calls > 0) {
-          const efficiency = ((metrics.prompt_tokens + metrics.completion_tokens) / metrics.llm_calls).toFixed(0);
-          efficiencyRatioEl.textContent = `${efficiency} tok/call`;
-        } else {
-          efficiencyRatioEl.textContent = '--';
-        }
-      };
-
-      form.addEventListener('htmx:beforeRequest', (e) => {
-        console.log('🎯 Form submission triggered!', e);
-        log.innerHTML = '<div class="text-gray-500">Waiting for agent...</div>';
-        runButton.disabled = true;
-        runButton.textContent = 'Running...';
-        resetMetrics();
-
-        // HTMX doesn't have a clean way to send form data as JSON
-        // when also using the SSE extension. We will cancel the HTMX
-        // request and send our own fetch request.
-        e.preventDefault();
-
-        const prompt = document.getElementById('prompt-input').value;
-        const scenario = document.getElementById('scenario-select').value;
-        
-        // Check if we should use WebLLM or server
-        if (modelLoaded && webllmEngine) {
-          // Use WebLLM for inference
-          runWebLLMAgent(prompt, currentMode, scenario);
-        } else if (runButton.textContent.includes('Demo Mode')) {
-          // Demo mode - show simulated error
-          log.innerHTML = '<div class="text-yellow-500">Demo Mode: WebLLM is required for actual inference</div>';
-          runButton.disabled = false;
-          runButton.textContent = 'Demo Mode - Click to See Error';
-          return;
-        } else {
-          // Fallback to server-based inference
-          const payload = {
-              prompt: prompt,
-              mode: currentMode,
-              scenario: scenario
-          };
-          
-          console.log("Using server mode. Sending payload:", JSON.stringify(payload, null, 2));
-
-          // Use the browser's native fetch API to stream the response
-          fetch('/solve', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-          })
-        .then(response => {
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-
-            // Clear the "Waiting" message
-            if (log.firstElementChild && log.firstElementChild.textContent.includes('Waiting')) {
-                log.innerHTML = '';
-            }
-
-            function push() {
-                reader.read().then(({ done, value }) => {
-                    if (done) {
-                        runButton.disabled = false;
-                        runButton.textContent = 'Run Agent';
-                        return;
-                    }
-                    // The response is a stream of "data: {...}" events.
-                    // We need to parse them.
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n').filter(line => line.trim().startsWith('data:'));
-                    for (const line of lines) {
-                        const jsonStr = line.replace('data:', '').trim();
-                        if (jsonStr) {
-                            const data = JSON.parse(jsonStr);
-                            handleSseMessage(data);
-                        }
-                    }
-                    push();
-                });
-            }
-            push();
-        })
-        .catch(err => {
-            console.error('Fetch error:', err);
-            runButton.disabled = false;
-            runButton.textContent = 'Run Agent';
-        });
-        }
-      });
+      // No additional setup needed for simplified layout
 
       // --- WebLLM Agent Implementation ---
       const runWebLLMAgent = async (prompt, mode, scenario = 'sql') => {
@@ -1264,19 +799,13 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
         const prompt = promptInput.value;
         const scenario = scenarioSelect.value;
         
-        // Show racing panel, hide log panel
-        logPanel.style.display = 'none';
-        racingPanel.style.display = 'block';
-        raceResults.style.display = 'none';
-        
         // Reset race state
         resetRaceState();
         
         // Update UI for racing state
         isRacing = true;
         runButton.disabled = true;
-        raceButton.disabled = true;
-        stopRaceButton.style.display = 'inline-block';
+        runButton.textContent = 'Racing...';
         
         // Create abort controllers for cancellation
         raceControllers.multiPass = new AbortController();
@@ -1310,40 +839,18 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
           
           // Update status to cancelled
           document.getElementById('multi-pass-status').textContent = 'Cancelled';
-          document.getElementById('multi-pass-status').className = document.getElementById('multi-pass-status').className.replace('bg-gray-700', 'bg-yellow-700');
           document.getElementById('single-pass-status').textContent = 'Cancelled';
-          document.getElementById('single-pass-status').className = document.getElementById('single-pass-status').className.replace('bg-gray-700', 'bg-yellow-700');
         }
         
         // Reset UI state
         isRacing = false;
         runButton.disabled = false;
-        raceButton.disabled = false;
-        stopRaceButton.style.display = 'none';
+        runButton.textContent = '🏁 Race Agents';
         
         // Reset controllers
         raceControllers = { multiPass: null, singlePass: null };
       };
 
-      const resetRaceState = () => {
-        // Reset multi-pass
-        document.getElementById('multi-pass-status').textContent = 'Starting...';
-        document.getElementById('multi-pass-progress').style.width = '0%';
-        document.getElementById('multi-pass-progress-text').textContent = '0%';
-        document.getElementById('multi-pass-log').innerHTML = '<div class="text-gray-500">Starting...</div>';
-        document.getElementById('multi-pass-time').textContent = '--';
-        document.getElementById('multi-pass-tokens').textContent = '--';
-        document.getElementById('multi-pass-calls').textContent = '--';
-        
-        // Reset single-pass
-        document.getElementById('single-pass-status').textContent = 'Starting...';
-        document.getElementById('single-pass-progress').style.width = '0%';
-        document.getElementById('single-pass-progress-text').textContent = '0%';
-        document.getElementById('single-pass-log').innerHTML = '<div class="text-gray-500">Starting...</div>';
-        document.getElementById('single-pass-time').textContent = '--';
-        document.getElementById('single-pass-tokens').textContent = '--';
-        document.getElementById('single-pass-calls').textContent = '--';
-      };
 
       const runRaceAgent = async (prompt, mode, scenario, abortSignal) => {
         const startTime = performance.now();
@@ -1385,8 +892,16 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
           
           const elapsed = (performance.now() - startTime) / 1000;
           timeEl.textContent = `${elapsed.toFixed(1)}s`;
-          tokensEl.textContent = metrics.prompt_tokens + metrics.completion_tokens;
+          const totalTokens = metrics.prompt_tokens + metrics.completion_tokens;
+          tokensEl.textContent = totalTokens;
           callsEl.textContent = metrics.llm_calls;
+          
+          // Update cost
+          const costEl = document.getElementById(`${prefix}-cost`);
+          if (costEl) {
+            const cost = (totalTokens * 0.00003).toFixed(4);
+            costEl.textContent = `$${cost}`;
+          }
           
           // Add log entry
           const entry = document.createElement('div');
@@ -1636,310 +1151,8 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
       const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-      // --- Network Effect Simulation ---
-      const runNetworkSimulation = () => {
-        const userCount = parseInt(scaleSlider.value);
-        const scenario = scenarioSelect.value;
-        
-        // Disable button during simulation
-        simulateNetworkButton.disabled = true;
-        simulateNetworkButton.textContent = 'Simulating...';
-        
-        // Simulate the calculations
-        setTimeout(() => {
-          const results = calculateNetworkEffect(userCount, scenario);
-          displayNetworkResults(results);
-          
-          simulateNetworkButton.disabled = false;
-          simulateNetworkButton.textContent = 'Run Simulation';
-          savingsSummary.style.display = 'block';
-        }, 800);
-      };
 
-      const calculateNetworkEffect = (userCount, scenario) => {
-        // Base metrics per run (from our simulations)
-        const baseMetrics = {
-          sql: { multiTokens: 200, singleTokens: 165, multiLatency: 2.5, singleLatency: 1.8 },
-          research: { multiTokens: 350, singleTokens: 280, multiLatency: 4.2, singleLatency: 2.9 },
-          data_analysis: { multiTokens: 280, singleTokens: 220, multiLatency: 3.1, singleLatency: 2.2 },
-          math_tutor: { multiTokens: 180, singleTokens: 150, multiLatency: 2.0, singleLatency: 1.5 }
-        };
-
-        const metrics = baseMetrics[scenario] || baseMetrics.sql;
-        
-        // Assume each user runs 5 queries per day, 30 days per month
-        const runsPerMonth = userCount * 5 * 30;
-        
-        // Calculate multi-pass totals
-        const multiTotalTokens = runsPerMonth * metrics.multiTokens;
-        const multiTotalLatency = runsPerMonth * metrics.multiLatency;
-        const multiMonthlyCost = multiTotalTokens * 0.00003; // $0.03 per 1K tokens
-        const multiContextLoss = Math.min(95, 60 + (userCount / 1000) * 10); // Increases with scale
-        
-        // Calculate single-pass totals
-        const singleTotalTokens = runsPerMonth * metrics.singleTokens;
-        const singleTotalLatency = runsPerMonth * metrics.singleLatency;
-        const singleMonthlyCost = singleTotalTokens * 0.00003;
-        const singleContextRetention = Math.max(75, 90 - (userCount / 10000) * 5); // Decreases slightly with scale
-        
-        // Calculate savings
-        const costSavings = multiMonthlyCost - singleMonthlyCost;
-        const speedImprovement = ((multiTotalLatency - singleTotalLatency) / multiTotalLatency * 100);
-        const efficiencyGain = ((multiTotalTokens - singleTotalTokens) / multiTotalTokens * 100);
-        
-        return {
-          userCount,
-          multi: {
-            totalTokens: multiTotalTokens,
-            monthlyCost: multiMonthlyCost,
-            totalLatency: multiTotalLatency,
-            contextLoss: multiContextLoss
-          },
-          single: {
-            totalTokens: singleTotalTokens,
-            monthlyCost: singleMonthlyCost,
-            totalLatency: singleTotalLatency,
-            contextRetention: singleContextRetention
-          },
-          savings: {
-            costSavings,
-            speedImprovement,
-            efficiencyGain
-          }
-        };
-      };
-
-      const displayNetworkResults = (results) => {
-        // Format large numbers
-        const formatNumber = (num) => {
-          if (num >= 1000000) return `${(num/1000000).toFixed(1)}M`;
-          if (num >= 1000) return `${(num/1000).toFixed(1)}K`;
-          return num.toFixed(0);
-        };
-
-        const formatCost = (cost) => {
-          if (cost >= 1000) return `$${(cost/1000).toFixed(1)}K`;
-          return `$${cost.toFixed(2)}`;
-        };
-
-        const formatTime = (seconds) => {
-          const hours = seconds / 3600;
-          if (hours >= 24) return `${(hours/24).toFixed(1)} days`;
-          if (hours >= 1) return `${hours.toFixed(1)} hrs`;
-          return `${(seconds/60).toFixed(0)} mins`;
-        };
-
-        // Multi-pass results
-        document.getElementById('multi-total-tokens').textContent = formatNumber(results.multi.totalTokens);
-        document.getElementById('multi-monthly-cost').textContent = formatCost(results.multi.monthlyCost);
-        document.getElementById('multi-total-latency').textContent = formatTime(results.multi.totalLatency);
-        document.getElementById('multi-context-loss').textContent = `${results.multi.contextLoss.toFixed(0)}%`;
-
-        // Single-pass results
-        document.getElementById('single-total-tokens').textContent = formatNumber(results.single.totalTokens);
-        document.getElementById('single-monthly-cost').textContent = formatCost(results.single.monthlyCost);
-        document.getElementById('single-total-latency').textContent = formatTime(results.single.totalLatency);
-        document.getElementById('single-context-retention').textContent = `${results.single.contextRetention.toFixed(0)}%`;
-
-        // Savings summary
-        document.getElementById('cost-savings-amount').textContent = formatCost(results.savings.costSavings);
-        document.getElementById('speed-improvement').textContent = `${results.savings.speedImprovement.toFixed(1)}%`;
-        document.getElementById('efficiency-gain').textContent = `${results.savings.efficiencyGain.toFixed(1)}%`;
-      };
-
-
-      function handleSseMessage(data) {
-        const entry = document.createElement('div');
-        entry.className = 'log-entry p-2 rounded-md flex items-start';
-
-        const now = new Date();
-        const timestamp = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
-
-        const ICONS = {
-          propose: '🧠',
-          execute: '⚙️',
-          failure: '❌',
-          patch: '🔧',
-          success: '✅',
-          tool_result: '📦',
-          model_response: '💬',
-          error: '🔥'
-        };
-
-        let icon = ICONS[data.phase] || '➡️';
-        let content = '';
-        let colorClass = 'bg-gray-700/50';
-        
-        // Get result panel elements once at the top to avoid redeclaration
-        const resultPanel = document.getElementById('result-panel');
-        const resultIcon = document.getElementById('result-icon');
-        const resultTitle = document.getElementById('result-title');
-        const finalAnswer = document.getElementById('final-answer');
-        const completionTime = document.getElementById('completion-time');
-        const totalAttempts = document.getElementById('total-attempts');
-
-        switch (data.phase) {
-          case 'propose':
-            content = `<span class="font-bold text-cyan-400">PROPOSE</span>: Agent is thinking...`;
-            updateExecutionDetails('Thinking', null, data.metrics);
-            
-            // Hide result panel when new execution starts
-            if (resultPanel) {
-              resultPanel.style.display = 'none';
-              // Reset to success styling for next execution
-              resultPanel.className = 'bg-gradient-to-r from-green-900/50 to-green-800/50 border border-green-600 p-4 rounded-lg shadow-2xl';
-              if (resultIcon) resultIcon.textContent = '✅';
-              if (resultTitle) resultTitle.textContent = 'Agent Completed Successfully';
-            }
-            break;
-          case 'model_response':
-            content = `<span class="font-bold text-gray-400">MODEL</span>: <pre class="inline-block whitespace-pre-wrap">${data.content}</pre>`;
-            updateExecutionDetails('Generated Response', null, data.metrics);
-            break;
-          case 'execute':
-            const attemptInfo = data.debug ? ` (Attempt ${data.debug.attempt})` : '';
-            content = `<span class="font-bold text-purple-400">EXECUTE${attemptInfo}</span>: Calling tool <code class="text-white bg-gray-800 px-1 rounded">${data.call.name}</code><br>
-                       <span class="text-gray-400">Args:</span> <code class="text-white bg-gray-800 px-2 py-1 rounded block mt-1">${JSON.stringify(data.call.args, null, 2)}</code>`;
-            updateExecutionDetails('Executing Tool', data.call, data.metrics);
-            break;
-          case 'tool_result':
-            const resultClass = data.result.ok ? 'text-green-400' : 'text-red-400';
-            const verifiedInfo = data.debug ? ` | Verified: ${data.debug.verified}` : '';
-            content = `<span class="font-bold ${resultClass}">RESULT</span>: <span class="text-gray-400">Status: ${data.result.ok ? 'SUCCESS' : 'FAILED'}${verifiedInfo}</span><br>
-                       <code class="text-white bg-gray-800 px-2 py-1 rounded block mt-1">${JSON.stringify(data.result, null, 2)}</code>`;
-            updateExecutionDetails(data.result.ok ? 'Tool Success' : 'Tool Failed', null, data.metrics);
-            break;
-          case 'failure':
-             content = `<span class="font-bold text-red-500">FAILURE</span>: ${data.message}`;
-             colorClass = 'bg-red-900/30';
-             updateExecutionDetails('Failed', null, data.metrics);
-             break;
-          case 'patch':
-            content = `<span class="font-bold text-yellow-400">PATCH</span>: Tool failed. Attempting to self-correct...`;
-            colorClass = 'bg-yellow-900/30';
-            updateExecutionDetails('Self-Correcting', null, data.metrics);
-            break;
-          case 'success':
-            content = `<span class="font-bold text-green-400">SUCCESS</span>: <pre class="inline-block whitespace-pre-wrap">${data.answer}</pre>`;
-            colorClass = 'bg-green-900/30';
-            updateExecutionDetails('Completed', null, data.metrics);
-            
-            // Show and populate the result panel
-            if (resultPanel && finalAnswer) {
-              resultPanel.style.display = 'block';
-              finalAnswer.textContent = data.answer || 'Task completed successfully';
-              
-              // Update completion metrics
-              if (completionTime && data.metrics?.latency) {
-                completionTime.textContent = `${data.metrics.latency.toFixed(2)}s`;
-              }
-              if (totalAttempts) {
-                // Try to estimate attempts from metrics or default to 1
-                const attempts = data.debug?.attempt || data.metrics?.attempts || 1;
-                totalAttempts.textContent = attempts.toString();
-              }
-            }
-            break;
-          case 'error':
-            content = `<span class="font-bold text-red-500">ERROR</span>: ${data.message}`;
-            colorClass = 'bg-red-900/50 border border-red-700';
-            updateExecutionDetails('Error', null, data.metrics);
-            
-            // Show result panel for errors too
-            if (resultPanel && finalAnswer) {
-              // Change to error styling
-              resultPanel.className = 'bg-gradient-to-r from-red-900/50 to-red-800/50 border border-red-600 p-4 rounded-lg shadow-2xl';
-              resultPanel.style.display = 'block';
-              if (resultIcon) resultIcon.textContent = '❌';
-              if (resultTitle) resultTitle.textContent = 'Agent Failed';
-              finalAnswer.textContent = data.message || 'Agent execution failed';
-            }
-            break;
-        }
-        
-        entry.className += ` ${colorClass}`;
-        entry.innerHTML = `<span class="mr-2 text-gray-500">${timestamp}</span><span class="mr-3">${icon}</span> <div class="flex-1">${content}</div>`;
-        log.appendChild(entry);
-        log.scrollTop = log.scrollHeight;
-
-        updateMetrics(data.metrics);
-      }
-
-      // Remove the now-unused global SSE listener
-      // document.body.removeEventListener('htmx:sseMessage', ...);
-
-      form.addEventListener('htmx:afterRequest', () => {
-        runButton.disabled = false;
-        runButton.textContent = 'Run Agent';
-      });
-
-      document.body.addEventListener('htmx:sseMessage', (event) => {
-        if (log.firstElementChild && log.firstElementChild.textContent.includes('Waiting')) {
-            log.innerHTML = ''; // Clear "Waiting" message
-        }
-        
-        const data = JSON.parse(event.detail.data);
-        const entry = document.createElement('div');
-        entry.className = 'log-entry p-2 rounded-md flex items-start';
-
-        const ICONS = {
-          propose: '🧠',
-          execute: '⚙️',
-          failure: '❌',
-          patch: '🔧',
-          success: '✅',
-          tool_result: '📦',
-          model_response: '💬',
-          error: '🔥'
-        };
-
-        let icon = ICONS[data.phase] || '➡️';
-        let content = '';
-        let colorClass = 'bg-gray-700/50';
-
-        switch (data.phase) {
-          case 'propose':
-            content = `<span class="font-bold text-cyan-400">PROPOSE</span>: Agent is thinking...`;
-            break;
-          case 'model_response':
-            content = `<span class="font-bold text-gray-400">MODEL</span>: <pre class="inline-block whitespace-pre-wrap">${data.content}</pre>`;
-            break;
-          case 'execute':
-            const attemptInfo = data.debug ? ` (Attempt ${data.debug.attempt})` : '';
-            content = `<span class="font-bold text-purple-400">EXECUTE${attemptInfo}</span>: Calling tool <code class="text-white bg-gray-800 px-1 rounded">${data.call.name}</code><br>
-                       <span class="text-gray-400">Args:</span> <code class="text-white bg-gray-800 px-2 py-1 rounded block mt-1">${JSON.stringify(data.call.args, null, 2)}</code>`;
-            break;
-          case 'tool_result':
-            const resultClass = data.result.ok ? 'text-green-400' : 'text-red-400';
-            const verifiedInfo = data.debug ? ` | Verified: ${data.debug.verified}` : '';
-            content = `<span class="font-bold ${resultClass}">RESULT</span>: <span class="text-gray-400">Status: ${data.result.ok ? 'SUCCESS' : 'FAILED'}${verifiedInfo}</span><br>
-                       <code class="text-white bg-gray-800 px-2 py-1 rounded block mt-1">${JSON.stringify(data.result, null, 2)}</code>`;
-            break;
-          case 'failure':
-             content = `<span class="font-bold text-red-500">FAILURE</span>: ${data.message}`;
-             colorClass = 'bg-red-900/30';
-             break;
-          case 'patch':
-            content = `<span class="font-bold text-yellow-400">PATCH</span>: Tool failed. Attempting to self-correct...`;
-            colorClass = 'bg-yellow-900/30';
-            break;
-          case 'success':
-            content = `<span class="font-bold text-green-400">SUCCESS</span>: <pre class="inline-block whitespace-pre-wrap">${data.answer}</pre>`;
-            colorClass = 'bg-green-900/30';
-            break;
-          case 'error':
-            content = `<span class="font-bold text-red-500">ERROR</span>: ${data.message}`;
-            colorClass = 'bg-red-900/50 border border-red-700';
-            break;
-        }
-        
-        entry.className += ` ${colorClass}`;
-        entry.innerHTML = `<span class="mr-3">${icon}</span> <div class="flex-1">${content}</div>`;
-        log.appendChild(entry);
-        log.scrollTop = log.scrollHeight;
-
-        updateMetrics(data.metrics);
-      });
+      // Simplified message handling for new UI - no longer needed
 
       // --- App Initialization ---
       const initializeApp = async () => {
@@ -1991,10 +1204,10 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
       // --- Initial Setup ---
       updateCodeView();
-      initializeMemoryBlocks();
+      resetRaceState();
       
-        // Check server configuration and initialize accordingly
-        initializeApp();
+      // Check server configuration and initialize accordingly
+      initializeApp();
         
       } catch (error) {
         console.error('❌ Error during SPOC-Shot initialization:', error);
