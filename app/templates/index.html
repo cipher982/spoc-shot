@@ -67,9 +67,9 @@
     </header>
 
     <!-- Model Loading Overlay (initially hidden) -->
-    <div id="model-loading-panel" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style="display: none;">
-      <div class="bg-gray-800 border border-blue-700 p-8 rounded-lg shadow-2xl max-w-md w-full mx-4">
-        <h2 class="text-xl font-semibold mb-4 flex items-center text-center">
+    <div id="model-loading-panel" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;">
+      <div class="bg-gray-800 border border-blue-700 p-8 rounded-lg shadow-2xl max-w-md w-full mx-4 relative">
+        <h2 class="text-xl font-semibold mb-4 flex items-center justify-center">
           <span class="mr-2">🧠</span> Initializing WebLLM
         </h2>
         <div class="mb-6">
