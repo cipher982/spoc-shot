@@ -10,7 +10,7 @@ help:
 	@echo ""
 	@echo "🐋 Docker:"
 	@echo "  make docker        Build and run web demo (local)"
-	@echo "  make docker-prod   Build and run for production (no exposed ports)"
+	@echo "  make docker-prod   Build and run for production (detached)"
 	@echo ""
 	@echo "💻 Local Development:"
 	@echo "  make dev           Run local development server"
@@ -25,10 +25,13 @@ docker:
 	@echo "🐋 Building and running SPOC-Shot web demo (local)..."
 	@docker compose up --build
 
-# Docker production (no exposed ports)
+# Docker production (detached, default compose file)
+# Uses docker-compose.yml but runs detached (`-d`). No source volume is
+# mounted, so container state remains isolated.  Override PORT/HOST in .env
+# if you need to expose a public port.
 docker-prod:
-	@echo "🐋 Building and running SPOC-Shot for production..."
-	@docker compose -f docker-compose.prod.yml up --build -d
+	@echo "🐋 Building and running SPOC-Shot for production (detached)..."
+	@docker compose up --build -d
 
 # Install dependencies
 install:

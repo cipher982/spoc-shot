@@ -19,12 +19,14 @@ It provides a live dashboard, token-level metrics, step-by-step logs and full cl
 
 ```bash
 # 1. Configure environment (.env)
+# (You can skip this step; both `make install` and `make dev` will copy
+#  .env.example automatically, but the helper script is convenient.)
 ./config.sh init      # copy .env.example → .env
 ./config.sh dev       # dev mode: WebLLM, port 8004, auto-reload
 
 # 2. Install deps & launch
 make install          # ⇒ uv sync
-make dev              # ⇒ uv run uvicorn app.main:app --reload
+make dev              # ⇒ uv run uvicorn app.main:app --host 127.0.0.1 --port 8004 --reload
 
 # 3. Open your browser
 open http://127.0.0.1:8004
@@ -72,7 +74,7 @@ make install     # uv sync
 make dev         # local development server (reload)
 make test        # run pytest & sanity checks
 make docker      # docker compose up --build (bind mount source)
-make docker-prod # production image (detached, no mount)
+make docker-prod # production image (detached)
 make clean       # remove __pycache__, stray .pyc, prune docker
 ```
 
@@ -88,10 +90,11 @@ Development (source mounted, port forwarded from `.env`):
 make docker              # or: docker compose up --build
 ```
 
+
 Production (detached, no host port unless you set `PORT`):
 
 ```bash
-make docker-prod         # or: docker compose -f docker-compose.prod.yml up -d
+make docker-prod         # or: docker compose up --build -d
 ```
 
 ---
