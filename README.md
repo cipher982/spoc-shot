@@ -1,132 +1,149 @@
 # SPOC-Shot Demo
 
-This project demonstrates a dashboard comparing traditional multi-pass agent loops against single-pass (SPOC-style) loops, now **deployable as a web demo** with client-side WebLLM inference!
+SPOC-Shot is an educational sandbox that contrasts **multi-pass ReAct agents** against an optimized **single-pass (SPOC) agent**.  
+It provides a live dashboard, token-level metrics, step-by-step logs and full client-side inference through **WebLLM**.
 
-## ⚙️ Configuration
+---
 
-SPOC-Shot uses environment variables for configuration. Get started quickly:
+## 1 Requirements
+
+• Python ≥ 3.12  
+• `uv` package manager (pip-installable)  
+• A modern browser with **WebGPU** (Chrome 113+, Firefox 110+) for WebLLM
+
+> 🛈  The server can be run on CPU-only machines; model inference happens in the browser by default.
+
+---
+
+## 2 Quick Start (Local)
 
 ```bash
-# Initialize configuration
-make init
+# 1. Configure environment (.env)
+./config.sh init      # copy .env.example → .env
+./config.sh dev       # dev mode: WebLLM, port 8004, auto-reload
 
-# Set up for development (recommended)
-make dev
+# 2. Install deps & launch
+make install          # ⇒ uv sync
+make dev              # ⇒ uv run uvicorn app.main:app --reload
 
-# Run the demo
-make run
+# 3. Open your browser
+open http://127.0.0.1:8004
 ```
 
-### Configuration Options
-
-- **Development**: WebLLM mode, port 8004, auto-reload
-- **Production**: Server mode, port 80, no reload  
-- **Hybrid**: Both WebLLM and server support
+Alternate one-liner (uses whatever is already in `.env`):
 
 ```bash
-# Quick configuration commands
-make dev              # Development setup
-make prod             # Production setup  
-make hybrid           # Hybrid mode
-make port PORT=3000   # Change port
-make show             # Show current config
+./run_demo.sh
 ```
 
-## 🚀 Quick Start
+---
+
+## 3 Configuration Helper
+
+`config.sh` replaces several old Make targets (`init`, `prod`, `hybrid`, `port`, `show`).
+
+| Command                 | Effect                                                        |
+|-------------------------|---------------------------------------------------------------|
+| `./config.sh init`      | Create `.env` from template                                   |
+| `./config.sh dev`       | WebLLM mode, port 8004, auto-reload                           |
+| `./config.sh prod`      | Server-only mode, port 80, no reload                          |
+| `./config.sh hybrid`    | Hybrid (WebLLM + vLLM) mode, port 8004                        |
+| `./config.sh port 3001` | Change exposed port                                           |
+| `./config.sh show`      | Display current `.env`                                        |
+
+Key environment variables (full list in `.env.example`):
+
+| Var            | Default        | Description                                      |
+|---------------|----------------|--------------------------------------------------|
+| `HOST`         | `0.0.0.0`      | Bind address                                     |
+| `PORT`         | `8004`         | HTTP port                                        |
+| `RELOAD`       | `true`         | Uvicorn autoreload                               |
+| `WEBLLM_MODE`  | `webllm`       | `webllm` \| `server` \| `hybrid`                 |
+| `VLLM_BASE_URL`| `http://cube:8000/v1` | vLLM REST endpoint when server/hybrid mode |
+| `MODEL_NAME`   | `local-7b`     | Model to request from vLLM                       |
+
+---
+
+## 4 Make Targets (current)
+
+```text
+make help        # print cheat-sheet
+make install     # uv sync
+make dev         # local development server (reload)
+make test        # run pytest & sanity checks
+make docker      # docker compose up --build (bind mount source)
+make docker-prod # production image (detached, no mount)
+make clean       # remove __pycache__, stray .pyc, prune docker
+```
+
+> ⚠️  Historical targets like `make run`, `make prod`, `make hybrid` are no longer in the Makefile. Use the equivalents above or `config.sh`.
+
+---
+
+## 5 Docker Usage
+
+Development (source mounted, port forwarded from `.env`):
 
 ```bash
-# 1. Initialize and configure
-make init
-make dev
+make docker              # or: docker compose up --build
+```
 
-# 2. Install dependencies and test setup
-make install
+Production (detached, no host port unless you set `PORT`):
+
+```bash
+make docker-prod         # or: docker compose -f docker-compose.prod.yml up -d
+```
+
+---
+
+## 6 API End-points
+
+| Method | Path            | Description                                         |
+|--------|-----------------|-----------------------------------------------------|
+| POST   | `/solve`        | SSE stream – body fields: `prompt`, `mode`, `scenario` |
+| GET    | `/api/config`   | Returns `{ webllm_mode, server_available }`         |
+| GET    | `/`             | SPA index page                                      |
+
+---
+
+## 7 Testing
+
+```bash
+# ensure .env exists first
+./config.sh init --quiet || true
+
 make test
-
-# 3. Run the demo
-make run
 ```
 
-The WebLLM model downloads automatically on first use.
+The suite verifies Python imports, file structure and both agent paths (`tests/test_agent.py`).
 
-## 🐋 Docker Deployment
+---
 
-```bash
-# Build and run with Make
-make docker-run
+## 8 How It Works (recap)
 
-# Or build image only
-make docker-build
+1. **Multi-Pass (baseline ReAct)** – each tool interaction is a separate LLM call.
+2. **Single-Pass (SPOC)** – retains KV-cache and conversation state inside one streaming generation.
 
-# Or with Docker directly
-docker build -t spoc-shot .
-docker run -p 8004:8004 -e WEBLLM_MODE=webllm spoc-shot
-```
+The web UI visualises: latency, token usage, LLM call count, live log stream and step-wise state.
 
-## ⚙️ Deployment Modes
+---
 
-### WebLLM Mode (Recommended)
-- **Client-side inference** using WebGPU
-- **No server GPU required**
-- Works on modern browsers (Chrome 113+, Firefox 110+)
-- Model runs entirely in the user's browser
+## 9 Performance Notes
 
-```bash
-make dev && make run
-```
+WebGPU / WebLLM speed depends heavily on hardware:
 
-### Hybrid Mode (Legacy + WebLLM)
-- Supports both server-side vLLM and client-side WebLLM
-- Falls back gracefully if vLLM server unavailable
+• Desktop dGPU → fast   
+• Laptop iGPU   → usable   
+• Mobile        → may fail due to memory limits (~2 GB required)
 
-```bash
-make hybrid && make run
-```
+The demo auto-detects capability and falls back to server or hybrid modes when available.
 
-### Server Mode (Original)
-- Requires external vLLM server with `--openai-api-server` flag
-- Uses your specified model and hardware
+---
 
-```bash
-make prod && make run
-```
+## 10 Roadmap / Contributions
 
-## 🧠 How It Works
+Planned features are tracked in `ROADMAP.md`.  PRs and issues are welcome — please run `make test` and format with black/ruff before submitting.
 
-The demo compares two agent architectures:
+---
 
-1. **Multi-Pass (Traditional ReAct)**: Multiple separate LLM calls for each tool interaction
-2. **Single-Pass (SPOC)**: Maintains conversation state and KV cache across tool calls
-
-Key features:
-- **Real-time metrics**: Latency, token usage, LLM call count
-- **Live log stream**: Step-by-step agent execution
-- **WebGPU acceleration**: Client-side inference with WebLLM
-- **KV cache demonstration**: Shows efficiency gains from state reuse
-
-## 🧪 Browser Requirements
-
-For WebLLM mode:
-- **Chrome 113+** or **Firefox 110+** (for WebGPU support)
-- **~2GB RAM** available for model inference
-- **Modern GPU** recommended (integrated graphics work but slower)
-
-## 🧪 Testing
-
-```bash
-# Run setup verification and tests
-make test
-
-# Or run individually
-uv run python test_setup.py
-pytest -q
-```
-
-## 📊 Performance Notes
-
-WebLLM performance varies by device:
-- **Desktop GPU**: Fast inference, excellent experience
-- **Laptop/Integrated**: Slower but functional
-- **Mobile**: Limited, may not work reliably
-
-The demo automatically detects capabilities and provides fallback options.
+© 2024 SPOC-Shot authors. Licensed under the Apache 2.0 License.
