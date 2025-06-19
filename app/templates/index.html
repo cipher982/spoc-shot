@@ -349,7 +349,8 @@ while retries < max_retries:
       // --- WebLLM Initialization ---
       const initializeWebLLM = async () => {
         try {
-          modelLoadingPanel.style.display = 'block';
+          // Show the overlay as a flex container so the modal stays centred
+          modelLoadingPanel.style.display = 'flex';
           runButton.disabled = true;
           
           console.log("🔍 Starting WebLLM initialization...");
