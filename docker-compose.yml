@@ -13,6 +13,19 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     env_file:
       - .env
-    volumes:
-      - ./app:/app/app  # For development - remove in production
     restart: unless-stopped
+
+# ---------------------------------------------------------------------------
+# Development override
+# ---------------------------------------------------------------------------
+# In local development we often want the source on the host machine to be
+# reflected inside the container for hot-reloading.  In Docker Compose this is
+# typically achieved with a bind-mount, **but mounting an empty directory in
+# production would hide the application code that the Dockerfile already
+# copied into the image** and the import `app.main` would fail.
+#
+# To avoid breaking production deployments we keep the base compose file
+# minimal and provide a second one – `docker-compose.dev.yml` – that adds the
+# bind-mount.  Run it with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ---------------------------------------------------------------------------

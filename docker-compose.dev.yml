@@ -1,0 +1,6 @@
+services:
+  spoc-shot:
+    volumes:
+      - ./app:/app/app  # Live-reload source code in development
+
+# The rest of the configuration is inherited from docker-compose.yml.
