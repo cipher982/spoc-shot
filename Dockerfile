@@ -5,8 +5,12 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml uv.lock ./
 
-# Install uv
-RUN pip install uv
+# Install uv and curl for healthchecks
+RUN pip install uv && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 RUN uv sync --frozen

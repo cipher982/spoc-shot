@@ -146,6 +146,14 @@ async def css_debug():
 # distracting 404 in the console.
 # ---------------------------------------------------------------------------
 
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint for Docker healthcheck and monitoring systems.
+    Returns 200 OK if the service is healthy.
+    """
+    return {"status": "healthy", "service": "spoc-shot"}
+
 @app.get("/favicon.ico")
 async def favicon():
     return HTMLResponse(status_code=204)
