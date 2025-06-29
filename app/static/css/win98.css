@@ -79,7 +79,7 @@ html, body {
   font-family: "MS Sans Serif", "Tahoma", system-ui, sans-serif;
   font-size: var(--font-base);
   line-height: var(--line-height-base);
-  background-color: var(--win98-face);
+  background-color: #008080; /* Teal canvas background */
   color: var(--win98-text);
   overflow-x: hidden;
 }
@@ -99,9 +99,15 @@ html, body {
 
 /* ===== MAIN CONTAINER ===== */
 .main-container {
-  max-width: 100%;
-  padding: 8px;
+  max-width: 1200px;
+  margin: 16px auto;
+  padding: 16px;
   background-color: var(--win98-face);
+  /* Windows 98 app window beveling */
+  border: 2px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  /* Subtle drop shadow */
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* ===== HEADER ===== */
