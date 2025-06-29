@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="bg-gray-900">
+<html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,103 +10,57 @@
     console.log("🔧 Captured original navigator.gpu:", window._originalGPU);
   </script>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Remove the early import - we'll do dynamic import in the function -->
-  <style>
-    /* Reset and base styles */
-    * {
-      box-sizing: border-box;
-    }
-    
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow-x: hidden; /* Prevent horizontal scroll */
-    }
-    
-    /* Custom styles for the toggle switch */
-    .toggle-checkbox:checked {
-      right: 0;
-      border-color: #4A5568;
-    }
-    .toggle-checkbox:checked + .toggle-label {
-      background-color: #4A5568;
-    }
-    
-    /* Simple fade-in animation for log entries */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .log-entry {
-      animation: fadeIn 0.3s ease-out;
-    }
-    
-    /* Ensure proper spacing and prevent overflow */
-    .main-container {
-      max-width: 100%;
-      overflow-x: hidden;
-    }
-    
-    /* Responsive grid improvements */
-    @media (max-width: 1024px) {
-      .grid.lg\\:grid-cols-2 {
-        grid-template-columns: 1fr !important;
-        gap: 1.5rem;
-      }
-    }
-    
-  </style>
+  <link rel="stylesheet" href="/static/css/win98.css">
 </head>
-<body class="min-h-full bg-gray-900 text-white font-sans p-2 sm:p-3 lg:p-4">
+<body>
 
-  <div class="main-container w-full max-w-7xl mx-auto">
-    <header class="text-center mb-3 py-2">
-      <h1 class="text-xl sm:text-2xl font-bold text-white">SPOC-Shot</h1>
-      <p class="text-gray-400 mt-1 text-xs">A Live Demo of Single-Pass Self-Correcting Agent Loops</p>
+  <div class="main-container">
+    <header class="header">
+      <h1>SPOC-Shot</h1>
+      <p class="subtitle">A Live Demo of Single-Pass Self-Correcting Agent Loops</p>
     </header>
 
     <!-- Model Loading Overlay (initially hidden) -->
-    <div id="model-loading-panel" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;">
-      <div class="bg-gray-800 border border-blue-700 p-8 rounded-lg shadow-2xl max-w-md w-full mx-4 relative">
-        <h2 class="text-xl font-semibold mb-4 flex items-center justify-center">
+    <div id="model-loading-panel" class="loading-overlay" style="display: none;">
+      <div class="loading-dialog">
+        <h2 class="loading-title">
           <span class="mr-2">🧠</span> Initializing WebLLM
         </h2>
-        <div class="mb-6">
-          <div class="flex justify-between text-sm text-gray-300 mb-2">
+        <div class="progress-section">
+          <div class="progress-labels">
             <span id="model-status">Starting WebLLM initialization...</span>
             <span id="model-progress-text">0%</span>
           </div>
-          <div class="w-full bg-gray-700 rounded-full h-3">
-            <div id="model-progress-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+          <div class="progress-bar-container">
+            <div id="model-progress-bar" class="progress-bar" style="width: 0%"></div>
           </div>
         </div>
-        <p class="text-sm text-gray-400 text-center">
+        <p class="loading-description">
           Loading Qwen3-0.6B (~300MB)<br>
-          <span class="text-xs text-gray-500">This happens once and caches locally</span>
+          <span class="loading-note">This happens once and caches locally</span>
         </p>
       </div>
     </div>
 
     <!-- Compact Control Panel -->
-    <div class="bg-gray-800 p-3 rounded-lg shadow-2xl mb-3">
-      <div class="flex flex-wrap items-center gap-4">
-        <div class="flex-1 min-w-64">
-          <label for="scenario-select" class="block text-xs font-medium text-gray-300 mb-1">Scenario</label>
-          <select id="scenario-select" name="scenario" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <div class="control-panel">
+      <div class="control-group">
+        <div class="scenario-group">
+          <label for="scenario-select" class="control-label">Scenario</label>
+          <select id="scenario-select" name="scenario" class="control-select">
             <option value="sql" selected>🗃️ SQL Query Agent</option>
             <option value="research">🔍 Research Agent</option>
             <option value="data_analysis">📊 Data Analyst</option>
             <option value="math_tutor">🧮 Math Tutor</option>
           </select>
         </div>
-        <div class="flex-2 min-w-80">
-          <label for="prompt-input" class="block text-xs font-medium text-gray-300 mb-1">Prompt</label>
-          <textarea id="prompt-input" name="prompt" rows="2" class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your prompt here...">How many conversions did we get this week?</textarea>
+        <div class="prompt-group">
+          <label for="prompt-input" class="control-label">Prompt</label>
+          <textarea id="prompt-input" name="prompt" rows="2" class="control-textarea" placeholder="Enter your prompt here...">How many conversions did we get this week?</textarea>
         </div>
-        <div class="flex-shrink-0">
-          <label class="block text-xs font-medium text-gray-300 mb-1">&nbsp;</label>
-          <button id="run-button" type="button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-md transition-colors disabled:bg-gray-500">
+        <div class="button-group">
+          <label class="control-label">&nbsp;</label>
+          <button id="run-button" type="button" class="run-button">
             🏁 Race Agents
           </button>
         </div>
@@ -114,121 +68,121 @@
     </div>
 
     <!-- Side-by-Side Agent Comparison -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
+    <div class="agent-comparison">
       <!-- Multi-Pass Agent -->
-      <div class="bg-red-900/20 border border-red-700 rounded-lg">
-        <div class="p-3 border-b border-red-700">
-          <h3 class="text-base font-semibold text-red-300 flex items-center">
+      <div class="agent-card multi-pass-agent">
+        <div class="agent-header">
+          <h3 class="agent-title">
             🐌 Multi-Pass Agent (Baseline)
-            <span id="multi-pass-status" class="ml-auto text-sm px-2 py-1 bg-gray-700 rounded">Ready</span>
+            <span id="multi-pass-status" class="agent-status">Ready</span>
           </h3>
-          <div class="mt-2">
-            <div class="flex justify-between text-sm text-gray-300 mb-1">
+          <div class="agent-progress">
+            <div class="progress-header">
               <span>Progress</span>
               <span id="multi-pass-progress-text">0%</span>
             </div>
-            <div class="w-full bg-gray-700 rounded-full h-2">
-              <div id="multi-pass-progress" class="bg-red-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+            <div class="progress-container">
+              <div id="multi-pass-progress" class="progress-fill" style="width: 0%"></div>
             </div>
           </div>
         </div>
-        <div class="p-3">
-          <div class="grid grid-cols-4 gap-2 text-center text-xs mb-3">
-            <div>
-              <div class="text-gray-400">Time</div>
-              <div id="multi-pass-time" class="font-bold text-red-300">--</div>
+        <div class="agent-body">
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <div class="metric-label">Time</div>
+              <div id="multi-pass-time" class="metric-value">--</div>
             </div>
-            <div>
-              <div class="text-gray-400">Tokens</div>
-              <div id="multi-pass-tokens" class="font-bold text-red-300">--</div>
+            <div class="metric-item">
+              <div class="metric-label">Tokens</div>
+              <div id="multi-pass-tokens" class="metric-value">--</div>
             </div>
-            <div>
-              <div class="text-gray-400">Calls</div>
-              <div id="multi-pass-calls" class="font-bold text-red-300">--</div>
+            <div class="metric-item">
+              <div class="metric-label">Calls</div>
+              <div id="multi-pass-calls" class="metric-value">--</div>
             </div>
-            <div>
-              <div class="text-gray-400">Cost</div>
-              <div id="multi-pass-cost" class="font-bold text-red-300">--</div>
+            <div class="metric-item">
+              <div class="metric-label">Cost</div>
+              <div id="multi-pass-cost" class="metric-value">--</div>
             </div>
           </div>
-          <div id="multi-pass-log" class="h-32 overflow-y-auto bg-gray-900/50 p-2 rounded text-xs font-mono">
-            <div class="text-gray-500">Ready to race...</div>
+          <div id="multi-pass-log" class="agent-log">
+            <div class="log-ready">Ready to race...</div>
           </div>
         </div>
       </div>
 
       <!-- Single-Pass Agent -->
-      <div class="bg-green-900/20 border border-green-700 rounded-lg">
-        <div class="p-3 border-b border-green-700">
-          <h3 class="text-base font-semibold text-green-300 flex items-center">
+      <div class="agent-card single-pass-agent">
+        <div class="agent-header">
+          <h3 class="agent-title">
             🚀 Single-Pass Agent (SPOC)
-            <span id="single-pass-status" class="ml-auto text-sm px-2 py-1 bg-gray-700 rounded">Ready</span>
+            <span id="single-pass-status" class="agent-status">Ready</span>
           </h3>
-          <div class="mt-2">
-            <div class="flex justify-between text-sm text-gray-300 mb-1">
+          <div class="agent-progress">
+            <div class="progress-header">
               <span>Progress</span>
               <span id="single-pass-progress-text">0%</span>
             </div>
-            <div class="w-full bg-gray-700 rounded-full h-2">
-              <div id="single-pass-progress" class="bg-green-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+            <div class="progress-container">
+              <div id="single-pass-progress" class="progress-fill" style="width: 0%"></div>
             </div>
           </div>
         </div>
-        <div class="p-3">
-          <div class="grid grid-cols-4 gap-2 text-center text-xs mb-3">
-            <div>
-              <div class="text-gray-400">Time</div>
-              <div id="single-pass-time" class="font-bold text-green-300">--</div>
+        <div class="agent-body">
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <div class="metric-label">Time</div>
+              <div id="single-pass-time" class="metric-value">--</div>
             </div>
-            <div>
-              <div class="text-gray-400">Tokens</div>
-              <div id="single-pass-tokens" class="font-bold text-green-300">--</div>
+            <div class="metric-item">
+              <div class="metric-label">Tokens</div>
+              <div id="single-pass-tokens" class="metric-value">--</div>
             </div>
-            <div>
-              <div class="text-gray-400">Calls</div>
-              <div id="single-pass-calls" class="font-bold text-green-300">--</div>
+            <div class="metric-item">
+              <div class="metric-label">Calls</div>
+              <div id="single-pass-calls" class="metric-value">--</div>
             </div>
-            <div>
-              <div class="text-gray-400">Cost</div>
-              <div id="single-pass-cost" class="font-bold text-green-300">--</div>
+            <div class="metric-item">
+              <div class="metric-label">Cost</div>
+              <div id="single-pass-cost" class="metric-value">--</div>
             </div>
           </div>
-          <div id="single-pass-log" class="h-32 overflow-y-auto bg-gray-900/50 p-2 rounded text-xs font-mono">
-            <div class="text-gray-500">Ready to race...</div>
+          <div id="single-pass-log" class="agent-log">
+            <div class="log-ready">Ready to race...</div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Race Results Summary -->
-    <div id="race-results" class="bg-gray-800 p-3 rounded-lg shadow-2xl" style="display: none;">
-      <h3 class="text-base font-semibold mb-3 text-center">🏆 Race Results</h3>
-      <div id="winner-announcement" class="text-center text-xl font-bold mb-3"></div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center text-sm">
-        <div>
-          <div class="text-gray-400">Speed Advantage</div>
-          <div id="speed-advantage" class="text-lg font-bold"></div>
+    <div id="race-results" class="race-results" style="display: none;">
+      <h3 class="results-title">🏆 Race Results</h3>
+      <div id="winner-announcement" class="winner-announcement"></div>
+      <div class="results-grid">
+        <div class="result-item">
+          <div class="result-label">Speed Advantage</div>
+          <div id="speed-advantage" class="result-value"></div>
         </div>
-        <div>
-          <div class="text-gray-400">Token Efficiency</div>
-          <div id="token-efficiency" class="text-lg font-bold"></div>
+        <div class="result-item">
+          <div class="result-label">Token Efficiency</div>
+          <div id="token-efficiency" class="result-value"></div>
         </div>
-        <div>
-          <div class="text-gray-400">Cost Savings</div>
-          <div id="cost-savings" class="text-lg font-bold"></div>
+        <div class="result-item">
+          <div class="result-label">Cost Savings</div>
+          <div id="cost-savings" class="result-value"></div>
         </div>
       </div>
     </div>
 
     <!-- Agent Logic - Collapsible Section -->
-    <details class="mt-2 bg-gray-800 p-3 rounded-lg shadow-2xl">
-      <summary class="cursor-pointer text-base font-semibold text-gray-300 hover:text-white flex items-center">
-        <span class="mr-2">🤖</span>
+    <details class="collapsible-section">
+      <summary class="collapsible-summary">
+        <span class="expand-icon">🤖</span>
         Agent Logic & Pseudo-code
-        <span class="ml-auto text-xs text-gray-500">(click to expand)</span>
+        <span class="expand-hint">(click to expand)</span>
       </summary>
-      <div class="mt-2 pt-2 border-t border-gray-700">
-        <div id="code-view" class="bg-gray-900 p-2 rounded-md text-xs font-mono">
+      <div class="collapsible-content">
+        <div id="code-view" class="code-view">
           <!-- Pseudo-code will be injected here -->
         </div>
       </div>
@@ -275,954 +229,7 @@ while retries < max_retries:
     </code></pre>
   </template>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('🚀 DOMContentLoaded fired - initializing SPOC-Shot');
-      
-      try {
-        const runButton = document.getElementById('run-button');
-        
-        console.log('🔍 Element check:', {
-          runButton: !!runButton
-        });
-      const scenarioSelect = document.getElementById('scenario-select');
-      const promptInput = document.getElementById('prompt-input');
-      const codeView = document.getElementById('code-view');
-      const multiPassTemplate = document.getElementById('multi-pass-code');
-      const singlePassTemplate = document.getElementById('single-pass-code');
-
-      // Race results
-      const raceResults = document.getElementById('race-results');
-
-      // No additional elements needed for simplified layout
-
-      // WebLLM elements
-      const modelLoadingPanel = document.getElementById('model-loading-panel');
-      const modelStatus = document.getElementById('model-status');
-      const modelProgressText = document.getElementById('model-progress-text');
-      const modelProgressBar = document.getElementById('model-progress-bar');
-
-      // --- State Management ---
-      let currentScenario = 'sql';
-      let webllmEngine = null;
-      let modelLoaded = false;
-
-      // Scenario configurations
-      const scenarioPrompts = {
-        sql: "How many conversions did we get this week?",
-        research: "What are the latest developments in climate change research?",
-        data_analysis: "Analyze the user engagement trends from our metrics data",
-        math_tutor: "Solve the equation: 2x + 5 = 15"
-      };
-
-      const updateCodeView = () => {
-        // Show multi-pass by default
-        codeView.innerHTML = multiPassTemplate.innerHTML;
-      };
-
-      // Simplified functions for new layout
-      const resetRaceState = () => {
-        // Reset multi-pass
-        document.getElementById('multi-pass-status').textContent = 'Ready';
-        document.getElementById('multi-pass-progress').style.width = '0%';
-        document.getElementById('multi-pass-progress-text').textContent = '0%';
-        document.getElementById('multi-pass-log').innerHTML = '<div class="text-gray-500">Ready to race...</div>';
-        document.getElementById('multi-pass-time').textContent = '--';
-        document.getElementById('multi-pass-tokens').textContent = '--';
-        document.getElementById('multi-pass-calls').textContent = '--';
-        document.getElementById('multi-pass-cost').textContent = '--';
-        
-        // Reset single-pass
-        document.getElementById('single-pass-status').textContent = 'Ready';
-        document.getElementById('single-pass-progress').style.width = '0%';
-        document.getElementById('single-pass-progress-text').textContent = '0%';
-        document.getElementById('single-pass-log').innerHTML = '<div class="text-gray-500">Ready to race...</div>';
-        document.getElementById('single-pass-time').textContent = '--';
-        document.getElementById('single-pass-tokens').textContent = '--';
-        document.getElementById('single-pass-calls').textContent = '--';
-        document.getElementById('single-pass-cost').textContent = '--';
-        
-        // Hide results
-        raceResults.style.display = 'none';
-      };
-
-      // --- WebLLM Initialization ---
-      const initializeWebLLM = async () => {
-        try {
-          // Show the overlay as a flex container so the modal stays centred
-          modelLoadingPanel.style.display = 'flex';
-          runButton.disabled = true;
-          
-          console.log("🔍 Starting WebLLM initialization...");
-          
-          modelStatus.textContent = "Loading WebLLM library...";
-          
-          // 1️⃣ Dynamically import WebLLM (fixes race condition)
-          const { CreateMLCEngine, prebuiltAppConfig } = await import(
-            'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm'
-          );
-          console.log("✅ WebLLM 0.2.79 loaded");
-
-          // 2️⃣ Check WebGPU
-          modelStatus.textContent = "Checking WebGPU support...";
-          if (!('gpu' in navigator)) {
-            throw new Error('WebGPU unavailable on this browser');
-          }
-          console.log("✅ WebGPU ready");
-
-          // 3️⃣ Verify model in catalogue
-          modelStatus.textContent = "Verifying model availability...";
-          const selectedModel = "Qwen3-0.6B-q4f16_1-MLC"; // No mlc-ai/ prefix
-          const found = prebuiltAppConfig.model_list.some((m) => m.model_id === selectedModel);
-          
-          if (!found) {
-            const qwen3Models = prebuiltAppConfig.model_list
-              .filter(m => m.model_id.startsWith("Qwen3"))
-              .map(m => m.model_id);
-            console.log("Available Qwen3 models:", qwen3Models);
-            throw new Error(`${selectedModel} missing from catalogue`);
-          }
-          console.log(`✅ Model found in catalogue: ${selectedModel}`);
-
-          // 4️⃣ Load the model
-          modelStatus.textContent = "Loading model...";
-          console.log("🔄 Creating MLC Engine with model:", selectedModel);
-          
-          const initProgressCallback = (report) => {
-            console.log("📊 Progress:", report);
-            const progress = Math.round((report.progress || 0) * 100);
-            modelProgressText.textContent = `${progress}%`;
-            modelProgressBar.style.width = `${progress}%`;
-            modelStatus.textContent = report.text || `Loading model... ${progress}%`;
-          };
-
-          webllmEngine = await CreateMLCEngine(selectedModel, { initProgressCallback });
-          
-          console.log("✅ WebLLM engine created successfully:", webllmEngine);
-
-          modelStatus.textContent = "Model loaded successfully!";
-          modelProgressText.textContent = "100%";
-          modelProgressBar.style.width = "100%";
-          
-          setTimeout(() => {
-            modelLoadingPanel.style.display = 'none';
-            runButton.disabled = false;
-            modelLoaded = true;
-          }, 1000);
-
-        } catch (error) {
-          console.error("❌ WebLLM initialization failed:", error);
-          console.error("Error details:", {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-          });
-          
-          modelStatus.textContent = `Error: ${error.message}`;
-          modelProgressBar.style.backgroundColor = '#dc2626';
-          
-          // Show helpful error message without popup
-          setTimeout(() => {
-            // Update the overlay to show error
-            const panel = modelLoadingPanel.querySelector('div');
-            panel.innerHTML = `
-              <div class="text-center">
-                <div class="text-red-400 text-xl mb-4">⚠️ WebLLM Unavailable</div>
-                <div class="text-sm text-gray-300 mb-6 text-left">
-                  <strong>Most likely cause:</strong> WebGPU not enabled in Chrome<br><br>
-                </div>
-                <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mr-3">
-                  Retry
-                </button>
-                <button onclick="enableDemoMode()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">
-                  View Demo UI
-                </button>
-              </div>
-            `;
-            
-            // Also update the main UI
-            runButton.disabled = true;
-            runButton.textContent = 'WebLLM Required';
-            runButton.className = runButton.className.replace('bg-blue-600', 'bg-gray-600');
-          }, 1000);
-        }
-      };
-
-      // --- Event Listeners ---
-      scenarioSelect.addEventListener('change', (e) => {
-        currentScenario = e.target.value;
-        promptInput.value = scenarioPrompts[currentScenario];
-      });
-
-      runButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        startRace();
-      });
-
-      // No additional setup needed for simplified layout
-
-      // --- WebLLM Agent Implementation ---
-      const runWebLLMAgent = async (prompt, mode, scenario = 'sql') => {
-        console.log(`Running WebLLM agent in ${mode} mode, ${scenario} scenario with prompt: ${prompt}`);
-        
-        // Clear log and reset UI
-        log.innerHTML = '<div class="text-gray-500">Running agent with WebLLM...</div>';
-        resetMetrics();
-        
-        const startTime = performance.now();
-        let metrics = { prompt_tokens: 0, completion_tokens: 0, latency: 0, llm_calls: 0 };
-        
-        try {
-          if (mode === 'multi_pass') {
-            await runMultiPassWebLLM(prompt, metrics, startTime, scenario);
-          } else {
-            await runSinglePassWebLLM(prompt, metrics, startTime, scenario);
-          }
-        } catch (error) {
-          console.error('WebLLM agent error:', error);
-          handleSseMessage({
-            phase: 'error',
-            message: `WebLLM error: ${error.message}`,
-            metrics: metrics
-          });
-        } finally {
-          runButton.disabled = false;
-          runButton.textContent = 'Run Agent';
-        }
-      };
-
-      const runMultiPassWebLLM = async (prompt, metrics, startTime, scenario = 'sql') => {
-        const requestId = `spoc-shot-${Date.now()}`;
-        
-        // Simulate the multi-pass logic
-        let attempt = 0;
-        
-        // First LLM call - MOVE MESSAGES OUTSIDE LOOP!
-        const systemPrompt = `You are an intelligent agent that learns from your mistakes and applies learned patterns.
-
-CRITICAL RULES:
-1. Look at your conversation history BEFORE making tool calls
-2. If you see a previous tool failure with a hint, USE THAT HINT in your next attempt
-3. Never repeat the exact same failed tool call
-4. Learn from patterns and apply them consistently
-
-Your task: Answer "How many conversions did we get this week?" using the sql_query tool.
-- The tool takes a single argument: column
-- Tool results come back as "TOOL_RESULT: {json data}"
-- If you get a hint like "Did you mean 'convs'?", use 'convs' in your next tool call
-- Format: TOOL_CALL: {"name": "sql_query", "args": {"column": "your_guess"}}
-
-DO NOT repeat failed attempts! Always learn from the conversation history.`;
-
-        const messages = [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ];
-
-        while (true) {
-          attempt++;
-          handleSseMessage({ phase: 'propose', metrics });
-          
-          // DEBUG: Log attempt number
-          console.log(`🔄 Starting Multi-Pass attempt ${attempt}`);
-
-          // DEBUG: Compact logging
-          console.log(`🔍 Attempt ${attempt}: ${messages.length} messages`);
-          if (messages.length > 3) {
-            const lastMsg = messages[messages.length-1];
-            if (lastMsg.content.startsWith('TOOL_RESULT:')) {
-              try {
-                const result = JSON.parse(lastMsg.content.replace('TOOL_RESULT: ', ''));
-                console.log(`   Last hint: ${result.hint || 'none'}`);
-              } catch (e) {
-                console.log(`   Last hint: none`);
-              }
-            }
-          }
-
-          const completion = await webllmEngine.chat.completions.create({
-            messages,
-            temperature: 0.0,
-            // Note: WebLLM might handle request_id differently
-          });
-
-          metrics.llm_calls += 1;
-          metrics.prompt_tokens += completion.usage?.prompt_tokens || 0;
-          metrics.completion_tokens += completion.usage?.completion_tokens || 0;
-          
-          const response = completion.choices[0].message.content;
-          handleSseMessage({ phase: 'model_response', content: response, metrics });
-          
-          // Check for tool call
-          if (response.includes('TOOL_CALL:')) {
-            const toolCallStr = response.split('TOOL_CALL:')[1].trim();
-            try {
-              const toolCall = JSON.parse(toolCallStr);
-              handleSseMessage({ phase: 'execute', call: toolCall, metrics });
-              
-              // Execute tool (client-side simulation)
-              const result = simulateToolCall(toolCall, scenario);
-              handleSseMessage({ phase: 'tool_result', result, metrics });
-              
-              if (result.ok) {
-                // Success - make final LLM call for answer
-                messages.push({ role: 'assistant', content: response });
-                messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
-                
-                handleSseMessage({ phase: 'propose', metrics });
-                const finalCompletion = await webllmEngine.chat.completions.create({
-                  messages,
-                  temperature: 0.0,
-                });
-                
-                // Don't increment llm_calls for same request_id (simulating KV cache)
-                metrics.prompt_tokens += finalCompletion.usage?.prompt_tokens || 0;
-                metrics.completion_tokens += finalCompletion.usage?.completion_tokens || 0;
-                
-                const finalAnswer = finalCompletion.choices[0].message.content;
-                metrics.latency = (performance.now() - startTime) / 1000;
-                handleSseMessage({ phase: 'success', answer: finalAnswer, metrics, debug: { attempt } });
-                return;
-              } else {
-                // Tool failed, continue loop
-                messages.push({ role: 'assistant', content: response });
-                messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
-                
-                // DEBUG: Compact failure logging
-                console.log(`❌ Attempt ${attempt} failed. Added hint: ${result.hint || 'none'}`);
-                
-                handleSseMessage({ phase: 'failure', message: 'Tool execution failed. Retrying...', metrics });
-              }
-            } catch (e) {
-              handleSseMessage({ phase: 'failure', message: `Invalid tool call: ${e.message}`, metrics });
-              break;
-            }
-          } else {
-            metrics.latency = (performance.now() - startTime) / 1000;
-            handleSseMessage({ phase: 'success', answer: response, metrics });
-            return;
-          }
-        }
-        
-        // Continue loop - no max attempts
-      };
-
-      const runSinglePassWebLLM = async (prompt, metrics, startTime, scenario = 'sql') => {
-        const requestId = `spoc-shot-${Date.now()}`;
-        let attempt = 0;
-        
-        // Single-pass logic
-        while (true) {
-          attempt++;
-          console.log(`🔄 Starting Single-Pass attempt ${attempt}`);
-          handleSseMessage({ phase: 'propose', metrics });
-          
-          const systemPrompt = `You are an agent designed for a specific demo. Your ONLY purpose is to answer the user's question about "conversions".
-1. You will be given a TOOL_SIGNATURE for the sql_query tool. It is the only tool you can use.
-2. The tool takes a single argument: column.
-3. The user's question is "How many conversions did we get this week?". Infer the column name from this question.
-4. Your first action MUST be to call the tool. Output a TOOL_CALL in JSON format.
-5. If the EXEC_RESULT you receive is a failure, you MUST use the 'hint' to immediately try a new TOOL_CALL with the corrected column name.
-6. If the EXEC_RESULT is successful, provide a one-sentence answer summarizing the data.
-Example of a tool call:
-TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
-
-          const toolSignature = `TOOL_SIGNATURE: {
-  "name": "sql_query",
-  "description": "Query the company database.",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "column": {
-        "type": "string",
-        "description": "The column to query, e.g., 'users', 'revenue', 'convs'."
-      }
-    },
-    "required": ["column"]
-  }
-}`;
-
-          const messages = [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `${toolSignature}\n\nUser Prompt: ${prompt}` }
-          ];
-
-          const completion = await webllmEngine.chat.completions.create({
-            messages,
-            temperature: 0.0,
-          });
-
-          metrics.llm_calls += 1;
-          metrics.prompt_tokens += completion.usage?.prompt_tokens || 0;
-          metrics.completion_tokens += completion.usage?.completion_tokens || 0;
-          
-          const response = completion.choices[0].message.content;
-          handleSseMessage({ phase: 'model_response', content: response, metrics });
-          
-          // Check for tool call
-          if (response.includes('TOOL_CALL:')) {
-            const toolCallStr = response.split('TOOL_CALL:')[1].trim();
-            try {
-              const toolCall = JSON.parse(toolCallStr);
-              handleSseMessage({ phase: 'execute', call: toolCall, metrics });
-              
-              // Execute tool
-              const result = simulateToolCall(toolCall, scenario);
-              handleSseMessage({ phase: 'tool_result', result, metrics });
-              
-              if (result.ok) {
-                // Success - generate final answer (simulating continued generation)
-                messages.push({ role: 'assistant', content: response });
-                messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
-                
-                const finalCompletion = await webllmEngine.chat.completions.create({
-                  messages,
-                  temperature: 0.0,
-                });
-                
-                // In true single-pass, this would be continuation, not new call
-                metrics.prompt_tokens += finalCompletion.usage?.prompt_tokens || 0;
-                metrics.completion_tokens += finalCompletion.usage?.completion_tokens || 0;
-                
-                const finalAnswer = finalCompletion.choices[0].message.content;
-                metrics.latency = (performance.now() - startTime) / 1000;
-                handleSseMessage({ phase: 'success', answer: finalAnswer, metrics, debug: { attempt } });
-                return;
-              } else {
-                // Tool failed - show patch phase and continue
-                handleSseMessage({ phase: 'patch', message: 'Tool execution failed. Attempting to self-patch.', metrics });
-                messages.push({ role: 'assistant', content: response });
-                messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
-              }
-            } catch (e) {
-              handleSseMessage({ phase: 'failure', message: `Invalid tool call: ${e.message}`, metrics });
-              break;
-            }
-          } else {
-            metrics.latency = (performance.now() - startTime) / 1000;
-            handleSseMessage({ phase: 'success', answer: response, metrics });
-            return;
-          }
-        }
-        
-        // Continue loop - no max attempts
-      };
-
-      // Simulate the tool execution client-side
-      const simulateToolCall = (toolCall, scenario = 'sql') => {
-        const args = toolCall.args || toolCall.arguments || {};
-        
-        if (scenario === 'sql') {
-          const column = args.column;
-          if (column === "conversions") {
-            return { ok: false, hint: "Did you mean 'convs'?" };
-          } else if (column === "convs") {
-            return { ok: true, data: 12345 };
-          } else {
-            return { ok: false, hint: `Column '${column}' not found.` };
-          }
-        } else if (scenario === 'research') {
-          const query = args.query || "";
-          if (query.toLowerCase().includes("climate change")) {
-            if (!query.toLowerCase().includes("recent")) {
-              return { ok: false, hint: "Try searching for 'recent climate change data' for more current results" };
-            } else {
-              return {
-                ok: true,
-                data: {
-                  results: [
-                    { title: "2024 Climate Report", snippet: "Global temperatures rose 1.2°C above pre-industrial levels" },
-                    { title: "Arctic Ice Data", snippet: "Sea ice extent decreased by 13% per decade since 1979" }
-                  ]
-                }
-              };
-            }
-          } else {
-            return { ok: false, hint: `No results found for '${query}'. Try more specific terms.` };
-          }
-        } else if (scenario === 'data_analysis') {
-          const dataset = args.dataset;
-          const operation = args.operation;
-          if (dataset === "user_metrics" && operation === "trend") {
-            return {
-              ok: true,
-              data: {
-                trend: "upward",
-                growth_rate: "15% monthly",
-                key_metric: "Daily Active Users: 50,000"
-              }
-            };
-          } else {
-            return { ok: false, hint: `Try 'trend' analysis for 'user_metrics' dataset` };
-          }
-        } else if (scenario === 'math_tutor') {
-          const equation = args.equation;
-          const step = args.step;
-          if (equation.includes("2x + 5 = 15")) {
-            if (step === "simplify") {
-              return {
-                ok: true,
-                data: {
-                  result: "2x = 10",
-                  explanation: "Subtracted 5 from both sides"
-                }
-              };
-            } else if (step === "calculate") {
-              return {
-                ok: true,
-                data: {
-                  result: "x = 5",
-                  explanation: "Divided both sides by 2"
-                }
-              };
-            } else {
-              return { ok: false, hint: "First 'simplify' the equation by moving constants" };
-            }
-          } else {
-            return { ok: false, hint: `Try breaking down the equation with steps like 'simplify' or 'calculate'` };
-          }
-        }
-        
-        return { ok: false, hint: "Unknown tool or scenario" };
-      };
-
-      // --- Racing Functionality ---
-      let raceControllers = { multiPass: null, singlePass: null };
-      let isRacing = false;
-      
-      const startRace = async () => {
-        const prompt = promptInput.value;
-        const scenario = scenarioSelect.value;
-        
-        // Reset race state
-        resetRaceState();
-        
-        // Update UI for racing state
-        isRacing = true;
-        runButton.disabled = true;
-        runButton.textContent = 'Racing...';
-        
-        // Create abort controllers for cancellation
-        raceControllers.multiPass = new AbortController();
-        raceControllers.singlePass = new AbortController();
-        
-        try {
-          // Start both agents simultaneously
-          const multiPassPromise = runRaceAgent(prompt, 'multi_pass', scenario, raceControllers.multiPass.signal);
-          const singlePassPromise = runRaceAgent(prompt, 'single_pass', scenario, raceControllers.singlePass.signal);
-          
-          const results = await Promise.allSettled([multiPassPromise, singlePassPromise]);
-          
-          // Only show results if race wasn't cancelled
-          if (isRacing) {
-            showRaceResults(results);
-          }
-        } catch (error) {
-          if (error.name !== 'AbortError') {
-            console.error('Race error:', error);
-          }
-        } finally {
-          stopRace();
-        }
-      };
-      
-      const stopRace = () => {
-        if (isRacing) {
-          // Cancel both agents
-          if (raceControllers.multiPass) raceControllers.multiPass.abort();
-          if (raceControllers.singlePass) raceControllers.singlePass.abort();
-          
-          // Update status to cancelled
-          document.getElementById('multi-pass-status').textContent = 'Cancelled';
-          document.getElementById('single-pass-status').textContent = 'Cancelled';
-        }
-        
-        // Reset UI state
-        isRacing = false;
-        runButton.disabled = false;
-        runButton.textContent = '🏁 Race Agents';
-        
-        // Reset controllers
-        raceControllers = { multiPass: null, singlePass: null };
-      };
-
-
-      const runRaceAgent = async (prompt, mode, scenario, abortSignal) => {
-        const startTime = performance.now();
-        let metrics = { prompt_tokens: 0, completion_tokens: 0, latency: 0, llm_calls: 0 };
-        const prefix = mode === 'multi_pass' ? 'multi-pass' : 'single-pass';
-        let attemptCount = 0;
-        let isComplete = false;
-        
-        const statusEl = document.getElementById(`${prefix}-status`);
-        const progressEl = document.getElementById(`${prefix}-progress`);
-        const progressTextEl = document.getElementById(`${prefix}-progress-text`);
-        const logEl = document.getElementById(`${prefix}-log`);
-        const timeEl = document.getElementById(`${prefix}-time`);
-        const tokensEl = document.getElementById(`${prefix}-tokens`);
-        const callsEl = document.getElementById(`${prefix}-calls`);
-        
-        const updateRaceUI = (phase, data = {}) => {
-          // Check if cancelled
-          if (abortSignal?.aborted) {
-            throw new Error('Race cancelled');
-          }
-          
-          // Better progress calculation based on actual progress
-          let progress = 0;
-          if (phase === 'success') {
-            progress = 100;
-            isComplete = true;
-          } else if (phase === 'execute' || phase === 'tool_result') {
-            // Each attempt represents progress towards solution
-            progress = Math.min(80, attemptCount * 15 + 10);
-          } else if (phase === 'propose') {
-            progress = Math.min(70, attemptCount * 15);
-          } else if (phase === 'patch') {
-            progress = Math.min(85, attemptCount * 15 + 5);
-          }
-          
-          progressEl.style.width = `${progress}%`;
-          progressTextEl.textContent = `${progress}%`;
-          
-          const elapsed = (performance.now() - startTime) / 1000;
-          timeEl.textContent = `${elapsed.toFixed(1)}s`;
-          const totalTokens = metrics.prompt_tokens + metrics.completion_tokens;
-          tokensEl.textContent = totalTokens;
-          callsEl.textContent = metrics.llm_calls;
-          
-          // Update cost
-          const costEl = document.getElementById(`${prefix}-cost`);
-          if (costEl) {
-            const cost = (totalTokens * 0.00003).toFixed(4);
-            costEl.textContent = `$${cost}`;
-          }
-          
-          // Add log entry
-          const entry = document.createElement('div');
-          entry.className = 'mb-1 text-xs';
-          const timestamp = `[${elapsed.toFixed(1)}s]`;
-          
-          switch (phase) {
-            case 'propose':
-              entry.innerHTML = `${timestamp} 🧠 Thinking...`;
-              statusEl.textContent = 'Thinking';
-              break;
-            case 'execute':
-              const toolArgs = JSON.stringify(data.call?.args || {});
-              entry.innerHTML = `${timestamp} ⚙️ <strong>TOOL CALL:</strong> ${data.call?.name}(${toolArgs})`;
-              statusEl.textContent = 'Executing';
-              break;
-            case 'tool_result':
-              const resultClass = data.result?.ok ? 'text-green-300' : 'text-red-300';
-              const resultJson = JSON.stringify(data.result);
-              entry.innerHTML = `${timestamp} <span class="${resultClass}">📦 <strong>TOOL RESPONSE:</strong> ${resultJson}</span>`;
-              break;
-            case 'patch':
-              entry.innerHTML = `${timestamp} 🔧 Self-correcting...`;
-              statusEl.textContent = 'Patching';
-              break;
-            case 'success':
-              entry.innerHTML = `${timestamp} ✅ Complete!`;
-              statusEl.textContent = 'Complete';
-              statusEl.className = statusEl.className.replace('bg-gray-700', 'bg-green-700');
-              break;
-            case 'error':
-              entry.innerHTML = `${timestamp} ❌ Error: ${data.message}`;
-              statusEl.textContent = 'Error';
-              statusEl.className = statusEl.className.replace('bg-gray-700', 'bg-red-700');
-              break;
-          }
-          
-          logEl.appendChild(entry);
-          logEl.scrollTop = logEl.scrollHeight;
-        };
-        
-        try {
-          // Simulate the agent execution
-          if (mode === 'multi_pass') {
-            await simulateMultiPassRace(prompt, scenario, metrics, updateRaceUI, abortSignal, () => attemptCount++);
-          } else {
-            await simulateSinglePassRace(prompt, scenario, metrics, updateRaceUI, abortSignal, () => attemptCount++);
-          }
-          
-          metrics.latency = (performance.now() - startTime) / 1000;
-          return { mode, metrics, success: true };
-        } catch (error) {
-          if (error.message === 'Race cancelled' || abortSignal?.aborted) {
-            return { mode, metrics, success: false, cancelled: true };
-          }
-          updateRaceUI('error', { message: error.message });
-          return { mode, metrics, success: false, error };
-        }
-      };
-
-      const simulateMultiPassRace = async (prompt, scenario, metrics, updateUI, abortSignal, incrementAttempt) => {
-        let attemptNumber = 0;
-        let lastHint = null;
-        
-        while (true) {
-          if (abortSignal?.aborted) throw new Error('Race cancelled');
-          
-          attemptNumber++;
-          incrementAttempt();
-          updateUI('propose');
-          await sleep(800 + Math.random() * 400); // Variable delay
-          
-          if (abortSignal?.aborted) throw new Error('Race cancelled');
-          
-          metrics.llm_calls += 1;
-          metrics.prompt_tokens += 150;
-          metrics.completion_tokens += 50;
-          
-          // Learn from previous failures
-          const toolCall = { 
-            name: getToolForScenario(scenario), 
-            args: getSmartArgsForScenario(scenario, attemptNumber, lastHint) 
-          };
-          updateUI('execute', { call: toolCall });
-          await sleep(500 + Math.random() * 300);
-          
-          if (abortSignal?.aborted) throw new Error('Race cancelled');
-          
-          const result = simulateToolCall(toolCall, scenario);
-          updateUI('tool_result', { result });
-          
-          // Save hint for next attempt
-          if (!result.ok && result.hint) {
-            lastHint = result.hint;
-          }
-          
-          if (result.ok) {
-            updateUI('propose');
-            await sleep(600 + Math.random() * 400);
-            
-            if (abortSignal?.aborted) throw new Error('Race cancelled');
-            
-            metrics.llm_calls += 1; // Separate final call
-            metrics.prompt_tokens += 100;
-            metrics.completion_tokens += 30;
-            updateUI('success');
-            return;
-          } else {
-            await sleep(300);
-          }
-        }
-      };
-
-      const simulateSinglePassRace = async (prompt, scenario, metrics, updateUI, abortSignal, incrementAttempt) => {
-        let attemptNumber = 0;
-        let lastHint = null;
-        
-        while (true) {
-          if (abortSignal?.aborted) throw new Error('Race cancelled');
-          
-          attemptNumber++;
-          incrementAttempt();
-          updateUI('propose');
-          await sleep(600 + Math.random() * 200); // Faster due to KV cache
-          
-          if (abortSignal?.aborted) throw new Error('Race cancelled');
-          
-          metrics.llm_calls += 1;
-          metrics.prompt_tokens += 120; // Lower due to context reuse
-          metrics.completion_tokens += 45;
-          
-          // Learn from previous failures
-          const toolCall = { 
-            name: getToolForScenario(scenario), 
-            args: getSmartArgsForScenario(scenario, attemptNumber, lastHint) 
-          };
-          updateUI('execute', { call: toolCall });
-          await sleep(400 + Math.random() * 200);
-          
-          if (abortSignal?.aborted) throw new Error('Race cancelled');
-          
-          const result = simulateToolCall(toolCall, scenario);
-          updateUI('tool_result', { result });
-          
-          // Save hint for next attempt
-          if (!result.ok && result.hint) {
-            lastHint = result.hint;
-          }
-          
-          if (result.ok) {
-            // Single-pass continues in same context
-            await sleep(200);
-            
-            if (abortSignal?.aborted) throw new Error('Race cancelled');
-            
-            metrics.completion_tokens += 25; // Less tokens for final answer
-            updateUI('success');
-            return;
-          } else {
-            updateUI('patch');
-            await sleep(100); // Faster recovery
-          }
-        }
-      };
-
-      const getToolForScenario = (scenario) => {
-        const tools = {
-          sql: 'sql_query',
-          research: 'web_search',
-          data_analysis: 'analyze_data',
-          math_tutor: 'solve_equation'
-        };
-        return tools[scenario] || 'sql_query';
-      };
-
-      const getArgsForScenario = (scenario) => {
-        const args = {
-          sql: { column: 'conversions' },
-          research: { query: 'climate change' },
-          data_analysis: { dataset: 'user_metrics', operation: 'summary' },
-          math_tutor: { equation: '2x + 5 = 15', step: 'isolate' }
-        };
-        return args[scenario] || { column: 'conversions' };
-      };
-
-      // Smart version that learns from hints
-      const getSmartArgsForScenario = (scenario, attemptNumber, lastHint) => {
-        if (scenario === 'sql') {
-          if (attemptNumber === 1) {
-            return { column: 'conversions' }; // First attempt - will fail
-          } else if (lastHint && lastHint.includes("'convs'")) {
-            return { column: 'convs' }; // Learn from hint
-          } else {
-            return { column: 'conversions' }; // Fallback
-          }
-        } else if (scenario === 'research') {
-          if (attemptNumber === 1) {
-            return { query: 'climate change' }; // First attempt - will fail
-          } else if (lastHint && lastHint.includes('recent')) {
-            return { query: 'recent climate change data' }; // Learn from hint
-          } else {
-            return { query: 'climate change' }; // Fallback
-          }
-        } else if (scenario === 'data_analysis') {
-          if (attemptNumber === 1) {
-            return { dataset: 'user_metrics', operation: 'summary' }; // First attempt - will fail
-          } else if (lastHint && lastHint.includes('trend')) {
-            return { dataset: 'user_metrics', operation: 'trend' }; // Learn from hint
-          } else {
-            return { dataset: 'user_metrics', operation: 'summary' }; // Fallback
-          }
-        } else if (scenario === 'math_tutor') {
-          if (attemptNumber === 1) {
-            return { equation: '2x + 5 = 15', step: 'isolate' }; // First attempt - will fail
-          } else if (lastHint && lastHint.includes('simplify')) {
-            return { equation: '2x + 5 = 15', step: 'simplify' }; // Learn from hint
-          } else {
-            return { equation: '2x + 5 = 15', step: 'isolate' }; // Fallback
-          }
-        }
-        
-        // Default fallback
-        return getArgsForScenario(scenario);
-      };
-
-      const showRaceResults = (results) => {
-        raceResults.style.display = 'block';
-        
-        const multiResult = results[0].status === 'fulfilled' ? results[0].value : null;
-        const singleResult = results[1].status === 'fulfilled' ? results[1].value : null;
-        
-        if (multiResult && singleResult) {
-          const speedAdvantage = ((multiResult.metrics.latency - singleResult.metrics.latency) / multiResult.metrics.latency * 100).toFixed(1);
-          const tokenSavings = ((multiResult.metrics.prompt_tokens + multiResult.metrics.completion_tokens) - (singleResult.metrics.prompt_tokens + singleResult.metrics.completion_tokens));
-          const costSavings = (tokenSavings * 0.00001 * 1000).toFixed(2); // Rough cost estimate
-          
-          document.getElementById('winner-announcement').innerHTML = 
-            singleResult.metrics.latency < multiResult.metrics.latency 
-              ? '🚀 Single-Pass Wins!' 
-              : '🐌 Multi-Pass Wins!';
-          
-          document.getElementById('speed-advantage').textContent = `${speedAdvantage}% faster`;
-          document.getElementById('token-efficiency').textContent = `${tokenSavings} tokens saved`;
-          document.getElementById('cost-savings').textContent = `$${costSavings} saved per 1K runs`;
-        }
-      };
-
-      const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-
-      // Simplified message handling for new UI - no longer needed
-
-      // --- App Initialization ---
-      const initializeApp = async () => {
-        try {
-          // Check server configuration
-          const configResponse = await fetch('/api/config');
-          const config = await configResponse.json();
-          
-          console.log('Server config:', config);
-          
-          if (config.server_available) {
-            // Server mode available - initialize WebLLM as enhancement
-            console.log('Server available, initializing WebLLM as enhancement...');
-            initializeWebLLM();
-          } else {
-            // WebLLM required mode
-            console.log('Server not available, WebLLM required...');
-            modelStatus.textContent = "Server not available. WebLLM required for inference.";
-            initializeWebLLM();
-          }
-        } catch (error) {
-          console.error('Failed to check server config:', error);
-          // Assume WebLLM required
-          initializeWebLLM();
-        }
-      };
-
-      // --- Demo Mode (when WebLLM fails) ---
-      window.enableDemoMode = () => {
-        modelLoadingPanel.style.display = 'none';
-        
-        // Show demo notice
-        const demoNotice = document.createElement('div');
-        demoNotice.className = 'mb-6 bg-yellow-900/30 border border-yellow-700 p-4 rounded-lg text-center';
-        demoNotice.innerHTML = `
-          <div class="text-yellow-400 font-semibold mb-2">📖 Demo UI Mode</div>
-          <div class="text-sm text-gray-300">
-            WebLLM is unavailable, but you can explore the interface design.<br>
-            For full functionality, try a WebGPU-compatible browser.
-          </div>
-        `;
-        document.querySelector('.w-full.max-w-7xl').insertBefore(demoNotice, document.querySelector('.grid'));
-        
-        // Enable button for demo purposes (shows error when clicked)
-        runButton.disabled = false;
-        runButton.textContent = 'Demo Mode - Click to See Error';
-        runButton.className = runButton.className.replace('bg-gray-600', 'bg-yellow-600');
-      };
-
-      // --- Initial Setup ---
-      updateCodeView();
-      resetRaceState();
-      
-      // Check server configuration and initialize accordingly
-      initializeApp();
-        
-      } catch (error) {
-        console.error('❌ Error during SPOC-Shot initialization:', error);
-        console.error('📍 Stack trace:', error.stack);
-        
-        // Show error to user
-        const errorMsg = document.createElement('div');
-        errorMsg.className = 'bg-red-900/50 border border-red-600 p-4 rounded-lg text-red-200 mb-4';
-        errorMsg.innerHTML = `
-          <h3 class="font-bold text-red-400 mb-2">⚠️ Initialization Error</h3>
-          <p class="text-sm">Something went wrong while loading SPOC-Shot. Please refresh the page.</p>
-          <details class="mt-2">
-            <summary class="cursor-pointer text-xs text-red-300">Technical Details</summary>
-            <pre class="text-xs mt-1 text-red-200">${error.message}\n\n${error.stack}</pre>
-          </details>
-        `;
-        document.body.insertBefore(errorMsg, document.body.firstChild);
-      }
-    });
-  </script>
+  <script src="/static/js/app.js"></script>
 
 </body>
 </html>

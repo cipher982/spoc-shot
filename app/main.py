@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 from app.agent import solve_multi_pass, solve_single_pass, WEBLLM_MODE
 import json
@@ -46,6 +47,9 @@ dictConfig(LogConfig)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+# Mount static files using standard directory structure
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.on_event("startup")
 async def startup_event():
@@ -124,6 +128,17 @@ async def read_index():
             return HTMLResponse(content=f.read(), status_code=200)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="index.html not found.")
+
+@app.get("/debug", response_class=HTMLResponse)
+async def css_debug():
+    """
+    Serves CSS debug page for testing variables.
+    """
+    try:
+        with open("app/templates/css-debug.html") as f:
+            return HTMLResponse(content=f.read(), status_code=200)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="css-debug.html not found.")
 
 # ---------------------------------------------------------------------------
 # Optional favicon route
