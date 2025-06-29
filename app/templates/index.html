@@ -430,12 +430,6 @@ while retries < max_retries:
                 <div class="text-red-400 text-xl mb-4">⚠️ WebLLM Unavailable</div>
                 <div class="text-sm text-gray-300 mb-6 text-left">
                   <strong>Most likely cause:</strong> WebGPU not enabled in Chrome<br><br>
-                  <strong>Quick fix:</strong><br>
-                  1. Go to <code class="bg-gray-700 px-1 rounded">chrome://flags</code><br>
-                  2. Search for "webgpu"<br>
-                  3. Enable "#enable-unsafe-webgpu"<br>
-                  4. Restart Chrome<br><br>
-                  <strong>Alternative:</strong> Try Firefox (often enabled by default)
                 </div>
                 <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mr-3">
                   Retry
