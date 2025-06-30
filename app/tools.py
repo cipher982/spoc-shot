@@ -24,27 +24,16 @@ def sql_query(column: str):
         result = {"ok": False, "hint": f"Column '{column}' not found."}
     
     # Record tool metrics
-    if business_metrics:
-        if "tool_executions_total" in business_metrics:
-            business_metrics["tool_executions_total"].add(1, {
-                "tool_name": "sql_query",
-                "scenario": "sql",
-                "success": str(success)
-            })
-        
-        if hint_applied and "tool_hints_applied" in business_metrics:
-            business_metrics["tool_hints_applied"].add(1, {
-                "tool_name": "sql_query",
-                "hint_type": "column_fix",
-                "scenario": "sql"
-            })
-        
-        if "tool_latency_seconds" in business_metrics:
-            duration = time.time() - start_time
-            business_metrics["tool_latency_seconds"].record(duration, {
-                "tool_name": "sql_query",
-                "scenario": "sql"
-            })
+    duration = time.time() - start_time
+    if business_metrics and business_metrics.enabled:
+        business_metrics.record_tool_execution(
+            tool_name="sql_query",
+            scenario="sql",
+            success=success,
+            latency=duration,
+            hint_applied=hint_applied,
+            hint_type="column_fix" if hint_applied else ""
+        )
     
     return result
 
@@ -86,27 +75,16 @@ def web_search(query: str):
         result = {"ok": False, "hint": f"No results found for '{query}'. Try more specific terms."}
     
     # Record tool metrics
-    if business_metrics:
-        if "tool_executions_total" in business_metrics:
-            business_metrics["tool_executions_total"].add(1, {
-                "tool_name": "web_search",
-                "scenario": "research",
-                "success": str(success)
-            })
-        
-        if hint_applied and "tool_hints_applied" in business_metrics:
-            business_metrics["tool_hints_applied"].add(1, {
-                "tool_name": "web_search",
-                "hint_type": "specificity",
-                "scenario": "research"
-            })
-        
-        if "tool_latency_seconds" in business_metrics:
-            duration = time.time() - start_time
-            business_metrics["tool_latency_seconds"].record(duration, {
-                "tool_name": "web_search",
-                "scenario": "research"
-            })
+    duration = time.time() - start_time
+    if business_metrics and business_metrics.enabled:
+        business_metrics.record_tool_execution(
+            tool_name="web_search",
+            scenario="research",
+            success=success,
+            latency=duration,
+            hint_applied=hint_applied,
+            hint_type="specificity" if hint_applied else ""
+        )
     
     return result
 
@@ -150,27 +128,16 @@ def analyze_data(dataset: str, operation: str):
         result = {"ok": False, "hint": f"Dataset '{dataset}' not found. Try 'user_metrics' or 'sales_data'"}
     
     # Record tool metrics
-    if business_metrics:
-        if "tool_executions_total" in business_metrics:
-            business_metrics["tool_executions_total"].add(1, {
-                "tool_name": "analyze_data",
-                "scenario": "data_analysis",
-                "success": str(success)
-            })
-        
-        if hint_applied and "tool_hints_applied" in business_metrics:
-            business_metrics["tool_hints_applied"].add(1, {
-                "tool_name": "analyze_data",
-                "hint_type": "operation_mismatch",
-                "scenario": "data_analysis"
-            })
-        
-        if "tool_latency_seconds" in business_metrics:
-            duration = time.time() - start_time
-            business_metrics["tool_latency_seconds"].record(duration, {
-                "tool_name": "analyze_data",
-                "scenario": "data_analysis"
-            })
+    duration = time.time() - start_time
+    if business_metrics and business_metrics.enabled:
+        business_metrics.record_tool_execution(
+            tool_name="analyze_data",
+            scenario="data_analysis",
+            success=success,
+            latency=duration,
+            hint_applied=hint_applied,
+            hint_type="operation_mismatch" if hint_applied else ""
+        )
     
     return result
 
@@ -222,27 +189,16 @@ def solve_equation(equation: str, step: str):
         result = {"ok": False, "hint": f"Try breaking down the equation '{equation}' with steps like 'simplify', 'isolate', or 'calculate'"}
     
     # Record tool metrics
-    if business_metrics:
-        if "tool_executions_total" in business_metrics:
-            business_metrics["tool_executions_total"].add(1, {
-                "tool_name": "solve_equation",
-                "scenario": "math_tutoring",
-                "success": str(success)
-            })
-        
-        if hint_applied and "tool_hints_applied" in business_metrics:
-            business_metrics["tool_hints_applied"].add(1, {
-                "tool_name": "solve_equation",
-                "hint_type": "step_sequence",
-                "scenario": "math_tutoring"
-            })
-        
-        if "tool_latency_seconds" in business_metrics:
-            duration = time.time() - start_time
-            business_metrics["tool_latency_seconds"].record(duration, {
-                "tool_name": "solve_equation",
-                "scenario": "math_tutoring"
-            })
+    duration = time.time() - start_time
+    if business_metrics and business_metrics.enabled:
+        business_metrics.record_tool_execution(
+            tool_name="solve_equation",
+            scenario="math_tutoring",
+            success=success,
+            latency=duration,
+            hint_applied=hint_applied,
+            hint_type="step_sequence" if hint_applied else ""
+        )
     
     return result
 

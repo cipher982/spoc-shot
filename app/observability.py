@@ -95,118 +95,188 @@ def instrument_fastapi(app):
         logger.error(f"Failed to instrument FastAPI: {e}")
 
 # Business-specific metrics for SPOC-Shot AI agent system
+class BusinessMetrics:
+    """Clean interface for all business metrics."""
+    
+    def __init__(self):
+        if not ENABLE_OTEL:
+            self.enabled = False
+            return
+            
+        self.enabled = True
+        meter = metrics.get_meter(__name__)
+        
+        # Agent Performance Metrics
+        self.agent_requests_total = meter.create_counter(
+            "agent_requests_total",
+            description="Total agent requests by mode and scenario",
+            unit="1"
+        )
+        
+        self.agent_success_rate = meter.create_histogram(
+            "agent_success_rate", 
+            description="Agent task completion success rate",
+            unit="1"
+        )
+        
+        self.agent_iterations = meter.create_histogram(
+            "agent_iterations",
+            description="Number of iterations before success/failure",
+            unit="1"
+        )
+        
+        self.agent_duration_seconds = meter.create_histogram(
+            "agent_duration_seconds",
+            description="End-to-end agent task duration",
+            unit="s"
+        )
+        
+        # Tool System Metrics
+        self.tool_executions_total = meter.create_counter(
+            "tool_executions_total",
+            description="Tool execution attempts",
+            unit="1"
+        )
+        
+        self.tool_hints_applied = meter.create_counter(
+            "tool_hints_applied", 
+            description="Tool hints applied for recovery",
+            unit="1"
+        )
+        
+        self.tool_latency_seconds = meter.create_histogram(
+            "tool_latency_seconds",
+            description="Tool execution latency",
+            unit="s"
+        )
+        
+        # LLM Operations Metrics
+        self.llm_requests_total = meter.create_counter(
+            "llm_requests_total",
+            description="LLM API requests",
+            unit="1"
+        )
+        
+        self.llm_tokens_consumed = meter.create_histogram(
+            "llm_tokens_consumed",
+            description="Tokens consumed per operation",
+            unit="1"
+        )
+        
+        self.llm_latency_seconds = meter.create_histogram(
+            "llm_latency_seconds", 
+            description="LLM API call latency",
+            unit="s"
+        )
+        
+        self.llm_costs_usd = meter.create_histogram(
+            "llm_costs_usd",
+            description="Estimated LLM costs in USD",
+            unit="USD"
+        )
+        
+        # Learning System Metrics
+        self.learning_patterns_applied = meter.create_counter(
+            "learning_patterns_applied",
+            description="Learning pattern applications",
+            unit="1"
+        )
+        
+        self.conversation_memory_size = meter.create_histogram(
+            "conversation_memory_size",
+            description="Size of conversation memory",
+            unit="1"
+        )
+        
+        # Error Classification
+        self.agent_errors_total = meter.create_counter(
+            "agent_errors_total", 
+            description="Agent errors by type",
+            unit="1"
+        )
+    
+    def record_agent_request(self, mode: str, scenario: str, webllm_mode: str):
+        """Record an agent request."""
+        if self.enabled:
+            self.agent_requests_total.add(1, {
+                "mode": mode,
+                "scenario": scenario, 
+                "webllm_mode": webllm_mode
+            })
+    
+    def record_agent_completion(self, mode: str, scenario: str, success: bool, duration: float, iterations: int):
+        """Record agent completion metrics."""
+        if self.enabled:
+            self.agent_success_rate.record(1.0 if success else 0.0, {
+                "mode": mode,
+                "scenario": scenario
+            })
+            self.agent_iterations.record(iterations, {
+                "mode": mode,
+                "scenario": scenario
+            })
+            self.agent_duration_seconds.record(duration, {
+                "mode": mode,
+                "scenario": scenario,
+                "success": str(success)
+            })
+    
+    def record_llm_request(self, mode: str, scenario: str, model: str, webllm_mode: str, tokens: int, cost: float, latency: float, operation_type: str = "agent_call"):
+        """Record LLM API call metrics."""
+        if self.enabled:
+            self.llm_requests_total.add(1, {
+                "mode": mode,
+                "scenario": scenario,
+                "model": model,
+                "webllm_mode": webllm_mode
+            })
+            self.llm_tokens_consumed.record(tokens, {
+                "operation_type": operation_type,
+                "mode": mode,
+                "scenario": scenario
+            })
+            self.llm_costs_usd.record(cost, {
+                "mode": mode,
+                "scenario": scenario,
+                "model": model
+            })
+            self.llm_latency_seconds.record(latency, {
+                "model": model,
+                "webllm_mode": webllm_mode
+            })
+    
+    def record_tool_execution(self, tool_name: str, scenario: str, success: bool, latency: float, hint_applied: bool = False, hint_type: str = ""):
+        """Record tool execution metrics."""
+        if self.enabled:
+            self.tool_executions_total.add(1, {
+                "tool_name": tool_name,
+                "scenario": scenario,
+                "success": str(success)
+            })
+            self.tool_latency_seconds.record(latency, {
+                "tool_name": tool_name,
+                "scenario": scenario
+            })
+            if hint_applied:
+                self.tool_hints_applied.add(1, {
+                    "tool_name": tool_name,
+                    "hint_type": hint_type,
+                    "scenario": scenario
+                })
+    
+    def record_error(self, error_type: str, mode: str, scenario: str, tool_name: str = ""):
+        """Record business errors."""
+        if self.enabled:
+            self.agent_errors_total.add(1, {
+                "error_type": error_type,
+                "mode": mode,
+                "scenario": scenario,
+                "tool_name": tool_name
+            })
+
 def get_metrics():
-    """Get application-specific metrics instruments for business intelligence."""
-    if not ENABLE_OTEL:
-        return {}
-    
-    meter = metrics.get_meter(__name__)
-    
-    # Agent Performance Metrics
-    agent_requests_total = meter.create_counter(
-        "agent_requests_total",
-        description="Total agent requests by mode and scenario",
-        unit="1"
-    )
-    
-    agent_success_rate = meter.create_histogram(
-        "agent_success_rate", 
-        description="Agent task completion success rate",
-        unit="1"
-    )
-    
-    agent_iterations = meter.create_histogram(
-        "agent_iterations",
-        description="Number of iterations before success/failure",
-        unit="1"
-    )
-    
-    agent_duration_seconds = meter.create_histogram(
-        "agent_duration_seconds",
-        description="End-to-end agent task duration",
-        unit="s"
-    )
-    
-    # Tool System Metrics
-    tool_executions_total = meter.create_counter(
-        "tool_executions_total",
-        description="Tool execution attempts",
-        unit="1"
-    )
-    
-    tool_hints_applied = meter.create_counter(
-        "tool_hints_applied", 
-        description="Tool hints applied for recovery",
-        unit="1"
-    )
-    
-    tool_latency_seconds = meter.create_histogram(
-        "tool_latency_seconds",
-        description="Tool execution latency",
-        unit="s"
-    )
-    
-    # LLM Operations Metrics
-    llm_requests_total = meter.create_counter(
-        "llm_requests_total",
-        description="LLM API requests",
-        unit="1"
-    )
-    
-    llm_tokens_consumed = meter.create_histogram(
-        "llm_tokens_consumed",
-        description="Tokens consumed per operation",
-        unit="1"
-    )
-    
-    llm_latency_seconds = meter.create_histogram(
-        "llm_latency_seconds", 
-        description="LLM API call latency",
-        unit="s"
-    )
-    
-    llm_costs_usd = meter.create_histogram(
-        "llm_costs_usd",
-        description="Estimated LLM costs in USD",
-        unit="USD"
-    )
-    
-    # Learning System Metrics
-    learning_patterns_applied = meter.create_counter(
-        "learning_patterns_applied",
-        description="Learning pattern applications",
-        unit="1"
-    )
-    
-    conversation_memory_size = meter.create_histogram(
-        "conversation_memory_size",
-        description="Size of conversation memory",
-        unit="1"
-    )
-    
-    # Error Classification
-    agent_errors_total = meter.create_counter(
-        "agent_errors_total", 
-        description="Agent errors by type",
-        unit="1"
-    )
-    
-    return {
-        "agent_requests_total": agent_requests_total,
-        "agent_success_rate": agent_success_rate,
-        "agent_iterations": agent_iterations,
-        "agent_duration_seconds": agent_duration_seconds,
-        "tool_executions_total": tool_executions_total,
-        "tool_hints_applied": tool_hints_applied,
-        "tool_latency_seconds": tool_latency_seconds,
-        "llm_requests_total": llm_requests_total,
-        "llm_tokens_consumed": llm_tokens_consumed,
-        "llm_latency_seconds": llm_latency_seconds,
-        "llm_costs_usd": llm_costs_usd,
-        "learning_patterns_applied": learning_patterns_applied,
-        "conversation_memory_size": conversation_memory_size,
-        "agent_errors_total": agent_errors_total
-    }
+    """Get the global business metrics instance."""
+    return BusinessMetrics()
 
 # Get tracer for business context spans
 def get_tracer():

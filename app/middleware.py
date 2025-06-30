@@ -19,11 +19,11 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
         # Get metrics instruments
-        self.llm_requests_counter, self.inference_duration_histogram, self.token_count_histogram, self.error_counter = get_metrics()
+        self.business_metrics = get_metrics()
         self.tracer = get_tracer()
         
         # Create additional metrics for general HTTP requests
-        if self.llm_requests_counter:  # Only if metrics are enabled
+        if self.business_metrics:  # Only if metrics are enabled
             from opentelemetry import metrics
             meter = metrics.get_meter(__name__)
             
@@ -164,12 +164,12 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):
             duration = time.time() - start_time
             
             # Record error metrics
-            if self.error_counter:
-                self.error_counter.add(1, {
-                    "error_type": "middleware_exception",
-                    "endpoint": path,
-                    "method": method
-                })
+            if self.business_metrics and self.business_metrics.enabled:
+                self.business_metrics.record_error(
+                    error_type="middleware_exception",
+                    mode="unknown",
+                    scenario="unknown"
+                )
             
             # Log the error
             error_data = {

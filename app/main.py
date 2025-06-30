@@ -108,12 +108,12 @@ async def solve_sse(request: Request):
         raise HTTPException(status_code=400, detail="Prompt not provided.")
 
     # Record business metrics
-    if business_metrics and "agent_requests_total" in business_metrics:
-        business_metrics["agent_requests_total"].add(1, {
-            "mode": mode,
-            "scenario": scenario,
-            "webllm_mode": WEBLLM_MODE
-        })
+    if business_metrics and business_metrics.enabled:
+        business_metrics.record_agent_request(
+            mode=mode,
+            scenario=scenario,
+            webllm_mode=WEBLLM_MODE
+        )
 
     logger.info(f"Received request for mode='{mode}', scenario='{scenario}' with prompt='{prompt}'")
     # Choose the solver based on the mode
@@ -122,6 +122,7 @@ async def solve_sse(request: Request):
 
     iteration_count = 0
     success = False
+    start_time = time.time()
     
     # Start business context span
     if tracer:
@@ -152,14 +153,13 @@ async def solve_sse(request: Request):
             logger.error(f"An unexpected error occurred in the event generator: {e}", exc_info=True)
             
             # Record business error metrics
-            if business_metrics and "agent_errors_total" in business_metrics:
+            if business_metrics and business_metrics.enabled:
                 from app.observability import classify_error
-                business_metrics["agent_errors_total"].add(1, {
-                    "error_type": classify_error(e),
-                    "mode": mode,
-                    "scenario": scenario,
-                    "tool_name": ""
-                })
+                business_metrics.record_error(
+                    error_type=classify_error(e),
+                    mode=mode,
+                    scenario=scenario
+                )
                 
             yield {"data": json.dumps({"phase": "error", "message": "An unexpected server error occurred."})}
         
@@ -167,28 +167,14 @@ async def solve_sse(request: Request):
             # Record final business metrics
             duration = time.time() - start_time
             
-            if business_metrics:
-                # Success rate
-                if "agent_success_rate" in business_metrics:
-                    business_metrics["agent_success_rate"].record(1.0 if success else 0.0, {
-                        "mode": mode,
-                        "scenario": scenario
-                    })
-                
-                # Iteration count
-                if "agent_iterations" in business_metrics:
-                    business_metrics["agent_iterations"].record(iteration_count, {
-                        "mode": mode,
-                        "scenario": scenario
-                    })
-                
-                # Duration
-                if "agent_duration_seconds" in business_metrics:
-                    business_metrics["agent_duration_seconds"].record(duration, {
-                        "mode": mode,
-                        "scenario": scenario,
-                        "success": str(success)
-                    })
+            if business_metrics and business_metrics.enabled:
+                business_metrics.record_agent_completion(
+                    mode=mode,
+                    scenario=scenario,
+                    success=success,
+                    duration=duration,
+                    iterations=iteration_count
+                )
             
             # Close span
             if tracer and 'span' in locals():
@@ -256,10 +242,13 @@ async def debug_metrics():
     if not business_metrics:
         return {"error": "Business metrics not initialized"}
     
+    if not business_metrics.enabled:
+        return {"error": "Business metrics disabled (ENABLE_OTEL=false)"}
+    
     return {
         "status": "Business metrics initialized",
-        "metrics_available": list(business_metrics.keys()),
-        "total_metrics": len(business_metrics)
+        "enabled": business_metrics.enabled,
+        "otel_configured": True
     }
 
 @app.get("/favicon.ico")

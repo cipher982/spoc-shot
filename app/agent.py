@@ -154,13 +154,12 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
 
         except openai.APIError as e:
             # Record LLM error
-            if business_metrics and "agent_errors_total" in business_metrics:
-                business_metrics["agent_errors_total"].add(1, {
-                    "error_type": "llm_timeout",
-                    "mode": "multi_pass",
-                    "scenario": scenario,
-                    "tool_name": ""
-                })
+            if business_metrics and business_metrics.enabled:
+                business_metrics.record_error(
+                    error_type="llm_timeout",
+                    mode="multi_pass",
+                    scenario=scenario
+                )
             yield {"phase": "error", "message": f"vLLM server error: {e}"}
             return
 
@@ -189,7 +188,7 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
                 logger.info(f"[Multi-Pass] Conversation history now has {len(messages)} messages")
                 logger.info(f"[Multi-Pass] Last message: {messages[-1]}")
 
-                if tool_success:
+                if V.verify(result):
                     yield {"phase": "propose", "metrics": metrics}
                     logger.info("[Multi-Pass] Simulating network latency for final answer...")
                     await asyncio.sleep(2)
@@ -253,13 +252,16 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
             
             # Record LLM request metrics
             llm_start = time.time()
-            if business_metrics and "llm_requests_total" in business_metrics:
-                business_metrics["llm_requests_total"].add(1, {
-                    "mode": "single_pass",
-                    "scenario": scenario,
-                    "model": MODEL_NAME,
-                    "webllm_mode": WEBLLM_MODE
-                })
+            if business_metrics and business_metrics.enabled:
+                business_metrics.record_llm_request(
+                    mode="single_pass",
+                    scenario=scenario,
+                    model=MODEL_NAME,
+                    webllm_mode=WEBLLM_MODE,
+                    tokens=0,  # Will be updated after completion
+                    cost=0.0,  # Will be updated after completion
+                    latency=0.0  # Will be updated after completion
+                )
             
             completion = await client.chat.completions.create(
                 model=MODEL_NAME,
@@ -268,37 +270,27 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
                 extra_body={"request_id": req_id},
             )
             
-            # Record LLM latency
+            # Record LLM latency and token consumption
             llm_duration = time.time() - llm_start
-            if business_metrics and "llm_latency_seconds" in business_metrics:
-                business_metrics["llm_latency_seconds"].record(llm_duration, {
-                    "model": MODEL_NAME,
-                    "webllm_mode": WEBLLM_MODE,
-                    "attempt_number": str(attempt)
-                })
-            
             metrics["llm_calls"] += 1
             token_counts = get_token_counts(completion)
             metrics["prompt_tokens"] += token_counts["prompt"]
             metrics["completion_tokens"] += token_counts["completion"]
             
-            # Record token consumption
+            # Record comprehensive LLM metrics
             total_tokens = token_counts["prompt"] + token_counts["completion"]
-            if business_metrics and "llm_tokens_consumed" in business_metrics:
-                business_metrics["llm_tokens_consumed"].record(total_tokens, {
-                    "operation_type": "agent_call",
-                    "mode": "single_pass",
-                    "scenario": scenario
-                })
+            cost = calculate_llm_cost(total_tokens, MODEL_NAME)
             
-            # Record estimated cost
-            if business_metrics and "llm_costs_usd" in business_metrics:
-                cost = calculate_llm_cost(total_tokens, MODEL_NAME)
-                business_metrics["llm_costs_usd"].record(cost, {
-                    "mode": "single_pass",
-                    "scenario": scenario,
-                    "model": MODEL_NAME
-                })
+            if business_metrics and business_metrics.enabled:
+                business_metrics.record_llm_request(
+                    mode="single_pass",
+                    scenario=scenario,
+                    model=MODEL_NAME,
+                    webllm_mode=WEBLLM_MODE,
+                    tokens=total_tokens,
+                    cost=cost,
+                    latency=llm_duration
+                )
             
             response_text = completion.choices[0].message.content
             logger.info(f"Model response: {repr(response_text)}")
@@ -307,13 +299,12 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
 
         except openai.APIError as e:
             # Record LLM error
-            if business_metrics and "agent_errors_total" in business_metrics:
-                business_metrics["agent_errors_total"].add(1, {
-                    "error_type": "llm_timeout",
-                    "mode": "single_pass",
-                    "scenario": scenario,
-                    "tool_name": ""
-                })
+            if business_metrics and business_metrics.enabled:
+                business_metrics.record_error(
+                    error_type="llm_timeout",
+                    mode="single_pass",
+                    scenario=scenario
+                )
             yield {"phase": "error", "message": f"vLLM server error: {e}"}
             return
 
