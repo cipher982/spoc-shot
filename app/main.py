@@ -2,14 +2,20 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 from app.agent import solve_multi_pass, solve_single_pass, WEBLLM_MODE
+from app.observability import setup_otel, instrument_fastapi, get_metrics, get_tracer
+from app.middleware import ObservabilityMiddleware
 import json
 import asyncio
 import logging
 import os
+import time
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+# Initialize OpenTelemetry early
+setup_otel()
 
 # --- Logging Setup ---
 # This is the proper way to configure logging for the whole application
@@ -48,6 +54,16 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+# Add observability middleware
+app.add_middleware(ObservabilityMiddleware)
+
+# Instrument FastAPI with OpenTelemetry
+instrument_fastapi(app)
+
+# Get business metrics and tracer
+business_metrics = get_metrics()
+tracer = get_tracer()
+
 # Mount static files using standard directory structure
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -63,6 +79,7 @@ async def solve_sse(request: Request):
     """
     Handles the POST request to solve a prompt and streams the response.
     """
+    
     # ------------------------------------------------------------------
     # HTMX submits forms as "application/x-www-form-urlencoded".  The original
     # implementation only handled JSON and returned 400 errors when the UI
@@ -79,6 +96,7 @@ async def solve_sse(request: Request):
             data = dict(form)
         except Exception as e:
             logger.error("Failed to parse request body: %s", e, exc_info=True)
+            # Error automatically tracked by OpenTelemetry instrumentation
             raise HTTPException(status_code=400, detail="Invalid request body.")
 
     prompt = data.get("prompt")
@@ -86,23 +104,98 @@ async def solve_sse(request: Request):
     scenario = data.get("scenario", "sql")  # Default to sql
 
     if not prompt:
+        # Error automatically tracked by OpenTelemetry instrumentation
         raise HTTPException(status_code=400, detail="Prompt not provided.")
+
+    # Record business metrics
+    if business_metrics and "agent_requests_total" in business_metrics:
+        business_metrics["agent_requests_total"].add(1, {
+            "mode": mode,
+            "scenario": scenario,
+            "webllm_mode": WEBLLM_MODE
+        })
 
     logger.info(f"Received request for mode='{mode}', scenario='{scenario}' with prompt='{prompt}'")
     # Choose the solver based on the mode
     solver = solve_single_pass if mode == "single_pass" else solve_multi_pass
     logger.info(f"Using solver: {solver.__name__}")
 
+    iteration_count = 0
+    success = False
+    
+    # Start business context span
+    if tracer:
+        span = tracer.start_span("agent_execution")
+        span.set_attributes({
+            "agent.mode": mode,
+            "agent.scenario": scenario,
+            "agent.webllm_mode": WEBLLM_MODE,
+            "agent.prompt_length": len(prompt)
+        })
+    
     async def event_generator():
         """
         A generator function that yields server-sent events.
         """
+        nonlocal iteration_count, success
+        
         try:
             async for row in solver(prompt, scenario=scenario):
+                iteration_count += 1
                 yield {"data": json.dumps(row)}
+                
+                # Check if this indicates success
+                if isinstance(row, dict) and row.get("phase") == "complete":
+                    success = True
+                    
         except Exception as e:
             logger.error(f"An unexpected error occurred in the event generator: {e}", exc_info=True)
+            
+            # Record business error metrics
+            if business_metrics and "agent_errors_total" in business_metrics:
+                from app.observability import classify_error
+                business_metrics["agent_errors_total"].add(1, {
+                    "error_type": classify_error(e),
+                    "mode": mode,
+                    "scenario": scenario,
+                    "tool_name": ""
+                })
+                
             yield {"data": json.dumps({"phase": "error", "message": "An unexpected server error occurred."})}
+        
+        finally:
+            # Record final business metrics
+            duration = time.time() - start_time
+            
+            if business_metrics:
+                # Success rate
+                if "agent_success_rate" in business_metrics:
+                    business_metrics["agent_success_rate"].record(1.0 if success else 0.0, {
+                        "mode": mode,
+                        "scenario": scenario
+                    })
+                
+                # Iteration count
+                if "agent_iterations" in business_metrics:
+                    business_metrics["agent_iterations"].record(iteration_count, {
+                        "mode": mode,
+                        "scenario": scenario
+                    })
+                
+                # Duration
+                if "agent_duration_seconds" in business_metrics:
+                    business_metrics["agent_duration_seconds"].record(duration, {
+                        "mode": mode,
+                        "scenario": scenario,
+                        "success": str(success)
+                    })
+            
+            # Close span
+            if tracer and 'span' in locals():
+                span.set_attribute("agent.success", success)
+                span.set_attribute("agent.iterations", iteration_count)
+                span.set_attribute("agent.duration_seconds", duration)
+                span.end()
 
     return EventSourceResponse(event_generator())
 
@@ -153,6 +246,21 @@ async def health_check():
     Returns 200 OK if the service is healthy.
     """
     return {"status": "healthy", "service": "spoc-shot"}
+
+
+@app.get("/debug/metrics")
+async def debug_metrics():
+    """
+    Debug endpoint to check if business metrics are working.
+    """
+    if not business_metrics:
+        return {"error": "Business metrics not initialized"}
+    
+    return {
+        "status": "Business metrics initialized",
+        "metrics_available": list(business_metrics.keys()),
+        "total_metrics": len(business_metrics)
+    }
 
 @app.get("/favicon.ico")
 async def favicon():

@@ -9,11 +9,16 @@ from typing import List, Dict, Any, AsyncGenerator
 import logging
 import asyncio
 from dotenv import load_dotenv
+from app.observability import get_metrics, get_tracer, classify_error, calculate_llm_cost
 
 # Load environment variables
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+# Initialize observability
+business_metrics = get_metrics()
+tracer = get_tracer()
 
 # --- Configuration ---
 VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://cube:8000/v1")
@@ -148,6 +153,14 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
             yield {"phase": "model_response", "content": response_text, "metrics": metrics}
 
         except openai.APIError as e:
+            # Record LLM error
+            if business_metrics and "agent_errors_total" in business_metrics:
+                business_metrics["agent_errors_total"].add(1, {
+                    "error_type": "llm_timeout",
+                    "mode": "multi_pass",
+                    "scenario": scenario,
+                    "tool_name": ""
+                })
             yield {"phase": "error", "message": f"vLLM server error: {e}"}
             return
 
@@ -176,7 +189,7 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
                 logger.info(f"[Multi-Pass] Conversation history now has {len(messages)} messages")
                 logger.info(f"[Multi-Pass] Last message: {messages[-1]}")
 
-                if V.verify(result):
+                if tool_success:
                     yield {"phase": "propose", "metrics": metrics}
                     logger.info("[Multi-Pass] Simulating network latency for final answer...")
                     await asyncio.sleep(2)
@@ -238,22 +251,69 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
             await asyncio.sleep(2)
             logger.info("[Single-Pass] Calling OpenAI API...")
             
+            # Record LLM request metrics
+            llm_start = time.time()
+            if business_metrics and "llm_requests_total" in business_metrics:
+                business_metrics["llm_requests_total"].add(1, {
+                    "mode": "single_pass",
+                    "scenario": scenario,
+                    "model": MODEL_NAME,
+                    "webllm_mode": WEBLLM_MODE
+                })
+            
             completion = await client.chat.completions.create(
                 model=MODEL_NAME,
                 messages=messages,
                 temperature=0.0,
                 extra_body={"request_id": req_id},
             )
+            
+            # Record LLM latency
+            llm_duration = time.time() - llm_start
+            if business_metrics and "llm_latency_seconds" in business_metrics:
+                business_metrics["llm_latency_seconds"].record(llm_duration, {
+                    "model": MODEL_NAME,
+                    "webllm_mode": WEBLLM_MODE,
+                    "attempt_number": str(attempt)
+                })
+            
             metrics["llm_calls"] += 1
             token_counts = get_token_counts(completion)
             metrics["prompt_tokens"] += token_counts["prompt"]
             metrics["completion_tokens"] += token_counts["completion"]
+            
+            # Record token consumption
+            total_tokens = token_counts["prompt"] + token_counts["completion"]
+            if business_metrics and "llm_tokens_consumed" in business_metrics:
+                business_metrics["llm_tokens_consumed"].record(total_tokens, {
+                    "operation_type": "agent_call",
+                    "mode": "single_pass",
+                    "scenario": scenario
+                })
+            
+            # Record estimated cost
+            if business_metrics and "llm_costs_usd" in business_metrics:
+                cost = calculate_llm_cost(total_tokens, MODEL_NAME)
+                business_metrics["llm_costs_usd"].record(cost, {
+                    "mode": "single_pass",
+                    "scenario": scenario,
+                    "model": MODEL_NAME
+                })
+            
             response_text = completion.choices[0].message.content
             logger.info(f"Model response: {repr(response_text)}")
             messages.append({"role": "assistant", "content": response_text})
             yield {"phase": "model_response", "content": response_text, "metrics": metrics}
 
         except openai.APIError as e:
+            # Record LLM error
+            if business_metrics and "agent_errors_total" in business_metrics:
+                business_metrics["agent_errors_total"].add(1, {
+                    "error_type": "llm_timeout",
+                    "mode": "single_pass",
+                    "scenario": scenario,
+                    "tool_name": ""
+                })
             yield {"phase": "error", "message": f"vLLM server error: {e}"}
             return
 

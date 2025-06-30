@@ -1,26 +1,68 @@
 import json
 import time
 import random
+from app.observability import get_metrics
+
+# Initialize observability
+business_metrics = get_metrics()
 
 def sql_query(column: str):
     """A dummy SQL query function that fails on a specific column name and provides a hint for the correct one."""
+    start_time = time.time()
+    success = False
+    hint_applied = False
+    
     time.sleep(0.5)  # Simulate database latency
+    
     if column == "conversions":
-        return {"ok": False, "hint": "Did you mean 'convs'?"}
+        hint_applied = True
+        result = {"ok": False, "hint": "Did you mean 'convs'?"}
     elif column == "convs":
-        return {"ok": True, "data": 12345}
+        success = True
+        result = {"ok": True, "data": 12345}
     else:
-        return {"ok": False, "hint": f"Column '{column}' not found."}
+        result = {"ok": False, "hint": f"Column '{column}' not found."}
+    
+    # Record tool metrics
+    if business_metrics:
+        if "tool_executions_total" in business_metrics:
+            business_metrics["tool_executions_total"].add(1, {
+                "tool_name": "sql_query",
+                "scenario": "sql",
+                "success": str(success)
+            })
+        
+        if hint_applied and "tool_hints_applied" in business_metrics:
+            business_metrics["tool_hints_applied"].add(1, {
+                "tool_name": "sql_query",
+                "hint_type": "column_fix",
+                "scenario": "sql"
+            })
+        
+        if "tool_latency_seconds" in business_metrics:
+            duration = time.time() - start_time
+            business_metrics["tool_latency_seconds"].record(duration, {
+                "tool_name": "sql_query",
+                "scenario": "sql"
+            })
+    
+    return result
 
 def web_search(query: str):
     """Simulates web search results."""
+    start_time = time.time()
+    success = False
+    hint_applied = False
+    
     time.sleep(1.2)  # Simulate network latency
     
     if "climate change" in query.lower():
         if "recent" not in query.lower():
-            return {"ok": False, "hint": "Try searching for 'recent climate change data' for more current results"}
+            hint_applied = True
+            result = {"ok": False, "hint": "Try searching for 'recent climate change data' for more current results"}
         else:
-            return {
+            success = True
+            result = {
                 "ok": True, 
                 "data": {
                     "results": [
@@ -30,7 +72,8 @@ def web_search(query: str):
                 }
             }
     elif "ai research" in query.lower():
-        return {
+        success = True
+        result = {
             "ok": True,
             "data": {
                 "results": [
@@ -40,15 +83,45 @@ def web_search(query: str):
             }
         }
     else:
-        return {"ok": False, "hint": f"No results found for '{query}'. Try more specific terms."}
+        result = {"ok": False, "hint": f"No results found for '{query}'. Try more specific terms."}
+    
+    # Record tool metrics
+    if business_metrics:
+        if "tool_executions_total" in business_metrics:
+            business_metrics["tool_executions_total"].add(1, {
+                "tool_name": "web_search",
+                "scenario": "research",
+                "success": str(success)
+            })
+        
+        if hint_applied and "tool_hints_applied" in business_metrics:
+            business_metrics["tool_hints_applied"].add(1, {
+                "tool_name": "web_search",
+                "hint_type": "specificity",
+                "scenario": "research"
+            })
+        
+        if "tool_latency_seconds" in business_metrics:
+            duration = time.time() - start_time
+            business_metrics["tool_latency_seconds"].record(duration, {
+                "tool_name": "web_search",
+                "scenario": "research"
+            })
+    
+    return result
 
 def analyze_data(dataset: str, operation: str):
     """Simulates data analysis operations."""
+    start_time = time.time()
+    success = False
+    hint_applied = False
+    
     time.sleep(0.8)  # Simulate processing time
     
     if dataset == "user_metrics":
         if operation == "trend":
-            return {
+            success = True
+            result = {
                 "ok": True,
                 "data": {
                     "trend": "upward",
@@ -57,30 +130,65 @@ def analyze_data(dataset: str, operation: str):
                 }
             }
         elif operation == "summary":
-            return {"ok": False, "hint": "Try 'trend' analysis for user_metrics dataset"}
+            hint_applied = True
+            result = {"ok": False, "hint": "Try 'trend' analysis for user_metrics dataset"}
+        else:
+            result = {"ok": False, "hint": f"Operation '{operation}' not supported for dataset '{dataset}'"}
     elif dataset == "sales_data":
         if operation == "correlation":
-            return {
+            success = True
+            result = {
                 "ok": True,
                 "data": {
                     "correlation_strength": 0.85,
                     "insight": "Strong correlation between marketing spend and revenue"
                 }
             }
+        else:
+            result = {"ok": False, "hint": f"Operation '{operation}' not supported for dataset '{dataset}'"}
     else:
-        return {"ok": False, "hint": f"Dataset '{dataset}' not found. Try 'user_metrics' or 'sales_data'"}
+        result = {"ok": False, "hint": f"Dataset '{dataset}' not found. Try 'user_metrics' or 'sales_data'"}
     
-    return {"ok": False, "hint": f"Operation '{operation}' not supported for dataset '{dataset}'"}
+    # Record tool metrics
+    if business_metrics:
+        if "tool_executions_total" in business_metrics:
+            business_metrics["tool_executions_total"].add(1, {
+                "tool_name": "analyze_data",
+                "scenario": "data_analysis",
+                "success": str(success)
+            })
+        
+        if hint_applied and "tool_hints_applied" in business_metrics:
+            business_metrics["tool_hints_applied"].add(1, {
+                "tool_name": "analyze_data",
+                "hint_type": "operation_mismatch",
+                "scenario": "data_analysis"
+            })
+        
+        if "tool_latency_seconds" in business_metrics:
+            duration = time.time() - start_time
+            business_metrics["tool_latency_seconds"].record(duration, {
+                "tool_name": "analyze_data",
+                "scenario": "data_analysis"
+            })
+    
+    return result
 
 def solve_equation(equation: str, step: str):
     """Simulates step-by-step math problem solving."""
+    start_time = time.time()
+    success = False
+    hint_applied = False
+    
     time.sleep(0.6)  # Simulate calculation time
     
     if "2x + 5 = 15" in equation:
         if step == "isolate":
-            return {"ok": False, "hint": "First 'simplify' the equation by moving constants"}
+            hint_applied = True
+            result = {"ok": False, "hint": "First 'simplify' the equation by moving constants"}
         elif step == "simplify":
-            return {
+            success = True
+            result = {
                 "ok": True,
                 "data": {
                     "result": "2x = 10",
@@ -88,24 +196,55 @@ def solve_equation(equation: str, step: str):
                 }
             }
         elif step == "calculate":
-            return {
+            success = True
+            result = {
                 "ok": True,
                 "data": {
                     "result": "x = 5",
                     "explanation": "Divided both sides by 2"
                 }
             }
+        else:
+            result = {"ok": False, "hint": f"Try breaking down the equation '{equation}' with steps like 'simplify', 'isolate', or 'calculate'"}
     elif "x^2 - 4 = 0" in equation:
         if step == "factor":
-            return {
+            success = True
+            result = {
                 "ok": True,
                 "data": {
                     "result": "(x-2)(x+2) = 0",
                     "explanation": "Used difference of squares formula"
                 }
             }
+        else:
+            result = {"ok": False, "hint": f"Try breaking down the equation '{equation}' with steps like 'simplify', 'isolate', or 'calculate'"}
+    else:
+        result = {"ok": False, "hint": f"Try breaking down the equation '{equation}' with steps like 'simplify', 'isolate', or 'calculate'"}
     
-    return {"ok": False, "hint": f"Try breaking down the equation '{equation}' with steps like 'simplify', 'isolate', or 'calculate'"}
+    # Record tool metrics
+    if business_metrics:
+        if "tool_executions_total" in business_metrics:
+            business_metrics["tool_executions_total"].add(1, {
+                "tool_name": "solve_equation",
+                "scenario": "math_tutoring",
+                "success": str(success)
+            })
+        
+        if hint_applied and "tool_hints_applied" in business_metrics:
+            business_metrics["tool_hints_applied"].add(1, {
+                "tool_name": "solve_equation",
+                "hint_type": "step_sequence",
+                "scenario": "math_tutoring"
+            })
+        
+        if "tool_latency_seconds" in business_metrics:
+            duration = time.time() - start_time
+            business_metrics["tool_latency_seconds"].record(duration, {
+                "tool_name": "solve_equation",
+                "scenario": "math_tutoring"
+            })
+    
+    return result
 
 TOOL_REGISTRY = {
     "sql_query": sql_query,
