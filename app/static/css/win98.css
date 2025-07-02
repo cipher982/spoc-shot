@@ -256,6 +256,12 @@ html, body {
   background-color: white;
   color: var(--win98-text);
   padding: var(--space-xs) var(--space-sm);
+  border-radius: 0;
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .control-select {
