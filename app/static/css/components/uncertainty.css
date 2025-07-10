@@ -42,23 +42,26 @@
 }
 
 .uncertainty-section {
-  /* Darker sections for better contrast */
-  background: #A0A0A0;
-  border: 2px solid;
-  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-  padding: var(--space-sm);
+  /* Minimal dark sections */
+  background: #111;
+  border: 1px solid #333;
+  padding: 4px;
+  margin-bottom: 4px;
 }
 
 .uncertainty-section h4 {
-  /* Section headers are raised */
-  background: linear-gradient(to bottom, var(--win98-face) 0%, #B8B8B8 100%);
-  border: 1px solid;
-  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
-  padding: 2px 4px;  /* Much less padding */
-  margin: -4px -4px 4px -4px;  /* Adjusted for new container padding */
-  font-size: 11px;  /* Smaller header text */
+  /* Clean, readable section headers */
+  background: none;
+  border: none;
+  border-bottom: 1px solid #ccc;  /* Light gray border */
+  padding: 2px 0;
+  margin: -4px -4px 4px -4px;
+  font-size: 10px;
   font-weight: bold;
-  color: var(--win98-text);
+  color: #000;  /* Black text for readability on light background */
+  text-transform: uppercase;
+  font-family: "Courier New", monospace;
+  letter-spacing: 1px;
 }
 
 /* Token-level confidence visualization */
@@ -156,132 +159,204 @@
   margin-right: 3px;  /* Space between words */
 }
 
-/* Sequence-level metrics */
-.metrics-container {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-sm);
+/* Sequence-level metrics - REDESIGNED */
+.confidence-metrics {
+  background: #000;
+  border: 1px solid #333;
+  padding: 4px;
+  font-family: "Courier New", monospace;
 }
 
-.confidence-gauge-container {
-  margin-bottom: var(--space-md);
+/* Overall confidence with ASCII bar */
+.metric-gauge {
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.confidence-gauge-label {
-  font-size: var(--font-sm);
+.gauge-label {
+  font-size: 10px;
+  color: #888;
+  margin: 0;
+  min-width: 60px;
+}
+
+.gauge-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+/* ASCII progress bar */
+.gauge-bar {
+  flex: 1;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  color: #0f0;
+  letter-spacing: -1px;
+}
+
+.gauge-value {
+  color: #0f0;
+  font-family: "Courier New", monospace;
   font-weight: bold;
-  margin-bottom: var(--space-xs);
-  color: var(--win98-text);
+  min-width: 45px;
+  text-align: right;
 }
 
-.confidence-gauge-bg {
-  width: 100%;
-  height: 20px;
-  background: #404040;
-  border: 2px solid;
-  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-  position: relative;
-  overflow: hidden;
-}
-
-.confidence-gauge {
-  height: 100%;
-  background: linear-gradient(to right, #ff4444, #ffaa00, #00ff00);
-  transition: width 0.5s ease;
-  width: 0%;
-  box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
-}
-
-.confidence-value {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  font-size: var(--font-xs);
-  font-weight: bold;
-  color: white;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-}
-
+/* Dense metrics grid with more data */
 .metrics-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-xs);
-  background: rgba(255, 255, 255, 0.1);
-  padding: var(--space-xs);
-  border-radius: 2px;
+  grid-template-columns: repeat(3, 1fr);  /* 3 columns for density */
+  gap: 1px;
+  background: #333;  /* Gap color */
+  padding: 1px;
+  border: 1px solid #333;
+  font-size: 10px;
 }
 
-.metric-row {
+.metric-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-xs);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.metric-row:last-child {
-  border-bottom: none;
+  flex-direction: column;  /* Stack label and value */
+  padding: 3px;
+  background: #000;
+  border: none;
 }
 
 .metric-label {
-  font-size: var(--font-xs);
-  color: #303030;
-  font-weight: bold;
+  font-size: 9px;
+  color: #666;
+  font-weight: normal;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .metric-value {
-  font-size: var(--font-sm);
+  font-size: 12px;
   font-weight: bold;
-  color: var(--win98-text);
-  text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.3);
+  color: #fff;
+  text-shadow: none;
+  font-family: "Courier New", monospace;
+}
+
+/* Add mini sparklines for each metric */
+.metric-sparkline {
+  height: 16px;
+  margin-top: 2px;
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  line-height: 1;
+  color: #444;
+  letter-spacing: -1px;
+}
+
+/* Color code the values based on their meaning */
+#entropy-value { color: #ff0; }
+#logprob-value { color: #f88; }
+#perplexity-value { color: #fa0; }
+#self-score-value { color: #0ff; }
+#variance-value { color: #f0f; }  /* Magenta for variance */
+#top-p-value { color: #8f8; }  /* Light green for top-p */
+
+/* Token distribution mini chart */
+.token-distribution {
+  grid-column: 1 / -1;  /* Span full width */
+  padding: 4px;
+  background: #111;
+  margin-top: 2px;
+}
+
+.distribution-label {
+  font-size: 9px;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.distribution-bars {
+  display: flex;
+  height: 20px;
+  gap: 1px;
+  font-size: 8px;
+  align-items: flex-end;
+}
+
+.dist-bar {
+  flex: 1;
+  background: #0f0;
+  opacity: 0.3;
+  position: relative;
+  min-height: 2px;
+}
+
+.dist-bar:hover {
+  opacity: 0.8;
+}
+
+.dist-bar::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 7px;
+  color: #666;
+}
+
+/* Remove all the old gauge styling */
+.confidence-gauge-container,
+.confidence-gauge-label,
+.confidence-gauge-bg,
+.confidence-gauge,
+.confidence-value {
+  /* Deprecated - using simpler display */
 }
 
 /* Model response log */
-.response-log {
-  grid-column: 1 / -1; /* Span full width */
-  margin-top: var(--space-md);
-}
-
-.response-log .uncertainty-section {
-  min-height: 200px;
-}
-
-.log-container {
-  /* Cool terminal style log */
-  background: var(--taskman-bg);
-  border: 2px solid;
-  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-  padding: var(--space-sm);
-  height: 180px;
+.uncertainty-log {
+  background: #000;
+  border: 1px solid #333;
+  padding: 4px;
+  height: 120px;  /* Smaller, denser */
   overflow-y: auto;
   font-family: "Courier New", monospace;
-  font-size: var(--font-xs);
-  line-height: 1.3;
-  color: var(--taskman-green);
+  font-size: 10px;  /* Even smaller for density */
+  line-height: 1.2;
+  color: #0f0;  /* Terminal green */
 }
 
 .log-entry {
-  margin-bottom: var(--space-xs);
+  margin-bottom: 2px;
   word-wrap: break-word;
 }
 
 .log-ready {
-  color: #808080;
-  font-style: italic;
+  color: #666;
+  font-style: normal;  /* No italic in terminal */
 }
 
 .log-info {
-  color: var(--taskman-green);
+  color: #0ff;  /* Cyan for info */
 }
 
 .log-response {
-  color: #00FFFF;
-  font-weight: bold;
+  color: #fff;  /* White for actual response */
+  font-weight: normal;  /* Normal weight for readability */
 }
 
 .log-error {
-  color: var(--taskman-red);
+  color: #f00;  /* Bright red for errors */
   font-weight: bold;
+}
+
+/* Timestamps in logs */
+.log-entry::before {
+  content: '>';  /* Terminal prompt */
+  color: #666;
+  margin-right: 4px;
 }
 
 /* Variant analysis (optional - hidden by default) */

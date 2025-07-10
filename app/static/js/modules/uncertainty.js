@@ -24,8 +24,9 @@ export class UncertaintyAnalyzer {
   }
 
   resetUI() {
+    document.getElementById('uncertainty-status').textContent = 'Analyzing...';
     document.getElementById('heatmap-text').innerHTML = 'Analyzing token-level confidence...';
-    document.getElementById('confidence-gauge').style.width = '0%';
+    document.getElementById('confidence-bar').style.width = '0%';
     document.getElementById('confidence-value').textContent = '--';
     document.getElementById('entropy-value').textContent = '--';
     document.getElementById('logprob-value').textContent = '--';
@@ -133,7 +134,7 @@ export class UncertaintyAnalyzer {
 
   updateSequenceMetrics(metrics) {
     const confidence = Math.max(0, Math.min(100, 100 / metrics.ppl * 10));
-    document.getElementById('confidence-gauge').style.width = `${confidence}%`;
+    document.getElementById('confidence-bar').style.width = `${confidence}%`;
     document.getElementById('confidence-value').textContent = `${confidence.toFixed(1)}%`;
     
     document.getElementById('entropy-value').textContent = metrics.entropy_avg.toFixed(2);

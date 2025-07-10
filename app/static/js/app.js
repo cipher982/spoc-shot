@@ -907,7 +907,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
   const resetUncertaintyUI = () => {
     document.getElementById('uncertainty-status').textContent = 'Analyzing...';
     document.getElementById('heatmap-text').innerHTML = 'Analyzing token-level confidence...';
-    document.getElementById('confidence-gauge').style.width = '0%';
+    document.getElementById('confidence-bar').style.width = '0%';
     document.getElementById('confidence-value').textContent = '--';
     document.getElementById('entropy-value').textContent = '--';
     document.getElementById('logprob-value').textContent = '--';
@@ -928,8 +928,8 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       <span class="token" style="background-color: hsl(0, 80%, 50%); opacity: 0.3" title="Demo: Very low confidence">token-level</span>
       <span class="token" style="background-color: hsl(120, 80%, 50%); opacity: 0.3" title="Demo: High confidence">confidence...</span>
     `;
-    document.getElementById('confidence-gauge').style.width = '75%';
-    document.getElementById('confidence-gauge').style.opacity = '0.3';
+    document.getElementById('confidence-bar').style.width = '75%';
+    document.getElementById('confidence-bar').style.opacity = '0.3';
     document.getElementById('confidence-value').textContent = '75%';
     document.getElementById('confidence-value').style.opacity = '0.5';
     document.getElementById('entropy-value').textContent = '1.45';
@@ -990,11 +990,17 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     });
 
     let fullResponse = '';
+    let tokens = [];
+    let logprobs = [];
 
     for await (const chunk of chunks) {
       const delta = chunk.choices[0]?.delta;
       if (delta?.content) {
         fullResponse += delta.content;
+        tokens.push(delta.content);
+        if (delta.logprobs) {
+          logprobs.push(delta.logprobs);
+        }
         appendTokenToHeatmap(delta.content, delta.logprobs);
       }
     }
@@ -1002,13 +1008,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     updateUncertaintyLog('response', fullResponse);
 
     // After streaming, compute and update sequence metrics
-    // Note: Since logprobs are per token, we might need to collect them during streaming
-    // For simplicity, simulate as before or compute from collected data
-    updateSequenceMetrics({
-      entropy_avg: 1.2 + Math.random() * 0.8,
-      min_logprob: -2.5 - Math.random() * 1.5,
-      ppl: 3.2 + Math.random() * 2.0
-    });
+    updateSequenceLevelMetrics(tokens, logprobs);
 
     document.getElementById('uncertainty-status').textContent = 'Complete';
   }
@@ -1078,11 +1078,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     
     // Simulate sequence metrics
     await sleep(300);
-    updateSequenceMetrics({
-      entropy_avg: 1.5 + Math.random() * 0.6,
-      min_logprob: -3.2 - Math.random() * 1.0,
-      ppl: 4.5 + Math.random() * 1.5
-    });
+    updateSequenceLevelMetrics(response.split(/(\s+)/), []); // Simulate logprobs
     
     document.getElementById('uncertainty-status').textContent = 'Complete';
   };
@@ -1152,21 +1148,79 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     document.getElementById('heatmap-text').innerHTML = heatmapHTML;
   };
 
-  const updateSequenceMetrics = (metrics) => {
-    // Update confidence gauge (convert perplexity to confidence)
-    const confidence = Math.max(0, Math.min(100, 100 / metrics.ppl * 10));
-    document.getElementById('confidence-gauge').style.width = `${confidence}%`;
-    document.getElementById('confidence-value').textContent = `${confidence.toFixed(1)}%`;
+  function updateSequenceLevelMetrics(tokens, logprobs) {
+    // Calculate metrics
+    let totalLogprob = 0;
+    let totalEntropy = 0;
+    let minLogprob = 0;
+    let confidences = [];
+    let logprobValues = [];
+
+    for (let i = 0; i < tokens.length; i++) {
+      let logprob = -2.0; // Default low confidence
+      if (logprobs[i] && logprobs[i].content && logprobs[i].content.length > 0) {
+        logprob = logprobs[i].content[0].logprob;
+      }
+      totalLogprob += logprob;
+      totalEntropy += -logprob * Math.exp(logprob);
+      minLogprob = Math.min(minLogprob, logprob);
+      logprobValues.push(logprob);
+      confidences.push(Math.exp(logprob));
+    }
+
+    const avgLogprob = totalLogprob / tokens.length;
+    const avgEntropy = totalEntropy / tokens.length;
+    const perplexity = Math.exp(-avgLogprob);
+    const selfScore = Math.exp(avgLogprob);
+    const overallConfidence = Math.exp(avgLogprob);
     
-    // Update individual metrics
-    document.getElementById('entropy-value').textContent = metrics.entropy_avg.toFixed(2);
-    document.getElementById('logprob-value').textContent = metrics.min_logprob.toFixed(2);
-    document.getElementById('perplexity-value').textContent = metrics.ppl.toFixed(2);
+    // Calculate variance
+    const variance = confidences.reduce((acc, conf) => {
+      const diff = conf - overallConfidence;
+      return acc + (diff * diff);
+    }, 0) / confidences.length;
     
-    // Simulate self-score
-    const selfScore = 0.4 + Math.random() * 0.5;
+    // Calculate top-p (cumulative probability of top tokens)
+    const topP = confidences.filter(c => c > 0.1).length / confidences.length;
+
+    // Update values
+    document.getElementById('confidence-value').textContent = `${(overallConfidence * 100).toFixed(1)}%`;
+    document.getElementById('entropy-value').textContent = avgEntropy.toFixed(2);
+    document.getElementById('logprob-value').textContent = minLogprob.toFixed(2);
+    document.getElementById('perplexity-value').textContent = perplexity.toFixed(2);
     document.getElementById('self-score-value').textContent = selfScore.toFixed(2);
-  };
+    document.getElementById('variance-value').textContent = variance.toFixed(3);
+    document.getElementById('top-p-value').textContent = topP.toFixed(2);
+
+    // Update ASCII confidence bar
+    const barElement = document.getElementById('confidence-bar');
+    const filledBars = Math.round(overallConfidence * 32); // 32 character bar
+    const emptyBars = 32 - filledBars;
+    barElement.textContent = '[' + '█'.repeat(filledBars) + '░'.repeat(emptyBars) + ']';
+
+    // Update distribution chart
+    const distBins = [0, 0, 0, 0, 0]; // 5 bins: 0-20%, 20-40%, etc
+    confidences.forEach(conf => {
+      const bin = Math.min(Math.floor(conf * 5), 4);
+      distBins[bin]++;
+    });
+
+    const distBars = document.querySelectorAll('.dist-bar');
+    const maxBin = Math.max(...distBins);
+    distBins.forEach((count, i) => {
+      const height = maxBin > 0 ? (count / maxBin) * 100 : 0;
+      distBars[i].style.height = `${height}%`;
+      distBars[i].style.background = `hsl(${120 - i * 30}, 100%, 50%)`; // Green to red gradient
+    });
+
+    // Generate dynamic sparklines (simplified for now)
+    updateSparklines(logprobValues);
+  }
+
+  function updateSparklines(values) {
+    // This is a placeholder - in real implementation, you'd update based on historical data
+    // For now, we'll just use the existing static sparklines
+  }
 
   const updateUncertaintyLog = (type, message) => {
     const log = document.getElementById('uncertainty-log');
