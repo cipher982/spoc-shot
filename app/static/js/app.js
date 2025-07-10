@@ -905,21 +905,58 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
   };
 
   const resetUncertaintyUI = () => {
-    document.getElementById('uncertainty-status').textContent = 'Analyzing...';
-    document.getElementById('heatmap-text').innerHTML = 'Analyzing token-level confidence...';
-    document.getElementById('confidence-bar').style.width = '0%';
-    document.getElementById('confidence-value').textContent = '--';
-    document.getElementById('entropy-value').textContent = '--';
-    document.getElementById('logprob-value').textContent = '--';
-    document.getElementById('perplexity-value').textContent = '--';
-    document.getElementById('self-score-value').textContent = '--';
-    document.getElementById('uncertainty-log').innerHTML = '<div class="log-ready">Starting uncertainty analysis...</div>';
-    document.getElementById('variant-section').style.display = 'none';
+    // Add null checks to prevent errors
+    const uncertaintyStatus = document.getElementById('uncertainty-status');
+    const heatmapText = document.getElementById('heatmap-text');
+    const confidenceBar = document.getElementById('confidence-bar');
+    const confidenceValue = document.getElementById('confidence-value');
+    const entropyValue = document.getElementById('entropy-value');
+    const logprobValue = document.getElementById('logprob-value');
+    const perplexityValue = document.getElementById('perplexity-value');
+    const selfScoreValue = document.getElementById('self-score-value');
+    const uncertaintyLog = document.getElementById('uncertainty-log');
+    const variantSection = document.getElementById('variant-section');
+    
+    if (!uncertaintyStatus || !heatmapText || !confidenceBar) {
+      console.warn('Uncertainty UI elements not found - skipping reset');
+      return;
+    }
+    
+    uncertaintyStatus.textContent = 'Analyzing...';
+    heatmapText.innerHTML = 'Analyzing token-level confidence...';
+    
+    // Reset ASCII bar to empty
+    confidenceBar.textContent = '[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]';
+    
+    if (confidenceValue) confidenceValue.textContent = '--';
+    if (entropyValue) entropyValue.textContent = '--';
+    if (logprobValue) logprobValue.textContent = '--';
+    if (perplexityValue) perplexityValue.textContent = '--';
+    if (selfScoreValue) selfScoreValue.textContent = '--';
+    if (uncertaintyLog) uncertaintyLog.innerHTML = '<div class="log-ready">Starting uncertainty analysis...</div>';
+    if (variantSection) variantSection.style.display = 'none';
   };
 
   const setUncertaintyIdle = () => {
-    document.getElementById('uncertainty-status').textContent = 'Idle';
-    document.getElementById('heatmap-text').innerHTML = `
+    // Add null checks to prevent errors during initialization
+    const uncertaintyStatus = document.getElementById('uncertainty-status');
+    const heatmapText = document.getElementById('heatmap-text');
+    const confidenceBar = document.getElementById('confidence-bar');
+    const confidenceValue = document.getElementById('confidence-value');
+    const entropyValue = document.getElementById('entropy-value');
+    const logprobValue = document.getElementById('logprob-value');
+    const perplexityValue = document.getElementById('perplexity-value');
+    const selfScoreValue = document.getElementById('self-score-value');
+    const uncertaintyLog = document.getElementById('uncertainty-log');
+    const variantSection = document.getElementById('variant-section');
+    
+    if (!uncertaintyStatus || !heatmapText || !confidenceBar) {
+      console.warn('Uncertainty UI elements not found - skipping idle state setup');
+      return;
+    }
+    
+    uncertaintyStatus.textContent = 'Idle';
+    heatmapText.innerHTML = `
       <span class="token" style="background-color: hsl(100, 80%, 50%); opacity: 0.3" title="Demo: High confidence">[Demo]</span>
       <span class="token" style="background-color: hsl(120, 80%, 50%); opacity: 0.3" title="Demo: High confidence">Model</span>
       <span class="token" style="background-color: hsl(90, 80%, 50%); opacity: 0.3" title="Demo: Good confidence">uncertainty</span>
@@ -928,25 +965,42 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       <span class="token" style="background-color: hsl(0, 80%, 50%); opacity: 0.3" title="Demo: Very low confidence">token-level</span>
       <span class="token" style="background-color: hsl(120, 80%, 50%); opacity: 0.3" title="Demo: High confidence">confidence...</span>
     `;
-    document.getElementById('confidence-bar').style.width = '75%';
-    document.getElementById('confidence-bar').style.opacity = '0.3';
-    document.getElementById('confidence-value').textContent = '75%';
-    document.getElementById('confidence-value').style.opacity = '0.5';
-    document.getElementById('entropy-value').textContent = '1.45';
-    document.getElementById('entropy-value').style.opacity = '0.5';
-    document.getElementById('logprob-value').textContent = '-2.31';
-    document.getElementById('logprob-value').style.opacity = '0.5';
-    document.getElementById('perplexity-value').textContent = '3.82';
-    document.getElementById('perplexity-value').style.opacity = '0.5';
-    document.getElementById('self-score-value').textContent = '0.72';
-    document.getElementById('self-score-value').style.opacity = '0.5';
-    document.getElementById('uncertainty-log').innerHTML = `
-      <div class="log-ready">Idle - ready to execute...</div>
-      <div class="log-entry" style="opacity: 0.3">[Demo] 🔍 Analyzing model confidence...</div>
-      <div class="log-entry log-response" style="opacity: 0.3">[Demo] 💬 Token perplexity calculated</div>
-      <div class="log-entry" style="opacity: 0.3">[Demo] ✅ Analysis complete!</div>
-    `;
-    document.getElementById('variant-section').style.display = 'none';
+    
+    // Update ASCII bar - it's text content, not width
+    confidenceBar.textContent = '[████████████████████████░░░░░░]';
+    confidenceBar.style.opacity = '0.3';
+    
+    if (confidenceValue) {
+      confidenceValue.textContent = '75%';
+      confidenceValue.style.opacity = '0.5';
+    }
+    if (entropyValue) {
+      entropyValue.textContent = '1.45';
+      entropyValue.style.opacity = '0.5';
+    }
+    if (logprobValue) {
+      logprobValue.textContent = '-2.31';
+      logprobValue.style.opacity = '0.5';
+    }
+    if (perplexityValue) {
+      perplexityValue.textContent = '3.82';
+      perplexityValue.style.opacity = '0.5';
+    }
+    if (selfScoreValue) {
+      selfScoreValue.textContent = '0.72';
+      selfScoreValue.style.opacity = '0.5';
+    }
+    if (uncertaintyLog) {
+      uncertaintyLog.innerHTML = `
+        <div class="log-ready">Idle - ready to execute...</div>
+        <div class="log-entry" style="opacity: 0.3">[Demo] 🔍 Analyzing model confidence...</div>
+        <div class="log-entry log-response" style="opacity: 0.3">[Demo] 💬 Token perplexity calculated</div>
+        <div class="log-entry" style="opacity: 0.3">[Demo] ✅ Analysis complete!</div>
+      `;
+    }
+    if (variantSection) {
+      variantSection.style.display = 'none';
+    }
   };
 
   const runSingleResponseAnalysis = async (prompt, scenario) => {
@@ -1194,9 +1248,11 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
     // Update ASCII confidence bar
     const barElement = document.getElementById('confidence-bar');
-    const filledBars = Math.round(overallConfidence * 32); // 32 character bar
-    const emptyBars = 32 - filledBars;
-    barElement.textContent = '[' + '█'.repeat(filledBars) + '░'.repeat(emptyBars) + ']';
+    if (barElement) {
+      const filledBars = Math.round(overallConfidence * 32); // 32 character bar
+      const emptyBars = 32 - filledBars;
+      barElement.textContent = '[' + '█'.repeat(filledBars) + '░'.repeat(emptyBars) + ']';
+    }
 
     // Update distribution chart
     const distBins = [0, 0, 0, 0, 0]; // 5 bins: 0-20%, 20-40%, etc
