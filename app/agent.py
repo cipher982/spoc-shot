@@ -8,8 +8,13 @@ import os
 from typing import List, Dict, Any, AsyncGenerator
 import logging
 import asyncio
+import math
 from dotenv import load_dotenv
-from app.observability import get_metrics, get_tracer, classify_error, calculate_llm_cost
+from app.observability import (
+    get_metrics,
+    get_tracer,
+    calculate_llm_cost,
+)
 
 # Load environment variables
 load_dotenv()
@@ -33,14 +38,16 @@ if WEBLLM_MODE in ["hybrid", "server"]:
             api_key="none",
         )
         MODEL_NAME = os.getenv("MODEL_NAME", "local-7b")
-        logger.info(f"Server mode enabled. Connecting to vLLM server at: {VLLM_BASE_URL}")
+        logger.info(
+            f"Server mode enabled. Connecting to vLLM server at: {VLLM_BASE_URL}"
+        )
     except Exception as e:
         logger.warning(f"Failed to initialize vLLM client: {e}")
         if WEBLLM_MODE == "server":
             raise
         logger.info("Falling back to WebLLM-only mode")
         WEBLLM_MODE = "webllm"
-        
+
 if WEBLLM_MODE == "webllm":
     logger.info("WebLLM-only mode enabled. Server-side inference disabled.")
 
@@ -91,9 +98,10 @@ Example flow:
 DO NOT repeat the same failed tool call! Always learn from the hint!
 """
 
+
 # --- Metrics Tracking ---
 def get_token_counts(completion: Dict[str, Any]) -> Dict[str, int]:
-    if completion and hasattr(completion, 'usage'):
+    if completion and hasattr(completion, "usage"):
         return {
             "prompt": completion.usage.prompt_tokens,
             "completion": completion.usage.completion_tokens,
@@ -101,23 +109,74 @@ def get_token_counts(completion: Dict[str, Any]) -> Dict[str, int]:
         }
     return {"prompt": 0, "completion": 0, "total": 0}
 
+
 def get_tool_args(call_data: Dict[str, Any]) -> Dict[str, Any]:
     """Safely gets the arguments from a tool call, checking for both 'args' and 'arguments'."""
     return call_data.get("args", call_data.get("arguments", {}))
 
+
+def extract_uncertainty_data(
+    completion: Any,
+) -> (str, List[Dict[str, Any]], Dict[str, float]):
+    """Extract tokens and simple uncertainty metrics from a chat completion."""
+    try:
+        token_logprobs = completion.choices[0].logprobs.content
+    except Exception:
+        token_logprobs = None
+
+    if not token_logprobs:
+        text = completion.choices[0].message.content
+        return text, [], {}
+
+    tokens = []
+    text = ""
+    entropy_sum = 0.0
+    min_logprob = float("inf")
+
+    for item in token_logprobs:
+        token = item.token
+        lp = item.logprob
+        top = [
+            {"token": t.token, "logprob": t.logprob}
+            for t in getattr(item, "top_logprobs", [])
+        ]
+        tokens.append({"token": token, "logprob": lp, "top_logprobs": top})
+        text += token
+        entropy_sum += -lp
+        if lp < min_logprob:
+            min_logprob = lp
+
+    count = len(tokens)
+    metrics = {
+        "entropy_avg": entropy_sum / count if count else 0.0,
+        "min_logprob": min_logprob if count else 0.0,
+        "ppl": math.exp(entropy_sum / count) if count else float("inf"),
+    }
+
+    return text, tokens, metrics
+
+
 # --- Multi-Pass Agent (Baseline) ---
-async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator[Dict[str, Any], None]:
+async def solve_multi_pass(
+    prompt: str, scenario: str = "sql"
+) -> AsyncGenerator[Dict[str, Any], None]:
     if WEBLLM_MODE == "webllm":
-        yield {"phase": "error", "message": "Server-side inference disabled. Please use WebLLM mode in the browser."}
+        yield {
+            "phase": "error",
+            "message": "Server-side inference disabled. Please use WebLLM mode in the browser.",
+        }
         return
-        
+
     if not client:
-        yield {"phase": "error", "message": "vLLM client not initialized. Check server configuration."}
+        yield {
+            "phase": "error",
+            "message": "vLLM client not initialized. Check server configuration.",
+        }
         return
     base_req_id = f"spoc-shot-{uuid.uuid4()}"
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT_MULTI_PASS},
-        {"role": "user", "content": prompt}
+        {"role": "user", "content": prompt},
     ]
     start_time = time.perf_counter()
     metrics = {"prompt_tokens": 0, "completion_tokens": 0, "latency": 0, "llm_calls": 0}
@@ -132,7 +191,7 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
         for i, msg in enumerate(messages):
             logger.info(f"  Message {i}: {msg['role']} = {repr(msg['content'][:200])}")
         yield {"phase": "propose", "metrics": metrics}
-        
+
         try:
             logger.info("[Multi-Pass] Simulating network latency...")
             await asyncio.sleep(2)
@@ -141,24 +200,32 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
                 model=MODEL_NAME,
                 messages=messages,
                 temperature=0.0,
+                logprobs=True,
+                top_logprobs=5,
                 extra_body={"request_id": req_id},
             )
             metrics["llm_calls"] += 1
             token_counts = get_token_counts(completion)
             metrics["prompt_tokens"] += token_counts["prompt"]
             metrics["completion_tokens"] += token_counts["completion"]
-            response_text = completion.choices[0].message.content
+            response_text, tokens, u_metrics = extract_uncertainty_data(completion)
+            for t in tokens:
+                yield {"phase": "token", **t}
+            if u_metrics:
+                yield {"phase": "metrics", **u_metrics}
             logger.info(f"Model response: {repr(response_text)}")
             messages.append({"role": "assistant", "content": response_text})
-            yield {"phase": "model_response", "content": response_text, "metrics": metrics}
+            yield {
+                "phase": "model_response",
+                "content": response_text,
+                "metrics": metrics,
+            }
 
         except openai.APIError as e:
             # Record LLM error
             if business_metrics and business_metrics.enabled:
                 business_metrics.record_error(
-                    error_type="llm_timeout",
-                    mode="multi_pass",
-                    scenario=scenario
+                    error_type="llm_timeout", mode="multi_pass", scenario=scenario
                 )
             yield {"phase": "error", "message": f"vLLM server error: {e}"}
             return
@@ -167,9 +234,9 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
             tool_call_str = response_text.split("TOOL_CALL:", 1)[1].strip()
             try:
                 call_data = json.loads(tool_call_str)
-                call_data["args"] = get_tool_args(call_data) # Standardize the args key
+                call_data["args"] = get_tool_args(call_data)  # Standardize the args key
                 logger.info(f"[Multi-Pass] Tool call: {call_data}")
-                
+
                 # Check if we're repeating the same failed call
                 if attempt > 1:
                     last_tool_msg = None
@@ -178,23 +245,41 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
                             last_tool_msg = msg
                             break
                     if last_tool_msg and "hint" in last_tool_msg.get("content", ""):
-                        logger.warning(f"[Multi-Pass] Agent may be ignoring hint from previous attempt: {last_tool_msg['content']}")
-                
-                yield {"phase": "execute", "call": call_data, "metrics": metrics, "debug": {"attempt": attempt, "call_data": call_data}}
+                        logger.warning(
+                            f"[Multi-Pass] Agent may be ignoring hint from previous attempt: {last_tool_msg['content']}"
+                        )
+
+                yield {
+                    "phase": "execute",
+                    "call": call_data,
+                    "metrics": metrics,
+                    "debug": {"attempt": attempt, "call_data": call_data},
+                }
                 result = T.run_tool(call_data)
                 logger.info(f"[Multi-Pass] Tool result: {result}")
-                yield {"phase": "tool_result", "result": result, "metrics": metrics, "debug": {"attempt": attempt, "verified": V.verify(result)}}
+                yield {
+                    "phase": "tool_result",
+                    "result": result,
+                    "metrics": metrics,
+                    "debug": {"attempt": attempt, "verified": V.verify(result)},
+                }
                 messages.append({"role": "tool", "content": json.dumps(result)})
-                logger.info(f"[Multi-Pass] Conversation history now has {len(messages)} messages")
+                logger.info(
+                    f"[Multi-Pass] Conversation history now has {len(messages)} messages"
+                )
                 logger.info(f"[Multi-Pass] Last message: {messages[-1]}")
 
                 if V.verify(result):
                     yield {"phase": "propose", "metrics": metrics}
-                    logger.info("[Multi-Pass] Simulating network latency for final answer...")
+                    logger.info(
+                        "[Multi-Pass] Simulating network latency for final answer..."
+                    )
                     await asyncio.sleep(2)
                     final_completion = await client.chat.completions.create(
                         model=MODEL_NAME,
                         messages=messages,
+                        logprobs=True,
+                        top_logprobs=5,
                         extra_body={"request_id": f"{req_id}-final"},
                     )
                     # This call reuses the same request_id to resume generation
@@ -202,15 +287,38 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
                     token_counts = get_token_counts(final_completion)
                     metrics["prompt_tokens"] += token_counts["prompt"]
                     metrics["completion_tokens"] += token_counts["completion"]
-                    final_answer = final_completion.choices[0].message.content
+                    final_answer, tokens, u_metrics = extract_uncertainty_data(
+                        final_completion
+                    )
+                    for t in tokens:
+                        yield {"phase": "token", **t}
+                    if u_metrics:
+                        yield {"phase": "metrics", **u_metrics}
                     metrics["latency"] = time.perf_counter() - start_time
-                    yield {"phase": "success", "answer": final_answer, "metrics": metrics}
+                    yield {
+                        "phase": "success",
+                        "answer": final_answer,
+                        "metrics": metrics,
+                    }
                     return
                 else:
-                    yield {"phase": "failure", "message": f"Tool execution failed verification. Attempt {attempt}", "metrics": metrics}
+                    yield {
+                        "phase": "failure",
+                        "message": f"Tool execution failed verification. Attempt {attempt}",
+                        "metrics": metrics,
+                    }
             except (json.JSONDecodeError, KeyError) as e:
-                yield {"phase": "failure", "message": f"Invalid tool call format: {e}", "metrics": metrics}
-                messages.append({"role": "tool", "content": json.dumps({"error": "Invalid tool call format"})})
+                yield {
+                    "phase": "failure",
+                    "message": f"Invalid tool call format: {e}",
+                    "metrics": metrics,
+                }
+                messages.append(
+                    {
+                        "role": "tool",
+                        "content": json.dumps({"error": "Invalid tool call format"}),
+                    }
+                )
         else:
             metrics["latency"] = time.perf_counter() - start_time
             yield {"phase": "success", "answer": response_text, "metrics": metrics}
@@ -218,20 +326,28 @@ async def solve_multi_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator
 
 
 # --- Single-Pass Agent (SPOC) ---
-async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerator[Dict[str, Any], None]:
+async def solve_single_pass(
+    prompt: str, scenario: str = "sql"
+) -> AsyncGenerator[Dict[str, Any], None]:
     if WEBLLM_MODE == "webllm":
-        yield {"phase": "error", "message": "Server-side inference disabled. Please use WebLLM mode in the browser."}
+        yield {
+            "phase": "error",
+            "message": "Server-side inference disabled. Please use WebLLM mode in the browser.",
+        }
         return
-        
+
     if not client:
-        yield {"phase": "error", "message": "vLLM client not initialized. Check server configuration."}
+        yield {
+            "phase": "error",
+            "message": "vLLM client not initialized. Check server configuration.",
+        }
         return
     base_req_id = f"spoc-shot-{uuid.uuid4()}"
     tool_signature = f"TOOL_SIGNATURE: {T.get_tool_signature(scenario)}"
     full_prompt = f"{tool_signature}\n\nUser Prompt: {prompt}"
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT_SINGLE_PASS},
-        {"role": "user", "content": full_prompt}
+        {"role": "user", "content": full_prompt},
     ]
     start_time = time.perf_counter()
     metrics = {"prompt_tokens": 0, "completion_tokens": 0, "latency": 0, "llm_calls": 0}
@@ -243,13 +359,13 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
         req_id = f"{base_req_id}-attempt-{attempt}"
         logger.info(f"[Single-Pass] Attempt {attempt}")
         yield {"phase": "propose", "metrics": metrics}
-        
+
         try:
             logger.info("[Single-Pass] Processing request...")
             logger.info("[Single-Pass] Simulating network latency...")
             await asyncio.sleep(2)
             logger.info("[Single-Pass] Calling OpenAI API...")
-            
+
             # Record LLM request metrics
             llm_start = time.time()
             if business_metrics and business_metrics.enabled:
@@ -260,27 +376,29 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
                     webllm_mode=WEBLLM_MODE,
                     tokens=0,  # Will be updated after completion
                     cost=0.0,  # Will be updated after completion
-                    latency=0.0  # Will be updated after completion
+                    latency=0.0,  # Will be updated after completion
                 )
-            
+
             completion = await client.chat.completions.create(
                 model=MODEL_NAME,
                 messages=messages,
                 temperature=0.0,
+                logprobs=True,
+                top_logprobs=5,
                 extra_body={"request_id": req_id},
             )
-            
+
             # Record LLM latency and token consumption
             llm_duration = time.time() - llm_start
             metrics["llm_calls"] += 1
             token_counts = get_token_counts(completion)
             metrics["prompt_tokens"] += token_counts["prompt"]
             metrics["completion_tokens"] += token_counts["completion"]
-            
+
             # Record comprehensive LLM metrics
             total_tokens = token_counts["prompt"] + token_counts["completion"]
             cost = calculate_llm_cost(total_tokens, MODEL_NAME)
-            
+
             if business_metrics and business_metrics.enabled:
                 business_metrics.record_llm_request(
                     mode="single_pass",
@@ -289,21 +407,27 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
                     webllm_mode=WEBLLM_MODE,
                     tokens=total_tokens,
                     cost=cost,
-                    latency=llm_duration
+                    latency=llm_duration,
                 )
-            
-            response_text = completion.choices[0].message.content
+
+            response_text, tokens, u_metrics = extract_uncertainty_data(completion)
+            for t in tokens:
+                yield {"phase": "token", **t}
+            if u_metrics:
+                yield {"phase": "metrics", **u_metrics}
             logger.info(f"Model response: {repr(response_text)}")
             messages.append({"role": "assistant", "content": response_text})
-            yield {"phase": "model_response", "content": response_text, "metrics": metrics}
+            yield {
+                "phase": "model_response",
+                "content": response_text,
+                "metrics": metrics,
+            }
 
         except openai.APIError as e:
             # Record LLM error
             if business_metrics and business_metrics.enabled:
                 business_metrics.record_error(
-                    error_type="llm_timeout",
-                    mode="single_pass",
-                    scenario=scenario
+                    error_type="llm_timeout", mode="single_pass", scenario=scenario
                 )
             yield {"phase": "error", "message": f"vLLM server error: {e}"}
             return
@@ -312,24 +436,40 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
             tool_call_str = response_text.split("TOOL_CALL:", 1)[1].strip()
             try:
                 call_data = json.loads(tool_call_str)
-                call_data["args"] = get_tool_args(call_data) # Standardize the args key
+                call_data["args"] = get_tool_args(call_data)  # Standardize the args key
                 logger.info(f"[Single-Pass] Tool call: {call_data}")
-                yield {"phase": "execute", "call": call_data, "metrics": metrics, "debug": {"attempt": attempt, "call_data": call_data}}
+                yield {
+                    "phase": "execute",
+                    "call": call_data,
+                    "metrics": metrics,
+                    "debug": {"attempt": attempt, "call_data": call_data},
+                }
                 result = T.run_tool(call_data)
                 logger.info(f"[Single-Pass] Tool result: {result}")
-                yield {"phase": "tool_result", "result": result, "metrics": metrics, "debug": {"attempt": attempt, "verified": V.verify(result)}}
+                yield {
+                    "phase": "tool_result",
+                    "result": result,
+                    "metrics": metrics,
+                    "debug": {"attempt": attempt, "verified": V.verify(result)},
+                }
                 messages.append({"role": "tool", "content": json.dumps(result)})
 
                 if V.verify(result):
                     # In a true single-pass, the model would generate the final answer
                     # after the successful tool call in the same response.
                     # For this demo, we'll simulate that by making one final call.
-                    logger.info("[Single-Pass] Tool successful. Generating final answer...")
-                    logger.info("[Single-Pass] Simulating network latency for final answer...")
+                    logger.info(
+                        "[Single-Pass] Tool successful. Generating final answer..."
+                    )
+                    logger.info(
+                        "[Single-Pass] Simulating network latency for final answer..."
+                    )
                     await asyncio.sleep(2)
                     final_completion = await client.chat.completions.create(
                         model=MODEL_NAME,
                         messages=messages,
+                        logprobs=True,
+                        top_logprobs=5,
                         extra_body={"request_id": f"{req_id}-final"},
                     )
                     # This call reuses the same request_id to resume generation,
@@ -338,15 +478,38 @@ async def solve_single_pass(prompt: str, scenario: str = "sql") -> AsyncGenerato
                     token_counts = get_token_counts(final_completion)
                     metrics["prompt_tokens"] += token_counts["prompt"]
                     metrics["completion_tokens"] += token_counts["completion"]
-                    final_answer = final_completion.choices[0].message.content
+                    final_answer, tokens, u_metrics = extract_uncertainty_data(
+                        final_completion
+                    )
+                    for t in tokens:
+                        yield {"phase": "token", **t}
+                    if u_metrics:
+                        yield {"phase": "metrics", **u_metrics}
                     metrics["latency"] = time.perf_counter() - start_time
-                    yield {"phase": "success", "answer": final_answer, "metrics": metrics}
+                    yield {
+                        "phase": "success",
+                        "answer": final_answer,
+                        "metrics": metrics,
+                    }
                     return
                 else:
-                    yield {"phase": "patch", "message": f"Tool execution failed. Attempting to self-patch. Attempt {attempt}", "metrics": metrics}
+                    yield {
+                        "phase": "patch",
+                        "message": f"Tool execution failed. Attempting to self-patch. Attempt {attempt}",
+                        "metrics": metrics,
+                    }
             except (json.JSONDecodeError, KeyError) as e:
-                yield {"phase": "failure", "message": f"Invalid tool call format: {e}", "metrics": metrics}
-                messages.append({"role": "tool", "content": json.dumps({"error": "Invalid tool call format"})})
+                yield {
+                    "phase": "failure",
+                    "message": f"Invalid tool call format: {e}",
+                    "metrics": metrics,
+                }
+                messages.append(
+                    {
+                        "role": "tool",
+                        "content": json.dumps({"error": "Invalid tool call format"}),
+                    }
+                )
         else:
             metrics["latency"] = time.perf_counter() - start_time
             yield {"phase": "success", "answer": response_text, "metrics": metrics}
