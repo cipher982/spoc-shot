@@ -54,48 +54,15 @@
   background: linear-gradient(to bottom, var(--win98-face) 0%, #B8B8B8 100%);
   border: 1px solid;
   border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
-  padding: var(--space-xs) var(--space-sm);
-  margin: calc(var(--space-sm) * -1) calc(var(--space-sm) * -1) var(--space-sm) calc(var(--space-sm) * -1);
-  font-size: var(--font-sm);
+  padding: 2px 4px;  /* Much less padding */
+  margin: -4px -4px 4px -4px;  /* Adjusted for new container padding */
+  font-size: 11px;  /* Smaller header text */
   font-weight: bold;
   color: var(--win98-text);
 }
 
 /* Token-level confidence visualization */
-.confidence-legend {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--font-xs);
-  margin-bottom: var(--space-xs);
-  color: #303030;
-  font-weight: bold;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.legend-color {
-  width: 12px;
-  height: 12px;
-  border: 1px solid var(--win98-shadow);
-  box-shadow: none;  /* Remove glow */
-}
-
-.legend-high { 
-  background-color: #0f0;  /* Bright terminal green */
-  box-shadow: none;
-}
-.legend-medium { 
-  background-color: #ff0;  /* Terminal yellow */
-  box-shadow: none;
-}
-.legend-low { 
-  background-color: #f88;  /* Terminal red */
-  box-shadow: none;
-}
+/* Legend removed - colors are self-explanatory */
 
 .heatmap-container {
   /* Dark terminal-style background */
