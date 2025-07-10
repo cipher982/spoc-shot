@@ -91,7 +91,7 @@
   border-radius: 0;  /* Sharp corners for that retro feel */
   cursor: help;
   position: relative;
-  font-weight: normal;
+  font-weight: bold;  /* Make tokens bold for better readability */
   transition: background-color 0.1s ease;  /* Faster transition */
   
   /* Remove all effects */
@@ -100,23 +100,8 @@
   filter: none;
 }
 
-/* High confidence - bright green on black */
-.token-high-confidence {
-  background-color: rgba(0, 255, 0, 0.25);
-  color: #0f0;  /* Bright green text */
-}
-
-/* Medium confidence - yellow on black */
-.token-medium-confidence {
-  background-color: rgba(255, 255, 0, 0.2);
-  color: #ff0;  /* Yellow text */
-}
-
-/* Low confidence - red on black */
-.token-low-confidence {
-  background-color: rgba(255, 0, 0, 0.3);
-  color: #f88;  /* Light red text */
-}
+/* Token confidence styles moved to win98.css to avoid conflicts */
+/* Use the standardized 6-level system: token-confidence-very-high, token-confidence-high, etc. */
 
 /* No overlap */
 .token + .token {
@@ -207,8 +192,8 @@
   text-align: right;
 }
 
-/* Dense metrics grid with more data */
-.metrics-grid {
+/* Uncertainty Metrics Grid - SINGLE SOURCE OF TRUTH for uncertainty analysis */
+.uncertainty-metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);  /* 3 columns for density */
   gap: 1px;
@@ -306,14 +291,7 @@
   color: #666;
 }
 
-/* Remove all the old gauge styling */
-.confidence-gauge-container,
-.confidence-gauge-label,
-.confidence-gauge-bg,
-.confidence-gauge,
-.confidence-value {
-  /* Deprecated - using simpler display */
-}
+/* Old gauge system removed - using ASCII bars instead */
 
 /* Model response log */
 .uncertainty-log {

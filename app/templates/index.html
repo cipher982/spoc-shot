@@ -30,7 +30,7 @@
     </header>
 
     <!-- Model Loading Overlay -->
-    <div id="model-loading-panel" class="loading-overlay" style="display: none;">
+    <div id="model-loading-panel" class="loading-overlay hidden">
       <div class="loading-dialog">
         <h2 class="loading-title">
           <span class="mr-2">🧠</span> Initializing WebLLM
@@ -41,7 +41,7 @@
             <span id="model-progress-text">0%</span>
           </div>
           <div class="progress-bar-container">
-            <div id="model-progress-bar" class="progress-bar" style="width: 0%"></div>
+            <div id="model-progress-bar" class="progress-bar" style="--progress-width: 0%"></div>
           </div>
         </div>
         <p class="loading-description">
@@ -106,12 +106,12 @@
           <span id="multi-pass-progress-text">0%</span>
         </div>
         <div class="progress-container">
-          <div id="multi-pass-progress" class="progress-fill" style="width: 0%"></div>
+          <div id="multi-pass-progress" class="progress-fill" style="--progress-width: 0%"></div>
         </div>
       </div>
     </div>
     <div class="agent-body">
-      <div class="metrics-grid">
+      <div class="race-metrics-grid">
         <div class="metric-item">
           <div class="metric-label">Time</div>
           <div id="multi-pass-time" class="metric-value">--</div>
@@ -148,12 +148,12 @@
           <span id="single-pass-progress-text">0%</span>
         </div>
         <div class="progress-container">
-          <div id="single-pass-progress" class="progress-fill" style="width: 0%"></div>
+          <div id="single-pass-progress" class="progress-fill" style="--progress-width: 0%"></div>
         </div>
       </div>
     </div>
     <div class="agent-body">
-      <div class="metrics-grid">
+      <div class="race-metrics-grid">
         <div class="metric-item">
           <div class="metric-label">Time</div>
           <div id="single-pass-time" class="metric-value">--</div>
@@ -179,7 +179,7 @@
 </div>
 
 <!-- Race Results Summary -->
-<div id="race-results" class="race-results" style="display: none;">
+<div id="race-results" class="race-results hidden">
   <h3 class="results-title">🏆 Comparison Results</h3>
   <div id="winner-announcement" class="winner-announcement"></div>
   <div class="results-grid">
@@ -236,7 +236,7 @@
               <span id="confidence-value" class="gauge-value">--</span>
             </div>
           </div>
-          <div class="metrics-grid">
+          <div class="uncertainty-metrics-grid">
             <div class="metric-item">
               <div class="metric-label">Entropy</div>
               <div id="entropy-value" class="metric-value">--</div>
@@ -282,14 +282,14 @@
       </div>
 
       <!-- Multi-Sample Variants -->
-      <div id="variant-section" class="uncertainty-section" style="display: none;">
+      <div id="variant-section" class="uncertainty-section hidden">
         <h4 class="section-title">Response Variants</h4>
         <div id="variant-viewer" class="variant-viewer">
           <div class="variant-summary">
             <span id="semantic-entropy">Semantic Entropy: --</span>
             <button id="toggle-variants" class="toggle-variants">Show Variants</button>
           </div>
-          <div id="variant-list" class="variant-list" style="display: none;">
+          <div id="variant-list" class="variant-list hidden">
             <!-- Variants will be populated here -->
           </div>
         </div>

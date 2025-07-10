@@ -95,7 +95,7 @@ export class RaceController {
     // Hide results
     const raceResults = document.getElementById('race-results');
     if (raceResults) {
-      raceResults.style.display = 'none';
+      raceResults.classList.add('hidden');
     }
   }
 
@@ -122,7 +122,7 @@ export class RaceController {
     };
 
     if (elements.status) elements.status.textContent = data.status;
-    if (elements.progress) elements.progress.style.width = `${data.progress}%`;
+    if (elements.progress) elements.progress.style.setProperty('--progress-width', `${data.progress}%`);
     if (elements.progressText) elements.progressText.textContent = `${data.progress}%`;
     if (elements.time) elements.time.textContent = data.time;
     if (elements.tokens) elements.tokens.textContent = data.tokens;
@@ -386,7 +386,7 @@ export class RaceController {
     const raceResults = document.getElementById('race-results');
     if (!raceResults) return;
 
-    raceResults.style.display = 'block';
+    raceResults.classList.remove('hidden');
     
     const multiResult = results[0].status === 'fulfilled' ? results[0].value : null;
     const singleResult = results[1].status === 'fulfilled' ? results[1].value : null;

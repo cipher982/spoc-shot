@@ -74,7 +74,7 @@ export class UncertaintyAnalyzer {
     // Hide variant section
     const variantSection = document.getElementById('variant-section');
     if (variantSection) {
-      variantSection.style.display = 'none';
+      variantSection.classList.add('hidden');
     }
   }
 
@@ -122,7 +122,7 @@ export class UncertaintyAnalyzer {
 
   async runMultiSampleAnalysis(prompt, scenario) {
     this.updateLog('info', 'Running multi-sample analysis (N=5)...');
-    document.getElementById('variant-section').style.display = 'block';
+    document.getElementById('variant-section').classList.remove('hidden');
     
     await this.sleep(1500);
     
@@ -146,11 +146,11 @@ export class UncertaintyAnalyzer {
     document.getElementById('toggle-variants').addEventListener('click', () => {
       const list = document.getElementById('variant-list');
       const button = document.getElementById('toggle-variants');
-      if (list.style.display === 'none') {
-        list.style.display = 'block';
+      if (list.classList.contains('hidden')) {
+        list.classList.remove('hidden');
         button.textContent = 'Hide Variants';
       } else {
-        list.style.display = 'none';
+        list.classList.add('hidden');
         button.textContent = 'Show Variants';
       }
     });
@@ -162,12 +162,20 @@ export class UncertaintyAnalyzer {
       if (token.trim() === '') return token;
       
       const confidence = 0.3 + Math.random() * 0.7;
-      const hue = Math.max(0, Math.min(120, 120 * confidence));
       const logprob = Math.log(confidence);
       
-      // Use darker backgrounds with black text for better contrast
-      const lightness = 25 + (confidence * 35); // 25-60% lightness instead of 90%
-      return `<span class="token" style="background-color: hsl(${hue}, 80%, ${lightness}%); color: black;" title="Simulated LogProb: ${logprob.toFixed(3)}">${token}</span>`;
+      // Map confidence to CSS classes instead of inline styles
+      const getConfidenceClass = (conf) => {
+        if (conf >= 0.9) return 'token-confidence-very-high';
+        if (conf >= 0.7) return 'token-confidence-high';
+        if (conf >= 0.5) return 'token-confidence-good';
+        if (conf >= 0.3) return 'token-confidence-medium';
+        if (conf >= 0.1) return 'token-confidence-low';
+        return 'token-confidence-very-low';
+      };
+      
+      const confidenceClass = getConfidenceClass(confidence);
+      return `<span class="token ${confidenceClass}" title="Simulated LogProb: ${logprob.toFixed(3)}">${token}</span>`;
     }).join('');
     
     document.getElementById('heatmap-text').innerHTML = heatmapHTML;
@@ -175,7 +183,7 @@ export class UncertaintyAnalyzer {
 
   updateSequenceMetrics(metrics) {
     const confidence = Math.max(0, Math.min(100, 100 / metrics.ppl * 10));
-    document.getElementById('confidence-bar').style.width = `${confidence}%`;
+    document.getElementById('confidence-bar').style.setProperty('--progress-width', `${confidence}%`);
     document.getElementById('confidence-value').textContent = `${confidence.toFixed(1)}%`;
     
     document.getElementById('entropy-value').textContent = metrics.entropy_avg.toFixed(2);

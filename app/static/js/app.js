@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const resetRaceState = () => {
     // Reset multi-pass
     document.getElementById('multi-pass-status').textContent = 'Idle';
-    document.getElementById('multi-pass-progress').style.width = '0%';
+    document.getElementById('multi-pass-progress').style.setProperty('--progress-width', '0%');
     document.getElementById('multi-pass-progress-text').textContent = '0%';
     document.getElementById('multi-pass-log').innerHTML = '<div class="log-ready">Idle - ready to execute...</div>';
     document.getElementById('multi-pass-time').textContent = '--';
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Reset single-pass
     document.getElementById('single-pass-status').textContent = 'Idle';
-    document.getElementById('single-pass-progress').style.width = '0%';
+    document.getElementById('single-pass-progress').style.setProperty('--progress-width', '0%');
     document.getElementById('single-pass-progress-text').textContent = '0%';
     document.getElementById('single-pass-log').innerHTML = '<div class="log-ready">Idle - ready to execute...</div>';
     document.getElementById('single-pass-time').textContent = '--';
@@ -66,14 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('single-pass-cost').textContent = '--';
     
     // Hide results
-    raceResults.style.display = 'none';
+    raceResults.classList.add('hidden');
   };
 
   // --- WebLLM Initialization ---
   const initializeWebLLM = async () => {
     try {
       // Show the overlay as a flex container so the modal stays centred
-      modelLoadingPanel.style.display = 'flex';
+      modelLoadingPanel.classList.remove('hidden');
       runButton.disabled = true;
       
       console.log("🔍 Starting WebLLM initialization...");
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("📊 Progress:", report);
         const progress = Math.round((report.progress || 0) * 100);
         modelProgressText.textContent = `${progress}%`;
-        modelProgressBar.style.width = `${progress}%`;
+        modelProgressBar.style.setProperty('--progress-width', `${progress}%`);
         modelStatus.textContent = report.text || `Loading model... ${progress}%`;
       };
 
@@ -125,10 +125,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       modelStatus.textContent = "Model loaded successfully!";
       modelProgressText.textContent = "100%";
-      modelProgressBar.style.width = "100%";
+      modelProgressBar.style.setProperty('--progress-width', '100%');
       
       setTimeout(() => {
-        modelLoadingPanel.style.display = 'none';
+        modelLoadingPanel.classList.add('hidden');
         runButton.disabled = false;
         modelLoaded = true;
       }, 1000);
@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       
       modelStatus.textContent = `Error: ${error.message}`;
-      modelProgressBar.style.backgroundColor = '#dc2626';
+      modelProgressBar.classList.add('progress-error');
       
       // Show helpful error message without popup
       setTimeout(() => {
@@ -641,7 +641,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
         progress = Math.min(85, attemptCount * 15 + 5);
       }
       
-      progressEl.style.width = `${progress}%`;
+      progressEl.style.setProperty('--progress-width', `${progress}%`);
       progressTextEl.textContent = `${progress}%`;
       
       const elapsed = (performance.now() - startTime) / 1000;
@@ -882,7 +882,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
   };
 
   const showRaceResults = (results) => {
-    raceResults.style.display = 'block';
+    raceResults.classList.remove('hidden');
     
     const multiResult = results[0].status === 'fulfilled' ? results[0].value : null;
     const singleResult = results[1].status === 'fulfilled' ? results[1].value : null;
@@ -959,7 +959,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     if (perplexityValue) perplexityValue.textContent = '--';
     if (selfScoreValue) selfScoreValue.textContent = '--';
     if (uncertaintyLog) uncertaintyLog.innerHTML = '<div class="log-ready">Starting uncertainty analysis...</div>';
-    if (variantSection) variantSection.style.display = 'none';
+    if (variantSection) variantSection.classList.add('hidden');
   };
 
   const setUncertaintyIdle = () => {
@@ -982,38 +982,38 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     
     uncertaintyStatus.textContent = 'Idle';
     heatmapText.innerHTML = `
-      <span class="token" style="background-color: hsl(100, 80%, 40%); color: black; opacity: 0.8" title="Demo: High confidence">[Demo]</span>
-      <span class="token" style="background-color: hsl(120, 80%, 45%); color: black; opacity: 0.8" title="Demo: High confidence">Model</span>
-      <span class="token" style="background-color: hsl(90, 80%, 40%); color: black; opacity: 0.8" title="Demo: Good confidence">uncertainty</span>
-      <span class="token" style="background-color: hsl(60, 80%, 35%); color: black; opacity: 0.8" title="Demo: Medium confidence">analysis</span>
-      <span class="token" style="background-color: hsl(30, 80%, 30%); color: black; opacity: 0.8" title="Demo: Low confidence">visualizes</span>
-      <span class="token" style="background-color: hsl(0, 80%, 30%); color: black; opacity: 0.8" title="Demo: Very low confidence">token-level</span>
-      <span class="token" style="background-color: hsl(120, 80%, 45%); color: black; opacity: 0.8" title="Demo: High confidence">confidence...</span>
+      <span class="token token-confidence-high" title="Demo: High confidence">[Demo]</span>
+      <span class="token token-confidence-very-high" title="Demo: High confidence">Model</span>
+      <span class="token token-confidence-good" title="Demo: Good confidence">uncertainty</span>
+      <span class="token token-confidence-medium" title="Demo: Medium confidence">analysis</span>
+      <span class="token token-confidence-low" title="Demo: Low confidence">visualizes</span>
+      <span class="token token-confidence-very-low" title="Demo: Very low confidence">token-level</span>
+      <span class="token token-confidence-very-high" title="Demo: High confidence">confidence...</span>
     `;
     
     // Update ASCII bar - it's text content, not width
     confidenceBar.textContent = '[████████████████████████░░░░░░]';
-    confidenceBar.style.opacity = '0.3';
+    confidenceBar.classList.add('demo-opacity');
     
     if (confidenceValue) {
       confidenceValue.textContent = '75%';
-      confidenceValue.style.opacity = '0.5';
+      confidenceValue.classList.add('metrics-loading');
     }
     if (entropyValue) {
       entropyValue.textContent = '1.45';
-      entropyValue.style.opacity = '0.5';
+      entropyValue.classList.add('metrics-loading');
     }
     if (logprobValue) {
       logprobValue.textContent = '-2.31';
-      logprobValue.style.opacity = '0.5';
+      logprobValue.classList.add('metrics-loading');
     }
     if (perplexityValue) {
       perplexityValue.textContent = '3.82';
-      perplexityValue.style.opacity = '0.5';
+      perplexityValue.classList.add('metrics-loading');
     }
     if (selfScoreValue) {
       selfScoreValue.textContent = '0.72';
-      selfScoreValue.style.opacity = '0.5';
+      selfScoreValue.classList.add('metrics-loading');
     }
     if (uncertaintyLog) {
       uncertaintyLog.innerHTML = `
@@ -1024,7 +1024,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       `;
     }
     if (variantSection) {
-      variantSection.style.display = 'none';
+      variantSection.classList.add('hidden');
     }
   };
 
@@ -1041,7 +1041,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
   const runMultiSampleAnalysis = async (prompt, scenario) => {
     updateUncertaintyLog('info', 'Running multi-sample analysis (N=5)...');
-    document.getElementById('variant-section').style.display = 'block';
+    document.getElementById('variant-section').classList.remove('hidden');
     
     // Simulate multiple responses and semantic entropy calculation
     await simulateMultiSampleAnalysis(prompt, scenario);
@@ -1186,11 +1186,11 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     document.getElementById('toggle-variants').addEventListener('click', () => {
       const list = document.getElementById('variant-list');
       const button = document.getElementById('toggle-variants');
-      if (list.style.display === 'none') {
-        list.style.display = 'block';
+      if (list.classList.contains('hidden')) {
+        list.classList.remove('hidden');
         button.textContent = 'Hide Variants';
       } else {
-        list.style.display = 'none';
+        list.classList.add('hidden');
         button.textContent = 'Show Variants';
       }
     });
@@ -1204,10 +1204,19 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     const heatmapHTML = tokens.map(tokenData => {
       const logprob = tokenData.logprob;
       const confidence = Math.exp(logprob); // Convert to probability
-      const hue = Math.max(0, Math.min(120, 120 * confidence)); // Green to red
-      // Use darker backgrounds with black text for better contrast
-      const lightness = 25 + (confidence * 35); // 25-60% lightness instead of 90%
-      return `<span class="token" style="background-color: hsl(${hue}, 80%, ${lightness}%); color: black;" title="LogProb: ${logprob.toFixed(3)}">${tokenData.token}</span>`;
+      
+      // Map confidence to CSS classes instead of inline styles
+      const getConfidenceClass = (conf) => {
+        if (conf >= 0.9) return 'token-confidence-very-high';
+        if (conf >= 0.7) return 'token-confidence-high';
+        if (conf >= 0.5) return 'token-confidence-good';
+        if (conf >= 0.3) return 'token-confidence-medium';
+        if (conf >= 0.1) return 'token-confidence-low';
+        return 'token-confidence-very-low';
+      };
+      
+      const confidenceClass = getConfidenceClass(confidence);
+      return `<span class="token ${confidenceClass}" title="LogProb: ${logprob.toFixed(3)}">${tokenData.token}</span>`;
     }).join('');
     
     document.getElementById('heatmap-text').innerHTML = heatmapHTML;
@@ -1220,12 +1229,20 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       if (token.trim() === '') return token; // Preserve whitespace
       
       const confidence = 0.3 + Math.random() * 0.7; // Random confidence
-      const hue = Math.max(0, Math.min(120, 120 * confidence));
       const logprob = Math.log(confidence);
       
-      // Use darker backgrounds with black text for better contrast
-      const lightness = 25 + (confidence * 35); // 25-60% lightness instead of 90%
-      return `<span class="token" style="background-color: hsl(${hue}, 80%, ${lightness}%); color: black;" title="Simulated LogProb: ${logprob.toFixed(3)}">${token}</span>`;
+      // Map confidence to CSS classes instead of inline styles
+      const getConfidenceClass = (conf) => {
+        if (conf >= 0.9) return 'token-confidence-very-high';
+        if (conf >= 0.7) return 'token-confidence-high';
+        if (conf >= 0.5) return 'token-confidence-good';
+        if (conf >= 0.3) return 'token-confidence-medium';
+        if (conf >= 0.1) return 'token-confidence-low';
+        return 'token-confidence-very-low';
+      };
+      
+      const confidenceClass = getConfidenceClass(confidence);
+      return `<span class="token ${confidenceClass}" title="Simulated LogProb: ${logprob.toFixed(3)}">${token}</span>`;
     }).join('');
     
     document.getElementById('heatmap-text').innerHTML = heatmapHTML;
@@ -1295,7 +1312,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     distBins.forEach((count, i) => {
       const height = maxBin > 0 ? (count / maxBin) * 100 : 0;
       distBars[i].style.height = `${height}%`;
-      distBars[i].style.background = `hsl(${120 - i * 30}, 100%, 50%)`; // Green to red gradient
+      distBars[i].className = `dist-bar dist-bar-${i + 1}`;
     });
 
     // Generate dynamic sparklines (simplified for now)
@@ -1385,7 +1402,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
   // --- Demo Mode (when WebLLM fails) ---
   window.enableDemoMode = () => {
-    modelLoadingPanel.style.display = 'none';
+    modelLoadingPanel.classList.add('hidden');
     
     // Show demo notice
     const demoNotice = document.createElement('div');

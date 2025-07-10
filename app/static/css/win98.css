@@ -99,18 +99,7 @@ html, body {
   background-color: var(--win98-window-bg);
 }
 
-/* Legacy compatibility - these map to the new system */
-.window, .dialog, .panel, .button-raised {
-  border: 2px solid;
-  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
-  background-color: var(--win98-face);
-}
-
-.window-sunken, .input-sunken, .progress-sunken {
-  border: 2px solid;
-  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-  background-color: var(--win98-window-bg);
-}
+/* Legacy compatibility classes removed - use .win98-raised and .win98-sunken instead */
 
 /* ===== MAIN CONTAINER ===== */
 .main-container {
@@ -203,6 +192,7 @@ html, body {
 .progress-bar {
   height: 100%;
   background-color: var(--win98-accent);
+  width: var(--progress-width, 0%);
   transition: width 0.3s ease;
 }
 
@@ -333,14 +323,7 @@ html, body {
   margin-bottom: 8px;
 }
 
-.agent-card {
-  display: table-cell;
-  width: 50%;
-  /* Agent cards are content areas - sunken */
-  background-color: var(--win98-window-bg);
-  border: 2px solid;
-  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-}
+/* Agent card styles moved to race.css to avoid conflicts */
 
 .multi-pass-agent {
   /* Red accent for multi-pass */
@@ -371,13 +354,7 @@ html, body {
   padding: 6px;
 }
 
-.metrics-grid {
-  display: table;
-  width: 100%;
-  border-spacing: var(--space-xs);
-  margin-bottom: var(--space-sm);
-  font-size: var(--font-sm);
-}
+/* Metrics grid moved to specific component files to avoid conflicts */
 
 .metric-item {
   display: table-cell;
@@ -415,18 +392,7 @@ html, body {
   background-color: var(--win98-window-bg);
 }
 
-.progress-fill {
-  height: 100%;
-  background: repeating-linear-gradient(
-    to right,
-    var(--win98-accent) 0px,
-    var(--win98-accent) 8px,
-    var(--win98-window-bg) 8px,
-    var(--win98-window-bg) 10px
-  );
-  background-size: 10px 100%;
-  transition: width 0.3s ease;
-}
+/* Progress fill moved to race.css to avoid conflicts - keep only base properties */
 
 /* ===== AGENT LOGS ===== */
 .agent-log {
@@ -443,10 +409,7 @@ html, body {
   line-height: 1.2;
 }
 
-.multi-pass-agent .agent-log,
-.single-pass-agent .agent-log {
-  color: #C0C0C0; /* Same neutral color for both */
-}
+/* Agent log colors moved to race.css to avoid redundancy */
 
 .log-entry {
   margin-bottom: 2px;
@@ -633,6 +596,98 @@ html, body {
 
 ::-webkit-scrollbar-corner {
   background-color: var(--win98-face);
+}
+
+/* ===== UTILITY CLASSES ===== */
+/* State management utilities */
+.hidden {
+  display: none !important;
+}
+
+.visible {
+  display: block !important;
+}
+
+.loading-state {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.error-state {
+  opacity: 0.5;
+  filter: grayscale(0.3);
+}
+
+.disabled-state {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.demo-opacity {
+  opacity: 0.3;
+}
+
+.metrics-loading {
+  opacity: 0.5;
+}
+
+.progress-error {
+  background-color: #dc2626 !important;
+}
+
+/* Dynamic property utilities */
+.progress-bar-dynamic {
+  width: var(--progress-width, 0%);
+  transition: width 0.3s ease;
+}
+
+.confidence-bar-dynamic {
+  width: var(--confidence-width, 0%);
+  transition: width 0.5s ease;
+}
+
+/* Distribution bar color variants */
+.dist-bar-1 { background: hsl(120, 100%, 50%); }
+.dist-bar-2 { background: hsl(90, 100%, 50%); }
+.dist-bar-3 { background: hsl(60, 100%, 50%); }
+.dist-bar-4 { background: hsl(30, 100%, 50%); }
+.dist-bar-5 { background: hsl(0, 100%, 50%); }
+
+/* Token confidence levels - replacing inline HSL */
+.token-confidence-very-high {
+  background-color: hsl(120, 80%, 45%);
+  color: black;
+  font-weight: bold;
+}
+
+.token-confidence-high {
+  background-color: hsl(100, 80%, 40%);
+  color: black;
+  font-weight: bold;
+}
+
+.token-confidence-good {
+  background-color: hsl(90, 80%, 40%);
+  color: black;
+  font-weight: bold;
+}
+
+.token-confidence-medium {
+  background-color: hsl(60, 80%, 35%);
+  color: black;
+  font-weight: bold;
+}
+
+.token-confidence-low {
+  background-color: hsl(30, 80%, 30%);
+  color: black;
+  font-weight: bold;
+}
+
+.token-confidence-very-low {
+  background-color: hsl(0, 80%, 30%);
+  color: black;
+  font-weight: bold;
 }
 
 /* ===== DEMO MODE NOTICE ===== */
