@@ -12,6 +12,13 @@ export class UncertaintyAnalyzer {
     const prompt = document.getElementById('prompt-input').value;
     const scenario = document.getElementById('scenario-select').value;
     
+    // Update button state
+    const runButton = document.getElementById('run-button');
+    if (runButton) {
+      runButton.disabled = true;
+      runButton.textContent = 'Analyzing...';
+    }
+    
     this.resetUI();
     this.updateStatus('Analyzing...');
     
@@ -20,19 +27,51 @@ export class UncertaintyAnalyzer {
     } catch (error) {
       console.error('Uncertainty analysis error:', error);
       this.updateLog('error', `Analysis failed: ${error.message}`);
+    } finally {
+      // Reset button state
+      if (runButton) {
+        runButton.disabled = false;
+        runButton.textContent = '🚀 Execute';
+      }
     }
   }
 
   resetUI() {
-    document.getElementById('uncertainty-status').textContent = 'Analyzing...';
-    document.getElementById('heatmap-text').innerHTML = 'Analyzing token-level confidence...';
-    document.getElementById('confidence-bar').style.width = '0%';
-    document.getElementById('confidence-value').textContent = '--';
-    document.getElementById('entropy-value').textContent = '--';
-    document.getElementById('logprob-value').textContent = '--';
-    document.getElementById('perplexity-value').textContent = '--';
-    document.getElementById('self-score-value').textContent = '--';
-    document.getElementById('uncertainty-log').innerHTML = '<div class="log-ready">Starting uncertainty analysis...</div>';
+    // Safely reset UI elements with null checks
+    const elements = {
+      'uncertainty-status': 'Analyzing...',
+      'heatmap-text': 'Analyzing token-level confidence...',
+      'confidence-value': '--',
+      'entropy-value': '--',
+      'logprob-value': '--',
+      'perplexity-value': '--',
+      'self-score-value': '--'
+    };
+    
+    Object.entries(elements).forEach(([id, value]) => {
+      const element = document.getElementById(id);
+      if (element) {
+        if (id === 'heatmap-text') {
+          element.innerHTML = value;
+        } else {
+          element.textContent = value;
+        }
+      }
+    });
+    
+    // Reset confidence bar width
+    const confidenceBar = document.getElementById('confidence-bar');
+    if (confidenceBar) {
+      confidenceBar.style.width = '0%';
+    }
+    
+    // Reset log
+    const uncertaintyLog = document.getElementById('uncertainty-log');
+    if (uncertaintyLog) {
+      uncertaintyLog.innerHTML = '<div class="log-ready">Starting uncertainty analysis...</div>';
+    }
+    
+    // Hide variant section
     const variantSection = document.getElementById('variant-section');
     if (variantSection) {
       variantSection.style.display = 'none';
@@ -126,7 +165,9 @@ export class UncertaintyAnalyzer {
       const hue = Math.max(0, Math.min(120, 120 * confidence));
       const logprob = Math.log(confidence);
       
-      return `<span class="token" style="background-color: hsl(${hue}, 80%, 90%)" title="Simulated LogProb: ${logprob.toFixed(3)}">${token}</span>`;
+      // Use darker backgrounds with black text for better contrast
+      const lightness = 25 + (confidence * 35); // 25-60% lightness instead of 90%
+      return `<span class="token" style="background-color: hsl(${hue}, 80%, ${lightness}%); color: black;" title="Simulated LogProb: ${logprob.toFixed(3)}">${token}</span>`;
     }).join('');
     
     document.getElementById('heatmap-text').innerHTML = heatmapHTML;

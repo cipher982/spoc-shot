@@ -7,19 +7,15 @@ export class RaceController {
   }
 
   init() {
-    const runButton = document.getElementById('run-button');
-    if (runButton) {
-      runButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.startRace();
-      });
-    }
-
-    // Initialize scenario selector
+    // Note: Execute button event listener is handled in app.js to coordinate between tabs
+    // This module only provides the race functionality when called
+    
+    // Initialize scenario selector (but only if not already handled by app.js)
     const scenarioSelect = document.getElementById('scenario-select');
     const promptInput = document.getElementById('prompt-input');
     
-    if (scenarioSelect && promptInput) {
+    // Only add scenario change listener if it hasn't been added already
+    if (scenarioSelect && promptInput && !scenarioSelect.hasAttribute('data-race-initialized')) {
       scenarioSelect.addEventListener('change', (e) => {
         const scenarioPrompts = {
           sql: "How many conversions did we get this week?",
@@ -29,9 +25,10 @@ export class RaceController {
         };
         promptInput.value = scenarioPrompts[e.target.value];
       });
+      scenarioSelect.setAttribute('data-race-initialized', 'true');
     }
 
-    console.log('✅ Race controller initialized');
+    console.log('✅ Race controller initialized (without duplicate button listener)');
   }
 
   async startRace() {

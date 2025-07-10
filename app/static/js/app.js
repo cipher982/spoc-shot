@@ -182,12 +182,37 @@ document.addEventListener('DOMContentLoaded', () => {
   runButton.addEventListener('click', (e) => {
     e.preventDefault();
     
-    // Check which tab is active
-    const activeTab = document.querySelector('.tab-button.active');
-    if (activeTab && activeTab.id === 'uncertainty-tab') {
-      startUncertaintyAnalysis();
-    } else {
-      startRace();
+    try {
+      // Check which tab is active
+      const activeTab = document.querySelector('.tab-button.active');
+      const isUncertaintyTab = activeTab && activeTab.id === 'uncertainty-tab';
+      
+      console.log('🚀 Execute button clicked - Active tab:', isUncertaintyTab ? 'uncertainty' : 'race');
+      
+      if (isUncertaintyTab) {
+        // Call the uncertainty analyzer's method if available, otherwise fallback to local implementation
+        if (window.SPOCShot && window.SPOCShot.modules && window.SPOCShot.modules.uncertainty) {
+          console.log('📊 Using uncertainty module');
+          window.SPOCShot.modules.uncertainty.startAnalysis();
+        } else {
+          console.log('📊 Using fallback uncertainty analysis');
+          startUncertaintyAnalysis(); // Fallback to local implementation
+        }
+      } else {
+        // Call the race controller's method if available, otherwise fallback to local implementation
+        if (window.SPOCShot && window.SPOCShot.modules && window.SPOCShot.modules.race) {
+          console.log('🏁 Using race module');
+          window.SPOCShot.modules.race.startRace();
+        } else {
+          console.log('🏁 Using fallback race implementation');
+          startRace(); // Fallback to local implementation
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error in execute button handler:', error);
+      // Reset button state on error
+      runButton.disabled = false;
+      runButton.textContent = '🚀 Execute';
     }
   });
 
@@ -957,13 +982,13 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     
     uncertaintyStatus.textContent = 'Idle';
     heatmapText.innerHTML = `
-      <span class="token" style="background-color: hsl(100, 80%, 50%); opacity: 0.3" title="Demo: High confidence">[Demo]</span>
-      <span class="token" style="background-color: hsl(120, 80%, 50%); opacity: 0.3" title="Demo: High confidence">Model</span>
-      <span class="token" style="background-color: hsl(90, 80%, 50%); opacity: 0.3" title="Demo: Good confidence">uncertainty</span>
-      <span class="token" style="background-color: hsl(60, 80%, 50%); opacity: 0.3" title="Demo: Medium confidence">analysis</span>
-      <span class="token" style="background-color: hsl(30, 80%, 50%); opacity: 0.3" title="Demo: Low confidence">visualizes</span>
-      <span class="token" style="background-color: hsl(0, 80%, 50%); opacity: 0.3" title="Demo: Very low confidence">token-level</span>
-      <span class="token" style="background-color: hsl(120, 80%, 50%); opacity: 0.3" title="Demo: High confidence">confidence...</span>
+      <span class="token" style="background-color: hsl(100, 80%, 40%); color: black; opacity: 0.8" title="Demo: High confidence">[Demo]</span>
+      <span class="token" style="background-color: hsl(120, 80%, 45%); color: black; opacity: 0.8" title="Demo: High confidence">Model</span>
+      <span class="token" style="background-color: hsl(90, 80%, 40%); color: black; opacity: 0.8" title="Demo: Good confidence">uncertainty</span>
+      <span class="token" style="background-color: hsl(60, 80%, 35%); color: black; opacity: 0.8" title="Demo: Medium confidence">analysis</span>
+      <span class="token" style="background-color: hsl(30, 80%, 30%); color: black; opacity: 0.8" title="Demo: Low confidence">visualizes</span>
+      <span class="token" style="background-color: hsl(0, 80%, 30%); color: black; opacity: 0.8" title="Demo: Very low confidence">token-level</span>
+      <span class="token" style="background-color: hsl(120, 80%, 45%); color: black; opacity: 0.8" title="Demo: High confidence">confidence...</span>
     `;
     
     // Update ASCII bar - it's text content, not width
@@ -1180,7 +1205,9 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       const logprob = tokenData.logprob;
       const confidence = Math.exp(logprob); // Convert to probability
       const hue = Math.max(0, Math.min(120, 120 * confidence)); // Green to red
-      return `<span class="token" style="background-color: hsl(${hue}, 80%, 90%)" title="LogProb: ${logprob.toFixed(3)}">${tokenData.token}</span>`;
+      // Use darker backgrounds with black text for better contrast
+      const lightness = 25 + (confidence * 35); // 25-60% lightness instead of 90%
+      return `<span class="token" style="background-color: hsl(${hue}, 80%, ${lightness}%); color: black;" title="LogProb: ${logprob.toFixed(3)}">${tokenData.token}</span>`;
     }).join('');
     
     document.getElementById('heatmap-text').innerHTML = heatmapHTML;
@@ -1196,7 +1223,9 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       const hue = Math.max(0, Math.min(120, 120 * confidence));
       const logprob = Math.log(confidence);
       
-      return `<span class="token" style="background-color: hsl(${hue}, 80%, 90%)" title="Simulated LogProb: ${logprob.toFixed(3)}">${token}</span>`;
+      // Use darker backgrounds with black text for better contrast
+      const lightness = 25 + (confidence * 35); // 25-60% lightness instead of 90%
+      return `<span class="token" style="background-color: hsl(${hue}, 80%, ${lightness}%); color: black;" title="Simulated LogProb: ${logprob.toFixed(3)}">${token}</span>`;
     }).join('');
     
     document.getElementById('heatmap-text').innerHTML = heatmapHTML;
