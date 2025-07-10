@@ -81,50 +81,112 @@
   width: 12px;
   height: 12px;
   border: 1px solid var(--win98-shadow);
-  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+  box-shadow: none;  /* Remove glow */
 }
 
 .legend-high { 
-  background-color: hsl(120, 80%, 50%); 
-  box-shadow: 0 0 4px rgba(0, 255, 0, 0.5);
+  background-color: #0f0;  /* Bright terminal green */
+  box-shadow: none;
 }
 .legend-medium { 
-  background-color: hsl(60, 80%, 50%); 
-  box-shadow: 0 0 4px rgba(255, 255, 0, 0.5);
+  background-color: #ff0;  /* Terminal yellow */
+  box-shadow: none;
 }
 .legend-low { 
-  background-color: hsl(0, 80%, 50%); 
-  box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
+  background-color: #f88;  /* Terminal red */
+  box-shadow: none;
 }
 
 .heatmap-container {
-  /* Dark background for contrast with colored tokens */
-  background: #2C2C2C;
+  /* Dark terminal-style background */
+  background: #000;
   border: 2px solid;
   border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-  padding: var(--space-sm);
-  min-height: 120px;
+  padding: 4px;  /* Minimal padding */
+  min-height: 100px;
   font-family: "Courier New", monospace;
-  font-size: var(--font-xs);
-  line-height: 1.4;
+  font-size: 11px;  /* Smaller, denser text */
+  line-height: 1.2;  /* Tighter line spacing */
   overflow-y: auto;
-  max-height: 200px;
-  color: #E0E0E0;
+  max-height: 300px;
+  color: #fff;  /* White text on black */
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .token {
   display: inline;
-  padding: 1px 2px;
-  margin: 0 1px;
-  border-radius: 2px;
+  padding: 0 1px;  /* Minimal padding */
+  margin: 0;
+  border-radius: 0;  /* Sharp corners for that retro feel */
   cursor: help;
-  border: 1px solid transparent;
-  font-weight: bold;
+  position: relative;
+  font-weight: normal;
+  transition: background-color 0.1s ease;  /* Faster transition */
+  
+  /* Remove all effects */
+  background-image: none;
+  box-shadow: none;
+  filter: none;
 }
 
+/* High confidence - bright green on black */
+.token-high-confidence {
+  background-color: rgba(0, 255, 0, 0.25);
+  color: #0f0;  /* Bright green text */
+}
+
+/* Medium confidence - yellow on black */
+.token-medium-confidence {
+  background-color: rgba(255, 255, 0, 0.2);
+  color: #ff0;  /* Yellow text */
+}
+
+/* Low confidence - red on black */
+.token-low-confidence {
+  background-color: rgba(255, 0, 0, 0.3);
+  color: #f88;  /* Light red text */
+}
+
+/* No overlap */
+.token + .token {
+  margin-left: 0;
+}
+
+/* Simple hover effect - just brighten */
 .token:hover {
-  border-color: white;
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  transform: none;
+  box-shadow: none;
+  z-index: 1;
+}
+
+/* Punctuation - dimmed */
+.token-punctuation {
+  padding: 0;
+  background: transparent !important;
+  color: #666;  /* Dim gray for punctuation */
+}
+
+/* Clean heatmap text container */
+.heatmap-text {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  margin: 0;
+}
+
+/* Remove all the alternative styles */
+.heatmap-container.smooth-transitions .token,
+.heatmap-container.continuous-flow .token,
+.heatmap-container.gradient-bars .token {
+  /* Reset to default */
+}
+
+/* Group tokens by words for better visual flow */
+.token-word-boundary {
+  margin-right: 3px;  /* Space between words */
 }
 
 /* Sequence-level metrics */

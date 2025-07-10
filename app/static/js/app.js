@@ -1016,25 +1016,45 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
   function appendTokenToHeatmap(token, logprobs) {
     const heatmapElement = document.getElementById('heatmap-text');
     const span = document.createElement('span');
-    span.className = 'token';
+    
+    // Check if token is punctuation
+    const isPunctuation = /^[.,!?;:\-—'"()[\]{}]+$/.test(token.trim());
+    
     span.textContent = token;
 
+    let confidence = 0.5; // Default middle confidence
+    let logprob = Math.log(confidence);
+
     if (logprobs && logprobs.content && logprobs.content.length > 0) {
-      const logprob = logprobs.content[0].logprob;
-      const confidence = Math.exp(logprob);
-      const hue = Math.max(0, Math.min(120, 120 * confidence));
-      span.style.backgroundColor = `hsl(${hue}, 80%, 90%)`;
-      span.title = `LogProb: ${logprob.toFixed(3)}`;
+      logprob = logprobs.content[0].logprob;
+      confidence = Math.exp(logprob);
     } else {
       // Fallback simulation
-      const confidence = 0.3 + Math.random() * 0.7;
-      const hue = Math.max(0, Math.min(120, 120 * confidence));
-      const simLogprob = Math.log(confidence);
-      span.style.backgroundColor = `hsl(${hue}, 80%, 90%)`;
-      span.title = `Simulated LogProb: ${simLogprob.toFixed(3)}`;
+      confidence = 0.3 + Math.random() * 0.7;
+      logprob = Math.log(confidence);
     }
 
+    // Assign class based on confidence level
+    if (isPunctuation) {
+      span.className = 'token token-punctuation';
+    } else if (confidence > 0.7) {
+      span.className = 'token token-high-confidence';
+    } else if (confidence > 0.4) {
+      span.className = 'token token-medium-confidence';
+    } else {
+      span.className = 'token token-low-confidence';
+    }
+
+    // Add tooltip with confidence info
+    span.title = `${(confidence * 100).toFixed(1)}% confidence (logprob: ${logprob.toFixed(3)})`;
+
     heatmapElement.appendChild(span);
+
+    // Smooth scroll to show new tokens
+    const container = heatmapElement.closest('.heatmap-container');
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }
 
   const simulateUncertaintyAnalysis = async (prompt, scenario) => {
