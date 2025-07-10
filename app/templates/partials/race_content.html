@@ -1,0 +1,106 @@
+<!-- Race Tab Content -->
+<div class="agent-comparison">
+  <!-- Multi-Pass Agent -->
+  <div class="agent-card multi-pass-agent">
+    <div class="agent-header">
+      <h3 class="agent-title">
+        🐌 Multi-Pass Agent (Baseline)
+        <span id="multi-pass-status" class="agent-status">Idle</span>
+      </h3>
+      <div class="agent-progress">
+        <div class="progress-header">
+          <span>Progress</span>
+          <span id="multi-pass-progress-text">0%</span>
+        </div>
+        <div class="progress-container">
+          <div id="multi-pass-progress" class="progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="agent-body">
+      <div class="metrics-grid">
+        <div class="metric-item">
+          <div class="metric-label">Time</div>
+          <div id="multi-pass-time" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Tokens</div>
+          <div id="multi-pass-tokens" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Calls</div>
+          <div id="multi-pass-calls" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Cost</div>
+          <div id="multi-pass-cost" class="metric-value">--</div>
+        </div>
+      </div>
+      <div id="multi-pass-log" class="agent-log">
+        <div class="log-ready">Idle - ready to execute...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Single-Pass Agent -->
+  <div class="agent-card single-pass-agent">
+    <div class="agent-header">
+      <h3 class="agent-title">
+        🚀 Single-Pass Agent (SPOC)
+        <span id="single-pass-status" class="agent-status">Idle</span>
+      </h3>
+      <div class="agent-progress">
+        <div class="progress-header">
+          <span>Progress</span>
+          <span id="single-pass-progress-text">0%</span>
+        </div>
+        <div class="progress-container">
+          <div id="single-pass-progress" class="progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="agent-body">
+      <div class="metrics-grid">
+        <div class="metric-item">
+          <div class="metric-label">Time</div>
+          <div id="single-pass-time" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Tokens</div>
+          <div id="single-pass-tokens" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Calls</div>
+          <div id="single-pass-calls" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Cost</div>
+          <div id="single-pass-cost" class="metric-value">--</div>
+        </div>
+      </div>
+      <div id="single-pass-log" class="agent-log">
+        <div class="log-ready">Idle - ready to execute...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Race Results Summary -->
+<div id="race-results" class="race-results" style="display: none;">
+  <h3 class="results-title">🏆 Comparison Results</h3>
+  <div id="winner-announcement" class="winner-announcement"></div>
+  <div class="results-grid">
+    <div class="result-item">
+      <div class="result-label">Speed Advantage</div>
+      <div id="speed-advantage" class="result-value"></div>
+    </div>
+    <div class="result-item">
+      <div class="result-label">Token Efficiency</div>
+      <div id="token-efficiency" class="result-value"></div>
+    </div>
+    <div class="result-item">
+      <div class="result-label">Cost Savings</div>
+      <div id="cost-savings" class="result-value"></div>
+    </div>
+  </div>
+</div>

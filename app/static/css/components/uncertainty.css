@@ -1,0 +1,332 @@
+/* Uncertainty Analysis Component - Windows 98 Style */
+
+.uncertainty-analysis {
+  /* Main container already handled by tab-content */
+  display: block;
+}
+
+.uncertainty-header {
+  /* Header with gradient for depth */
+  background: linear-gradient(to bottom, var(--win98-face) 0%, #B0B0B0 100%);
+  border: 2px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  padding: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.uncertainty-title {
+  font-size: var(--font-base);
+  font-weight: bold;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.uncertainty-status {
+  font-size: var(--font-sm);
+  font-weight: bold;
+  color: var(--win98-text);
+  padding: 2px 6px;
+  background: #E0E0E0;
+  border: 1px solid var(--win98-shadow);
+  border-radius: 2px;
+}
+
+/* Two-column layout for efficient space usage */
+.uncertainty-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.uncertainty-section {
+  /* Darker sections for better contrast */
+  background: #A0A0A0;
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  padding: var(--space-sm);
+}
+
+.uncertainty-section h4 {
+  /* Section headers are raised */
+  background: linear-gradient(to bottom, var(--win98-face) 0%, #B8B8B8 100%);
+  border: 1px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  padding: var(--space-xs) var(--space-sm);
+  margin: calc(var(--space-sm) * -1) calc(var(--space-sm) * -1) var(--space-sm) calc(var(--space-sm) * -1);
+  font-size: var(--font-sm);
+  font-weight: bold;
+  color: var(--win98-text);
+}
+
+/* Token-level confidence visualization */
+.confidence-legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+  margin-bottom: var(--space-xs);
+  color: #303030;
+  font-weight: bold;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--win98-shadow);
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+.legend-high { 
+  background-color: hsl(120, 80%, 50%); 
+  box-shadow: 0 0 4px rgba(0, 255, 0, 0.5);
+}
+.legend-medium { 
+  background-color: hsl(60, 80%, 50%); 
+  box-shadow: 0 0 4px rgba(255, 255, 0, 0.5);
+}
+.legend-low { 
+  background-color: hsl(0, 80%, 50%); 
+  box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
+}
+
+.heatmap-container {
+  /* Dark background for contrast with colored tokens */
+  background: #2C2C2C;
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  padding: var(--space-sm);
+  min-height: 120px;
+  font-family: "Courier New", monospace;
+  font-size: var(--font-xs);
+  line-height: 1.4;
+  overflow-y: auto;
+  max-height: 200px;
+  color: #E0E0E0;
+}
+
+.token {
+  display: inline;
+  padding: 1px 2px;
+  margin: 0 1px;
+  border-radius: 2px;
+  cursor: help;
+  border: 1px solid transparent;
+  font-weight: bold;
+}
+
+.token:hover {
+  border-color: white;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+}
+
+/* Sequence-level metrics */
+.metrics-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-sm);
+}
+
+.confidence-gauge-container {
+  margin-bottom: var(--space-md);
+}
+
+.confidence-gauge-label {
+  font-size: var(--font-sm);
+  font-weight: bold;
+  margin-bottom: var(--space-xs);
+  color: var(--win98-text);
+}
+
+.confidence-gauge-bg {
+  width: 100%;
+  height: 20px;
+  background: #404040;
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.confidence-gauge {
+  height: 100%;
+  background: linear-gradient(to right, #ff4444, #ffaa00, #00ff00);
+  transition: width 0.5s ease;
+  width: 0%;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+}
+
+.confidence-value {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: var(--font-xs);
+  font-weight: bold;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xs);
+  background: rgba(255, 255, 255, 0.1);
+  padding: var(--space-xs);
+  border-radius: 2px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric-label {
+  font-size: var(--font-xs);
+  color: #303030;
+  font-weight: bold;
+}
+
+.metric-value {
+  font-size: var(--font-sm);
+  font-weight: bold;
+  color: var(--win98-text);
+  text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Model response log */
+.response-log {
+  grid-column: 1 / -1; /* Span full width */
+  margin-top: var(--space-md);
+}
+
+.response-log .uncertainty-section {
+  min-height: 200px;
+}
+
+.log-container {
+  /* Cool terminal style log */
+  background: var(--taskman-bg);
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  padding: var(--space-sm);
+  height: 180px;
+  overflow-y: auto;
+  font-family: "Courier New", monospace;
+  font-size: var(--font-xs);
+  line-height: 1.3;
+  color: var(--taskman-green);
+}
+
+.log-entry {
+  margin-bottom: var(--space-xs);
+  word-wrap: break-word;
+}
+
+.log-ready {
+  color: #808080;
+  font-style: italic;
+}
+
+.log-info {
+  color: var(--taskman-green);
+}
+
+.log-response {
+  color: #00FFFF;
+  font-weight: bold;
+}
+
+.log-error {
+  color: var(--taskman-red);
+  font-weight: bold;
+}
+
+/* Variant analysis (optional - hidden by default) */
+.variant-section {
+  display: none;
+  grid-column: 1 / -1;
+  margin-top: var(--space-md);
+}
+
+.variant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+}
+
+.semantic-entropy {
+  font-size: var(--font-sm);
+  font-weight: bold;
+  color: var(--win98-text);
+}
+
+.toggle-variants {
+  font-size: var(--font-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--win98-face);
+  border: 2px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  cursor: pointer;
+}
+
+.toggle-variants:hover {
+  background: var(--win98-gray-light);
+}
+
+.variant-list {
+  display: none;
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  background: var(--win98-window-bg);
+  padding: var(--space-sm);
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.variant-item {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-xs);
+  border-bottom: 1px solid var(--win98-gray-light);
+  font-size: var(--font-xs);
+}
+
+.variant-item:last-child {
+  border-bottom: none;
+}
+
+.variant-text {
+  flex: 1;
+  margin-right: var(--space-sm);
+}
+
+.variant-count {
+  font-weight: bold;
+  color: var(--win98-gray-dark);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .uncertainty-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}

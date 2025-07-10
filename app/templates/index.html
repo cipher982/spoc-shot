@@ -1,26 +1,35 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SPOC-Shot Demo</title>
+  
+  <!-- Capture WebGPU before other scripts -->
   <script>
-    // Capture navigator.gpu BEFORE any other scripts can interfere
     window._originalGPU = navigator.gpu;
     console.log("🔧 Captured original navigator.gpu:", window._originalGPU);
   </script>
+  
+  <!-- External Libraries -->
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  
+  <!-- Stylesheets -->
   <link rel="stylesheet" href="/static/css/win98.css">
+  <link rel="stylesheet" href="/static/css/components/tabs.css">
+  <link rel="stylesheet" href="/static/css/components/race.css">
+  <link rel="stylesheet" href="/static/css/components/uncertainty.css">
 </head>
 <body>
-
   <div class="main-container">
+    
+    <!-- Page Header -->
     <header class="header">
       <h1>SPOC-Shot</h1>
       <p class="subtitle">A Live Demo of Single-Pass Self-Correcting Agent Loops</p>
     </header>
 
-    <!-- Model Loading Overlay (initially hidden) -->
+    <!-- Model Loading Overlay -->
     <div id="model-loading-panel" class="loading-overlay" style="display: none;">
       <div class="loading-dialog">
         <h2 class="loading-title">
@@ -42,7 +51,7 @@
       </div>
     </div>
 
-    <!-- Compact Control Panel -->
+    <!-- Control Panel -->
     <div class="control-panel">
       <div class="control-group">
         <div class="scenario-group">
@@ -61,115 +70,228 @@
         <div class="button-group">
           <label class="control-label">&nbsp;</label>
           <button id="run-button" type="button" class="run-button">
-            🏁 Race Agents
+            🚀 Execute
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Side-by-Side Agent Comparison -->
-    <div class="agent-comparison">
-      <!-- Multi-Pass Agent -->
-      <div class="agent-card multi-pass-agent">
-        <div class="agent-header">
-          <h3 class="agent-title">
-            🐌 Multi-Pass Agent (Baseline)
-            <span id="multi-pass-status" class="agent-status">Ready</span>
-          </h3>
-          <div class="agent-progress">
-            <div class="progress-header">
-              <span>Progress</span>
-              <span id="multi-pass-progress-text">0%</span>
-            </div>
-            <div class="progress-container">
-              <div id="multi-pass-progress" class="progress-fill" style="width: 0%"></div>
-            </div>
-          </div>
-        </div>
-        <div class="agent-body">
-          <div class="metrics-grid">
-            <div class="metric-item">
-              <div class="metric-label">Time</div>
-              <div id="multi-pass-time" class="metric-value">--</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">Tokens</div>
-              <div id="multi-pass-tokens" class="metric-value">--</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">Calls</div>
-              <div id="multi-pass-calls" class="metric-value">--</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">Cost</div>
-              <div id="multi-pass-cost" class="metric-value">--</div>
-            </div>
-          </div>
-          <div id="multi-pass-log" class="agent-log">
-            <div class="log-ready">Ready to race...</div>
-          </div>
-        </div>
+    <!-- Tab Navigation -->
+    <div class="tab-container">
+      <div class="tab-nav">
+        <button id="race-tab" class="tab-button active" data-tab="race">
+          🏁 Agent Comparison
+        </button>
+        <button id="uncertainty-tab" class="tab-button" data-tab="uncertainty">
+          🔬 Uncertainty Analysis
+        </button>
       </div>
-
-      <!-- Single-Pass Agent -->
-      <div class="agent-card single-pass-agent">
-        <div class="agent-header">
-          <h3 class="agent-title">
-            🚀 Single-Pass Agent (SPOC)
-            <span id="single-pass-status" class="agent-status">Ready</span>
-          </h3>
-          <div class="agent-progress">
-            <div class="progress-header">
-              <span>Progress</span>
-              <span id="single-pass-progress-text">0%</span>
-            </div>
-            <div class="progress-container">
-              <div id="single-pass-progress" class="progress-fill" style="width: 0%"></div>
-            </div>
-          </div>
+      
+      <!-- Tab Content -->
+      <div class="tab-content">
+        <!-- Race Tab -->
+        <div id="race-content" class="tab-panel active">
+<!-- Race Tab Content -->
+<div class="agent-comparison">
+  <!-- Multi-Pass Agent -->
+  <div class="agent-card multi-pass-agent">
+    <div class="agent-header">
+      <h3 class="agent-title">
+        🐌 Multi-Pass Agent (Baseline)
+                        <span id="multi-pass-status" class="agent-status">Idle</span>
+      </h3>
+      <div class="agent-progress">
+        <div class="progress-header">
+          <span>Progress</span>
+          <span id="multi-pass-progress-text">0%</span>
         </div>
-        <div class="agent-body">
-          <div class="metrics-grid">
-            <div class="metric-item">
-              <div class="metric-label">Time</div>
-              <div id="single-pass-time" class="metric-value">--</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">Tokens</div>
-              <div id="single-pass-tokens" class="metric-value">--</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">Calls</div>
-              <div id="single-pass-calls" class="metric-value">--</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">Cost</div>
-              <div id="single-pass-cost" class="metric-value">--</div>
-            </div>
-          </div>
-          <div id="single-pass-log" class="agent-log">
-            <div class="log-ready">Ready to race...</div>
-          </div>
+        <div class="progress-container">
+          <div id="multi-pass-progress" class="progress-fill" style="width: 0%"></div>
         </div>
       </div>
     </div>
+    <div class="agent-body">
+      <div class="metrics-grid">
+        <div class="metric-item">
+          <div class="metric-label">Time</div>
+          <div id="multi-pass-time" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Tokens</div>
+          <div id="multi-pass-tokens" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Calls</div>
+          <div id="multi-pass-calls" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Cost</div>
+          <div id="multi-pass-cost" class="metric-value">--</div>
+        </div>
+      </div>
+      <div id="multi-pass-log" class="agent-log">
+        <div class="log-ready">Idle - ready to execute...</div>
+      </div>
+    </div>
+  </div>
 
-    <!-- Race Results Summary -->
-    <div id="race-results" class="race-results" style="display: none;">
-      <h3 class="results-title">🏆 Race Results</h3>
-      <div id="winner-announcement" class="winner-announcement"></div>
-      <div class="results-grid">
-        <div class="result-item">
-          <div class="result-label">Speed Advantage</div>
-          <div id="speed-advantage" class="result-value"></div>
+  <!-- Single-Pass Agent -->
+  <div class="agent-card single-pass-agent">
+    <div class="agent-header">
+      <h3 class="agent-title">
+        🚀 Single-Pass Agent (SPOC)
+                        <span id="single-pass-status" class="agent-status">Idle</span>
+      </h3>
+      <div class="agent-progress">
+        <div class="progress-header">
+          <span>Progress</span>
+          <span id="single-pass-progress-text">0%</span>
         </div>
-        <div class="result-item">
-          <div class="result-label">Token Efficiency</div>
-          <div id="token-efficiency" class="result-value"></div>
+        <div class="progress-container">
+          <div id="single-pass-progress" class="progress-fill" style="width: 0%"></div>
         </div>
-        <div class="result-item">
-          <div class="result-label">Cost Savings</div>
-          <div id="cost-savings" class="result-value"></div>
+      </div>
+    </div>
+    <div class="agent-body">
+      <div class="metrics-grid">
+        <div class="metric-item">
+          <div class="metric-label">Time</div>
+          <div id="single-pass-time" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Tokens</div>
+          <div id="single-pass-tokens" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Calls</div>
+          <div id="single-pass-calls" class="metric-value">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">Cost</div>
+          <div id="single-pass-cost" class="metric-value">--</div>
+        </div>
+      </div>
+      <div id="single-pass-log" class="agent-log">
+        <div class="log-ready">Idle - ready to execute...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Race Results Summary -->
+<div id="race-results" class="race-results" style="display: none;">
+  <h3 class="results-title">🏆 Comparison Results</h3>
+  <div id="winner-announcement" class="winner-announcement"></div>
+  <div class="results-grid">
+    <div class="result-item">
+      <div class="result-label">Speed Advantage</div>
+      <div id="speed-advantage" class="result-value"></div>
+    </div>
+    <div class="result-item">
+      <div class="result-label">Token Efficiency</div>
+      <div id="token-efficiency" class="result-value"></div>
+    </div>
+    <div class="result-item">
+      <div class="result-label">Cost Savings</div>
+      <div id="cost-savings" class="result-value"></div>
+    </div>
+  </div>
+</div>
+        </div>
+
+        <!-- Uncertainty Tab -->
+        <div id="uncertainty-content" class="tab-panel">
+<!-- Uncertainty Tab Content -->
+<div class="uncertainty-analysis">
+  <div class="uncertainty-agent-card">
+    <div class="uncertainty-header">
+      <h3 class="uncertainty-title">
+        🔬 Model Uncertainty Analysis
+        <span id="uncertainty-status" class="agent-status">Idle</span>
+      </h3>
+    </div>
+    
+    <div class="uncertainty-body">
+      <!-- Token Heat Map -->
+      <div class="uncertainty-section">
+        <h4 class="section-title">Token-Level Confidence</h4>
+        <div id="token-heatmap" class="token-heatmap">
+          <div class="heatmap-legend">
+            <span class="legend-item">
+              <span class="legend-color high-confidence"></span>
+              High Confidence
+            </span>
+            <span class="legend-item">
+              <span class="legend-color medium-confidence"></span>
+              Medium
+            </span>
+            <span class="legend-item">
+              <span class="legend-color low-confidence"></span>
+              Low Confidence
+            </span>
+          </div>
+          <div id="heatmap-text" class="heatmap-text">
+            Run analysis to see token-level confidence visualization...
+          </div>
+        </div>
+      </div>
+
+      <!-- Confidence Metrics -->
+      <div class="uncertainty-section">
+        <h4 class="section-title">Sequence-Level Metrics</h4>
+        <div class="confidence-metrics">
+          <div class="metric-gauge">
+            <div class="gauge-label">Overall Confidence</div>
+            <div class="gauge-container">
+              <div id="confidence-gauge" class="gauge-fill" style="width: 0%"></div>
+              <span id="confidence-value" class="gauge-value">--</span>
+            </div>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <div class="metric-label">Avg Entropy</div>
+              <div id="entropy-value" class="metric-value">--</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">Min LogProb</div>
+              <div id="logprob-value" class="metric-value">--</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">Perplexity</div>
+              <div id="perplexity-value" class="metric-value">--</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">Self-Score</div>
+              <div id="self-score-value" class="metric-value">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Sample Variants -->
+      <div id="variant-section" class="uncertainty-section" style="display: none;">
+        <h4 class="section-title">Response Variants</h4>
+        <div id="variant-viewer" class="variant-viewer">
+          <div class="variant-summary">
+            <span id="semantic-entropy">Semantic Entropy: --</span>
+            <button id="toggle-variants" class="toggle-variants">Show Variants</button>
+          </div>
+          <div id="variant-list" class="variant-list" style="display: none;">
+            <!-- Variants will be populated here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Response Log -->
+      <div class="uncertainty-section">
+        <h4 class="section-title">Model Response</h4>
+        <div id="uncertainty-log" class="uncertainty-log">
+          <div class="log-ready">Idle - ready for uncertainty analysis...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
         </div>
       </div>
     </div>
@@ -229,6 +351,10 @@ while retries < max_retries:
     </code></pre>
   </template>
 
+  <!-- JavaScript Modules -->
+  <script type="module" src="/static/js/main.js"></script>
+  
+  <!-- Legacy WebLLM functionality (will be modularized) -->
   <script src="/static/js/app.js"></script>
 
 </body>

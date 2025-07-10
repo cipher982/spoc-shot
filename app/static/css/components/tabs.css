@@ -1,0 +1,120 @@
+/* Tab Components - Authentic Windows 98 Style */
+
+.tab-container {
+  margin-top: var(--space-xl);
+  /* Ensure proper stacking context */
+  position: relative;
+}
+
+.tab-nav {
+  display: flex;
+  margin-bottom: -2px; /* Overlap with content border */
+  position: relative;
+  z-index: 2;
+  /* Add small padding so tabs don't touch edges */
+  padding-left: var(--space-sm);
+}
+
+.tab-button {
+  background: var(--win98-face);
+  border: 2px solid;
+  font-size: var(--font-base);
+  font-family: 'MS Sans Serif', sans-serif;
+  font-weight: normal;
+  cursor: pointer;
+  margin-right: 2px;
+  position: relative;
+  transition: none;
+  padding: var(--space-sm) var(--space-lg);
+  
+  /* Inactive tabs: raised appearance */
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  
+  /* Key: inactive tabs are shorter and positioned normally */
+  top: 2px;
+  z-index: 1;
+}
+
+.tab-button:hover {
+  background: var(--win98-gray-light);
+}
+
+.tab-button.active {
+  background: var(--win98-window-bg);
+  
+  /* Active tab: create seamless connection with content */
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-window-bg) var(--win98-shadow);
+  
+  /* Remove bottom border completely */
+  border-bottom: none;
+  
+  /* Move up to normal position (inactive tabs are pushed down) */
+  top: 0;
+  z-index: 3;
+  
+  /* Extend padding to compensate for missing bottom border */
+  padding-bottom: calc(var(--space-sm) + 2px);
+  
+  /* Ensure seamless connection */
+  border-bottom: 2px solid var(--win98-window-bg);
+}
+
+.tab-content {
+  /* Content area is sunken */
+  background: var(--win98-window-bg);
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  min-height: 500px;
+  position: relative;
+  z-index: 1;
+  margin-top: 0;
+  
+  /* Create the illusion of connection */
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.tab-panel {
+  display: none;
+  padding: var(--space-lg);
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+/* Special styling for tab content areas */
+.tab-content .agent-header {
+  background: var(--win98-face);
+  border: 1px solid var(--win98-shadow);
+  border-bottom: 2px solid var(--win98-shadow);
+  padding: var(--space-sm);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.tab-content .agent-title {
+  font-size: var(--font-base);
+  font-weight: bold;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* Make sections within tabs feel integrated */
+.tab-content .uncertainty-section,
+.tab-content .race-section {
+  border: 1px solid var(--win98-shadow);
+  background: var(--win98-window-bg);
+  margin-bottom: var(--space-md);
+}
+
+.tab-content .uncertainty-section h4,
+.tab-content .race-section h4 {
+  background: var(--win98-face);
+  border-bottom: 1px solid var(--win98-shadow);
+  padding: var(--space-xs) var(--space-sm);
+  margin: 0 0 var(--space-sm) 0;
+  font-size: var(--font-sm);
+  font-weight: bold;
+}

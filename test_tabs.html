@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Tab Test</title>
+    <style>
+        .tab-nav {
+            display: flex;
+            border-bottom: 2px solid #888;
+            margin-bottom: 16px;
+        }
+        .tab-button {
+            background: #C3C3C3;
+            border: 2px outset #C3C3C3;
+            border-bottom: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            margin-right: 2px;
+        }
+        .tab-button.active {
+            background: #C0C0C0;
+            border: 2px inset #C3C3C3;
+        }
+        .tab-content {
+            background: #C0C0C0;
+            min-height: 300px;
+            padding: 16px;
+        }
+        .tab-panel {
+            display: none;
+        }
+        .tab-panel.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="tab-container">
+        <div class="tab-nav">
+            <button id="race-tab" class="tab-button active" data-tab="race">
+                🏁 Race Comparison
+            </button>
+            <button id="uncertainty-tab" class="tab-button" data-tab="uncertainty">
+                🔬 Uncertainty Analysis
+            </button>
+        </div>
+        
+        <div class="tab-content">
+            <div id="race-content" class="tab-panel active">
+                <h2>Race Content</h2>
+                <p>This is the race tab content.</p>
+            </div>
+            
+            <div id="uncertainty-content" class="tab-panel">
+                <h2>Uncertainty Content</h2>
+                <p>This is the uncertainty tab content.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+            
+            console.log('Tab initialization:', {
+                tabButtons: tabButtons.length,
+                tabPanels: tabPanels.length
+            });
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetTab = button.dataset.tab;
+                    console.log('Tab clicked:', targetTab);
+                    
+                    // Update tab buttons
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    // Update tab panels
+                    tabPanels.forEach(panel => panel.classList.remove('active'));
+                    const targetPanel = document.getElementById(`${targetTab}-content`);
+                    if (targetPanel) {
+                        targetPanel.classList.add('active');
+                        console.log('Tab switched to:', targetTab);
+                    } else {
+                        console.error('Target panel not found:', `${targetTab}-content`);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

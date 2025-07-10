@@ -1,0 +1,270 @@
+/* Race Comparison Components - Windows 98 Style */
+
+/* Agent Comparison Layout */
+.agent-comparison {
+  display: table;
+  width: 100%;
+  border-spacing: 8px 0;
+  margin-bottom: 8px;
+}
+
+.agent-card {
+  display: table-cell;
+  width: 50%;
+  /* Darker background for better contrast with colorful elements */
+  background-color: #A0A0A0;
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  vertical-align: top;
+}
+
+/* Agent Headers */
+.agent-header {
+  /* Keep raised appearance but darker for contrast */
+  background: linear-gradient(to bottom, var(--win98-face) 0%, #B0B0B0 100%);
+  color: var(--win98-text);
+  padding: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  border-bottom: 2px solid var(--win98-shadow);
+}
+
+.agent-title {
+  font-size: var(--font-base);
+  font-weight: bold;
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.agent-status {
+  font-size: var(--font-xs);
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  font-weight: bold;
+  color: var(--win98-text);
+}
+
+.agent-status-success {
+  background: var(--status-good) !important;
+  color: white !important;
+  border: 1px solid var(--win98-shadow) !important;
+  box-shadow: 0 0 4px rgba(0, 255, 0, 0.5);
+}
+
+.agent-status-error {
+  background: var(--status-error) !important;
+  color: white !important;
+  border: 1px solid var(--win98-shadow) !important;
+  box-shadow: 0 0 4px rgba(255, 0, 0, 0.5);
+}
+
+/* Progress Indicators */
+.agent-progress {
+  margin-top: var(--space-sm);
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+  color: var(--win98-text);
+  margin-bottom: var(--space-xs);
+}
+
+.progress-container {
+  width: 100%;
+  height: 16px;
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  background-color: #606060;
+}
+
+.progress-fill {
+  height: 100%;
+  background: repeating-linear-gradient(
+    to right,
+    var(--win98-accent) 0px,
+    var(--win98-accent) 8px,
+    #606060 8px,
+    #606060 10px
+  );
+  background-size: 10px 100%;
+  transition: width 0.5s ease;
+}
+
+.multi-pass-agent .progress-fill,
+.single-pass-agent .progress-fill {
+  /* All agents use the same blue segmented bar */
+  background: repeating-linear-gradient(
+    to right,
+    var(--win98-accent) 0px,
+    var(--win98-accent) 8px,
+    #606060 8px,
+    #606060 10px
+  );
+  background-size: 10px 100%;
+}
+
+/* Agent Body */
+.agent-body {
+  padding: var(--space-sm);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: table;
+  width: 100%;
+  border-spacing: var(--space-xs);
+  margin-bottom: var(--space-sm);
+  font-size: var(--font-xs);
+  background: rgba(255, 255, 255, 0.1);
+  padding: var(--space-xs);
+  border-radius: 2px;
+}
+
+.metric-item {
+  display: table-cell;
+  text-align: center;
+  vertical-align: top;
+}
+
+.metric-label {
+  color: #303030;
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-xs);
+  font-weight: bold;
+}
+
+.metric-value {
+  font-weight: bold;
+  font-size: var(--font-sm);
+  color: var(--win98-text);
+  text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+/* Agent Logs */
+.agent-log {
+  /* Cool terminal style - black background! */
+  height: var(--log-height);
+  overflow-y: auto;
+  background-color: var(--taskman-bg);
+  color: #C0C0C0; /* Light gray for neutral text */
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  padding: var(--space-xs);
+  font-family: "Courier New", monospace;
+  font-size: var(--font-xs);
+  line-height: 1.3;
+}
+
+/* Both agents use the same neutral colors */
+.multi-pass-agent .agent-log,
+.single-pass-agent .agent-log {
+  color: #C0C0C0; /* Light gray for all normal text */
+}
+
+.log-entry {
+  margin-bottom: 2px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.log-ready {
+  color: #808080; /* Darker gray for idle/ready state */
+  font-style: italic;
+}
+
+/* Semantic colors for different message types */
+.tool-success {
+  color: #00FF00; /* Bright green for successful operations */
+  font-weight: bold;
+}
+
+.tool-error {
+  color: #FF0000; /* Red for errors */
+  font-weight: bold;
+}
+
+.tool-warning {
+  color: #FFFF00; /* Yellow for warnings */
+  font-weight: bold;
+}
+
+.tool-info {
+  color: #00FFFF; /* Cyan for informational messages */
+}
+
+/* Tool calls and results use neutral white */
+.log-entry strong {
+  color: #FFFFFF; /* White for emphasis */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Race Results */
+.race-results {
+  /* Results are a dialog - raised */
+  background-color: var(--win98-face);
+  border: 2px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.race-results h3 {
+  font-size: var(--font-md);
+  font-weight: bold;
+  margin: 0 0 var(--space-sm) 0;
+  text-align: center;
+}
+
+.winner-announcement {
+  text-align: center;
+  font-size: var(--font-xl);
+  font-weight: bold;
+  margin-bottom: var(--space-sm);
+}
+
+.results-grid {
+  display: table;
+  width: 100%;
+  border-spacing: var(--space-sm);
+  text-align: center;
+  font-size: var(--font-sm);
+}
+
+.result-item {
+  display: table-cell;
+}
+
+.result-label {
+  color: var(--win98-gray-dark);
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-xs);
+}
+
+.result-value {
+  font-size: var(--font-lg);
+  font-weight: bold;
+  color: var(--win98-text);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .agent-comparison {
+    display: block;
+  }
+  
+  .agent-card {
+    display: block;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}

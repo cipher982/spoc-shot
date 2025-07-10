@@ -1,0 +1,91 @@
+<!-- Uncertainty Tab Content -->
+<div class="uncertainty-analysis">
+  <div class="uncertainty-agent-card">
+    <div class="uncertainty-header">
+      <h3 class="uncertainty-title">
+        🔬 Model Uncertainty Analysis
+        <span id="uncertainty-status" class="agent-status">Idle</span>
+      </h3>
+    </div>
+    
+    <div class="uncertainty-body">
+      <!-- Token Heat Map -->
+      <div class="uncertainty-section">
+        <h4 class="section-title">Token-Level Confidence</h4>
+        <div id="token-heatmap" class="token-heatmap">
+          <div class="heatmap-legend">
+            <span class="legend-item">
+              <span class="legend-color high-confidence"></span>
+              High Confidence
+            </span>
+            <span class="legend-item">
+              <span class="legend-color medium-confidence"></span>
+              Medium
+            </span>
+            <span class="legend-item">
+              <span class="legend-color low-confidence"></span>
+              Low Confidence
+            </span>
+          </div>
+          <div id="heatmap-text" class="heatmap-text">
+            Run analysis to see token-level confidence visualization...
+          </div>
+        </div>
+      </div>
+
+      <!-- Confidence Metrics -->
+      <div class="uncertainty-section">
+        <h4 class="section-title">Sequence-Level Metrics</h4>
+        <div class="confidence-metrics">
+          <div class="metric-gauge">
+            <div class="gauge-label">Overall Confidence</div>
+            <div class="gauge-container">
+              <div id="confidence-gauge" class="gauge-fill" style="width: 0%"></div>
+              <span id="confidence-value" class="gauge-value">--</span>
+            </div>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <div class="metric-label">Avg Entropy</div>
+              <div id="entropy-value" class="metric-value">--</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">Min LogProb</div>
+              <div id="logprob-value" class="metric-value">--</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">Perplexity</div>
+              <div id="perplexity-value" class="metric-value">--</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-label">Self-Score</div>
+              <div id="self-score-value" class="metric-value">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Sample Variants -->
+      <div id="variant-section" class="uncertainty-section" style="display: none;">
+        <h4 class="section-title">Response Variants</h4>
+        <div id="variant-viewer" class="variant-viewer">
+          <div class="variant-summary">
+            <span id="semantic-entropy">Semantic Entropy: --</span>
+            <button id="toggle-variants" class="toggle-variants">Show Variants</button>
+          </div>
+          <div id="variant-list" class="variant-list" style="display: none;">
+            <!-- Variants will be populated here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Response Log -->
+      <div class="uncertainty-section">
+        <h4 class="section-title">Model Response</h4>
+        <div id="uncertainty-log" class="uncertainty-log">
+          <div class="log-ready">Idle - ready for uncertainty analysis...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

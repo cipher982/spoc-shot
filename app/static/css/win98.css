@@ -85,6 +85,21 @@ html, body {
 }
 
 /* ===== CORE BEVELING PATTERNS ===== */
+/* Raised elements - toolbars, buttons, dialog frames */
+.win98-raised {
+  border: 2px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  background-color: var(--win98-face);
+}
+
+/* Sunken elements - content areas, input fields */
+.win98-sunken {
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  background-color: var(--win98-window-bg);
+}
+
+/* Legacy compatibility - these map to the new system */
 .window, .dialog, .panel, .button-raised {
   border: 2px solid;
   border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
@@ -205,6 +220,7 @@ html, body {
 
 /* ===== CONTROL PANEL ===== */
 .control-panel {
+  /* Control panel is a toolbar - raised */
   background-color: var(--win98-face);
   border: 2px solid;
   border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
@@ -320,9 +336,10 @@ html, body {
 .agent-card {
   display: table-cell;
   width: 50%;
-  background-color: var(--win98-face);
+  /* Agent cards are content areas - sunken */
+  background-color: var(--win98-window-bg);
   border: 2px solid;
-  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
 }
 
 .multi-pass-agent {
@@ -348,23 +365,7 @@ html, body {
   align-items: center;
 }
 
-.agent-status {
-  margin-left: auto;
-  font-size: var(--font-xs);
-  color: var(--win98-text);
-  padding: var(--space-xs) var(--space-sm);
-  font-weight: bold;
-}
-
-.agent-status-success {
-  background-color: var(--win98-window-bg);
-  color: var(--win98-text);
-}
-
-.agent-status-error {
-  background-color: var(--win98-window-bg);
-  color: var(--win98-text);
-}
+/* Agent status styles moved to components/race.css */
 
 .agent-body {
   padding: 6px;
@@ -424,27 +425,27 @@ html, body {
     var(--win98-window-bg) 10px
   );
   background-size: 10px 100%;
-  transition: width 0.5s ease;
+  transition: width 0.3s ease;
 }
 
+/* ===== AGENT LOGS ===== */
 .agent-log {
+  /* Keep the cool terminal look! */
   height: var(--log-height);
   overflow-y: auto;
   background-color: var(--taskman-bg);
-  color: var(--taskman-green);
+  color: #C0C0C0; /* Neutral light gray */
   border: 2px solid;
   border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-  padding: var(--space-xs);
+  padding: 4px;
   font-family: "Courier New", monospace;
   font-size: var(--font-xs);
+  line-height: 1.2;
 }
 
-.multi-pass-agent .agent-log {
-  color: #FF6B6B;
-}
-
+.multi-pass-agent .agent-log,
 .single-pass-agent .agent-log {
-  color: var(--taskman-green);
+  color: #C0C0C0; /* Same neutral color for both */
 }
 
 .log-entry {
@@ -459,6 +460,7 @@ html, body {
 
 /* ===== RACE RESULTS ===== */
 .race-results {
+  /* Race results is a dialog - raised */
   background-color: var(--win98-face);
   border: 2px solid;
   border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
@@ -503,8 +505,13 @@ html, body {
   font-weight: bold;
 }
 
+/* Tab styles moved to components/tabs.css */
+
+/* Uncertainty styles moved to components/uncertainty.css */
+
 /* ===== COLLAPSIBLE SECTION ===== */
 .collapsible-section {
+  /* Collapsible section is a dialog - raised */
   background-color: var(--win98-face);
   border: 2px solid;
   border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
@@ -528,8 +535,12 @@ html, body {
 }
 
 .collapsible-content {
+  /* Content inside collapsible is sunken */
   padding: 8px;
-  border-top: 1px solid var(--win98-shadow);
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  background-color: var(--win98-window-bg);
+  border-top: none;
 }
 
 .code-view {

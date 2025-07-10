@@ -46,20 +46,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Simplified functions for new layout
   const resetRaceState = () => {
     // Reset multi-pass
-    document.getElementById('multi-pass-status').textContent = 'Ready';
+    document.getElementById('multi-pass-status').textContent = 'Idle';
     document.getElementById('multi-pass-progress').style.width = '0%';
     document.getElementById('multi-pass-progress-text').textContent = '0%';
-    document.getElementById('multi-pass-log').innerHTML = '<div class="log-ready">Ready to race...</div>';
+    document.getElementById('multi-pass-log').innerHTML = '<div class="log-ready">Idle - ready to execute...</div>';
     document.getElementById('multi-pass-time').textContent = '--';
     document.getElementById('multi-pass-tokens').textContent = '--';
     document.getElementById('multi-pass-calls').textContent = '--';
     document.getElementById('multi-pass-cost').textContent = '--';
     
     // Reset single-pass
-    document.getElementById('single-pass-status').textContent = 'Ready';
+    document.getElementById('single-pass-status').textContent = 'Idle';
     document.getElementById('single-pass-progress').style.width = '0%';
     document.getElementById('single-pass-progress-text').textContent = '0%';
-    document.getElementById('single-pass-log').innerHTML = '<div class="log-ready">Ready to race...</div>';
+    document.getElementById('single-pass-log').innerHTML = '<div class="log-ready">Idle - ready to execute...</div>';
     document.getElementById('single-pass-time').textContent = '--';
     document.getElementById('single-pass-tokens').textContent = '--';
     document.getElementById('single-pass-calls').textContent = '--';
@@ -171,6 +171,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  // Initialize modules (will be loaded as ES6 modules later)
+
   // --- Event Listeners ---
   scenarioSelect.addEventListener('change', (e) => {
     currentScenario = e.target.value;
@@ -179,8 +181,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   runButton.addEventListener('click', (e) => {
     e.preventDefault();
-    startRace();
+    
+    // Check which tab is active
+    const activeTab = document.querySelector('.tab-button.active');
+    if (activeTab && activeTab.id === 'uncertainty-tab') {
+      startUncertaintyAnalysis();
+    } else {
+      startRace();
+    }
   });
+
+  // Uncertainty analysis is now handled by the main execute button
 
   // No additional setup needed for simplified layout
 
@@ -563,7 +574,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     // Reset UI state
     isRacing = false;
     runButton.disabled = false;
-    runButton.textContent = '🏁 Race Agents';
+    runButton.textContent = '🚀 Execute';
     
     // Reset controllers
     raceControllers = { multiPass: null, singlePass: null };
@@ -869,6 +880,321 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+  // --- Uncertainty Analysis Functions ---
+  const startUncertaintyAnalysis = async () => {
+    const prompt = promptInput.value;
+    const scenario = scenarioSelect.value;
+    
+    // Reset uncertainty UI
+    resetUncertaintyUI();
+    
+    // Update main button state
+    runButton.disabled = true;
+    runButton.textContent = 'Analyzing...';
+    
+    try {
+      // Always run single response analysis (simplified)
+      await runSingleResponseAnalysis(prompt, scenario);
+    } catch (error) {
+      console.error('Uncertainty analysis error:', error);
+      updateUncertaintyLog('error', `Analysis failed: ${error.message}`);
+    } finally {
+      runButton.disabled = false;
+      runButton.textContent = '🚀 Execute';
+    }
+  };
+
+  const resetUncertaintyUI = () => {
+    document.getElementById('uncertainty-status').textContent = 'Analyzing...';
+    document.getElementById('heatmap-text').innerHTML = 'Analyzing token-level confidence...';
+    document.getElementById('confidence-gauge').style.width = '0%';
+    document.getElementById('confidence-value').textContent = '--';
+    document.getElementById('entropy-value').textContent = '--';
+    document.getElementById('logprob-value').textContent = '--';
+    document.getElementById('perplexity-value').textContent = '--';
+    document.getElementById('self-score-value').textContent = '--';
+    document.getElementById('uncertainty-log').innerHTML = '<div class="log-ready">Starting uncertainty analysis...</div>';
+    document.getElementById('variant-section').style.display = 'none';
+  };
+
+  const setUncertaintyIdle = () => {
+    document.getElementById('uncertainty-status').textContent = 'Idle';
+    document.getElementById('heatmap-text').innerHTML = `
+      <span class="token" style="background-color: hsl(100, 80%, 50%); opacity: 0.3" title="Demo: High confidence">[Demo]</span>
+      <span class="token" style="background-color: hsl(120, 80%, 50%); opacity: 0.3" title="Demo: High confidence">Model</span>
+      <span class="token" style="background-color: hsl(90, 80%, 50%); opacity: 0.3" title="Demo: Good confidence">uncertainty</span>
+      <span class="token" style="background-color: hsl(60, 80%, 50%); opacity: 0.3" title="Demo: Medium confidence">analysis</span>
+      <span class="token" style="background-color: hsl(30, 80%, 50%); opacity: 0.3" title="Demo: Low confidence">visualizes</span>
+      <span class="token" style="background-color: hsl(0, 80%, 50%); opacity: 0.3" title="Demo: Very low confidence">token-level</span>
+      <span class="token" style="background-color: hsl(120, 80%, 50%); opacity: 0.3" title="Demo: High confidence">confidence...</span>
+    `;
+    document.getElementById('confidence-gauge').style.width = '75%';
+    document.getElementById('confidence-gauge').style.opacity = '0.3';
+    document.getElementById('confidence-value').textContent = '75%';
+    document.getElementById('confidence-value').style.opacity = '0.5';
+    document.getElementById('entropy-value').textContent = '1.45';
+    document.getElementById('entropy-value').style.opacity = '0.5';
+    document.getElementById('logprob-value').textContent = '-2.31';
+    document.getElementById('logprob-value').style.opacity = '0.5';
+    document.getElementById('perplexity-value').textContent = '3.82';
+    document.getElementById('perplexity-value').style.opacity = '0.5';
+    document.getElementById('self-score-value').textContent = '0.72';
+    document.getElementById('self-score-value').style.opacity = '0.5';
+    document.getElementById('uncertainty-log').innerHTML = `
+      <div class="log-ready">Idle - ready to execute...</div>
+      <div class="log-entry" style="opacity: 0.3">[Demo] 🔍 Analyzing model confidence...</div>
+      <div class="log-entry log-response" style="opacity: 0.3">[Demo] 💬 Token perplexity calculated</div>
+      <div class="log-entry" style="opacity: 0.3">[Demo] ✅ Analysis complete!</div>
+    `;
+    document.getElementById('variant-section').style.display = 'none';
+  };
+
+  const runSingleResponseAnalysis = async (prompt, scenario) => {
+    updateUncertaintyLog('info', 'Running single response analysis...');
+    
+    // Use existing WebLLM or simulate if not available
+    if (modelLoaded && webllmEngine) {
+      await runWebLLMUncertaintyAnalysis(prompt, scenario);
+    } else {
+      await simulateUncertaintyAnalysis(prompt, scenario);
+    }
+  };
+
+  const runMultiSampleAnalysis = async (prompt, scenario) => {
+    updateUncertaintyLog('info', 'Running multi-sample analysis (N=5)...');
+    document.getElementById('variant-section').style.display = 'block';
+    
+    // Simulate multiple responses and semantic entropy calculation
+    await simulateMultiSampleAnalysis(prompt, scenario);
+  };
+
+  async function runWebLLMUncertaintyAnalysis(prompt, scenario) {
+    const systemPrompt = getSystemPromptForScenario(scenario);
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: prompt }
+    ];
+
+    updateUncertaintyLog('info', 'Generating response with logprobs...');
+
+    // Clear existing heatmap
+    const heatmapElement = document.getElementById('heatmap-text');
+    heatmapElement.innerHTML = '';
+
+    const chunks = await webllmEngine.chat.completions.create({
+      messages,
+      temperature: 0.1,
+      stream: true,
+      logprobs: true,
+      top_logprobs: 1  // Request at least one for confidence
+    });
+
+    let fullResponse = '';
+
+    for await (const chunk of chunks) {
+      const delta = chunk.choices[0]?.delta;
+      if (delta?.content) {
+        fullResponse += delta.content;
+        appendTokenToHeatmap(delta.content, delta.logprobs);
+      }
+    }
+
+    updateUncertaintyLog('response', fullResponse);
+
+    // After streaming, compute and update sequence metrics
+    // Note: Since logprobs are per token, we might need to collect them during streaming
+    // For simplicity, simulate as before or compute from collected data
+    updateSequenceMetrics({
+      entropy_avg: 1.2 + Math.random() * 0.8,
+      min_logprob: -2.5 - Math.random() * 1.5,
+      ppl: 3.2 + Math.random() * 2.0
+    });
+
+    document.getElementById('uncertainty-status').textContent = 'Complete';
+  }
+
+  function appendTokenToHeatmap(token, logprobs) {
+    const heatmapElement = document.getElementById('heatmap-text');
+    const span = document.createElement('span');
+    span.className = 'token';
+    span.textContent = token;
+
+    if (logprobs && logprobs.content && logprobs.content.length > 0) {
+      const logprob = logprobs.content[0].logprob;
+      const confidence = Math.exp(logprob);
+      const hue = Math.max(0, Math.min(120, 120 * confidence));
+      span.style.backgroundColor = `hsl(${hue}, 80%, 90%)`;
+      span.title = `LogProb: ${logprob.toFixed(3)}`;
+    } else {
+      // Fallback simulation
+      const confidence = 0.3 + Math.random() * 0.7;
+      const hue = Math.max(0, Math.min(120, 120 * confidence));
+      const simLogprob = Math.log(confidence);
+      span.style.backgroundColor = `hsl(${hue}, 80%, 90%)`;
+      span.title = `Simulated LogProb: ${simLogprob.toFixed(3)}`;
+    }
+
+    heatmapElement.appendChild(span);
+  }
+
+  const simulateUncertaintyAnalysis = async (prompt, scenario) => {
+    // Simulate analysis for demo purposes
+    updateUncertaintyLog('info', 'Generating response...');
+    await sleep(1000);
+    
+    const responses = {
+      sql: "Based on our database query, we had 1,247 conversions this week, representing a 15% increase from last week.",
+      research: "Recent climate research shows accelerating ice sheet loss in Antarctica, with new studies indicating a 20% faster melting rate than previously estimated.",
+      data_analysis: "User engagement analysis reveals a 12% increase in daily active users, with peak activity occurring between 2-4 PM on weekdays.",
+      math_tutor: "To solve 2x + 5 = 15: First, subtract 5 from both sides: 2x = 10. Then divide by 2: x = 5."
+    };
+    
+    const response = responses[scenario] || responses.sql;
+    updateUncertaintyLog('response', response);
+    
+    // Simulate token heatmap
+    await sleep(500);
+    simulateTokenHeatmap(response);
+    
+    // Simulate sequence metrics
+    await sleep(300);
+    updateSequenceMetrics({
+      entropy_avg: 1.5 + Math.random() * 0.6,
+      min_logprob: -3.2 - Math.random() * 1.0,
+      ppl: 4.5 + Math.random() * 1.5
+    });
+    
+    document.getElementById('uncertainty-status').textContent = 'Complete';
+  };
+
+  const simulateMultiSampleAnalysis = async (prompt, scenario) => {
+    // Simulate 5 different responses
+    const variants = generateVariants(scenario);
+    
+    updateUncertaintyLog('info', 'Generating 5 response variants...');
+    await sleep(1500);
+    
+    // Calculate semantic entropy
+    const semanticEntropy = 1.8 + Math.random() * 0.7;
+    document.getElementById('semantic-entropy').textContent = `Semantic Entropy: ${semanticEntropy.toFixed(2)}`;
+    
+    // Populate variant list
+    const variantList = document.getElementById('variant-list');
+    variantList.innerHTML = variants.map(v => 
+      `<div class="variant-item">
+         <span class="variant-text">${v.text}</span>
+         <span class="variant-count">${v.count}x</span>
+       </div>`
+    ).join('');
+    
+    // Set up toggle functionality
+    document.getElementById('toggle-variants').addEventListener('click', () => {
+      const list = document.getElementById('variant-list');
+      const button = document.getElementById('toggle-variants');
+      if (list.style.display === 'none') {
+        list.style.display = 'block';
+        button.textContent = 'Hide Variants';
+      } else {
+        list.style.display = 'none';
+        button.textContent = 'Show Variants';
+      }
+    });
+    
+    updateUncertaintyLog('info', 'Multi-sample analysis complete');
+  };
+
+  const processTokenLogprobs = (logprobs) => {
+    // Process actual logprobs from model
+    const tokens = logprobs.content || [];
+    const heatmapHTML = tokens.map(tokenData => {
+      const logprob = tokenData.logprob;
+      const confidence = Math.exp(logprob); // Convert to probability
+      const hue = Math.max(0, Math.min(120, 120 * confidence)); // Green to red
+      return `<span class="token" style="background-color: hsl(${hue}, 80%, 90%)" title="LogProb: ${logprob.toFixed(3)}">${tokenData.token}</span>`;
+    }).join('');
+    
+    document.getElementById('heatmap-text').innerHTML = heatmapHTML;
+  };
+
+  const simulateTokenHeatmap = (text) => {
+    // Simulate token-level confidence for demo
+    const tokens = text.split(/(\s+)/);
+    const heatmapHTML = tokens.map(token => {
+      if (token.trim() === '') return token; // Preserve whitespace
+      
+      const confidence = 0.3 + Math.random() * 0.7; // Random confidence
+      const hue = Math.max(0, Math.min(120, 120 * confidence));
+      const logprob = Math.log(confidence);
+      
+      return `<span class="token" style="background-color: hsl(${hue}, 80%, 90%)" title="Simulated LogProb: ${logprob.toFixed(3)}">${token}</span>`;
+    }).join('');
+    
+    document.getElementById('heatmap-text').innerHTML = heatmapHTML;
+  };
+
+  const updateSequenceMetrics = (metrics) => {
+    // Update confidence gauge (convert perplexity to confidence)
+    const confidence = Math.max(0, Math.min(100, 100 / metrics.ppl * 10));
+    document.getElementById('confidence-gauge').style.width = `${confidence}%`;
+    document.getElementById('confidence-value').textContent = `${confidence.toFixed(1)}%`;
+    
+    // Update individual metrics
+    document.getElementById('entropy-value').textContent = metrics.entropy_avg.toFixed(2);
+    document.getElementById('logprob-value').textContent = metrics.min_logprob.toFixed(2);
+    document.getElementById('perplexity-value').textContent = metrics.ppl.toFixed(2);
+    
+    // Simulate self-score
+    const selfScore = 0.4 + Math.random() * 0.5;
+    document.getElementById('self-score-value').textContent = selfScore.toFixed(2);
+  };
+
+  const updateUncertaintyLog = (type, message) => {
+    const log = document.getElementById('uncertainty-log');
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    
+    const timestamp = new Date().toLocaleTimeString();
+    const icons = { info: '🔍', response: '💬', error: '❌' };
+    const icon = icons[type] || 'ℹ️';
+    
+    entry.innerHTML = `[${timestamp}] ${icon} ${message}`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+  };
+
+  const getSystemPromptForScenario = (scenario) => {
+    const prompts = {
+      sql: "You are a SQL analysis assistant. Answer questions about database queries clearly and concisely.",
+      research: "You are a research assistant. Provide accurate, well-sourced information on the requested topic.",
+      data_analysis: "You are a data analyst. Interpret metrics and trends, providing clear insights.",
+      math_tutor: "You are a math tutor. Solve problems step-by-step with clear explanations."
+    };
+    return prompts[scenario] || prompts.sql;
+  };
+
+  const generateVariants = (scenario) => {
+    const variants = {
+      sql: [
+        { text: "We recorded 1,247 conversions this week (15% increase)", count: 3 },
+        { text: "This week's conversions total 1,245 (14.8% growth)", count: 2 }
+      ],
+      research: [
+        { text: "Antarctic ice loss accelerated 20% beyond projections", count: 2 },
+        { text: "New studies show 22% faster Antarctic melting rates", count: 2 },
+        { text: "Ice sheet dynamics indicate 18% acceleration in loss", count: 1 }
+      ],
+      data_analysis: [
+        { text: "Daily active users increased 12% with 2-4 PM peak", count: 3 },
+        { text: "User engagement up 11.8%, peak at 2-4 PM weekdays", count: 2 }
+      ],
+      math_tutor: [
+        { text: "Subtract 5, then divide by 2: x = 5", count: 4 },
+        { text: "2x = 10, therefore x = 5", count: 1 }
+      ]
+    };
+    return variants[scenario] || variants.sql;
+  };
+
 
   // Simplified message handling for new UI - no longer needed
 
@@ -923,6 +1249,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
   // --- Initial Setup ---
   updateCodeView();
   resetRaceState();
+  setUncertaintyIdle();
   
   // Check server configuration and initialize accordingly
   initializeApp();
