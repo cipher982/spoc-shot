@@ -74,6 +74,29 @@ async def startup_event():
     logger.info("Application startup complete. All logs should now be visible.")
     logger.info(f"Open http://{host}:{port} to view the demo.")
 
+@app.post("/execute_tool")
+async def execute_tool(request: Request):
+    """Execute a single tool call and return the result."""
+    try:
+        data = await request.json()
+        tool_name = data.get("name")
+        tool_args = data.get("args", {})
+        
+        if not tool_name:
+            raise HTTPException(status_code=400, detail="Tool name is required")
+        
+        # Import here to avoid circular imports
+        from app.tools import run_tool
+        
+        # Execute the tool
+        result = run_tool({"name": tool_name, "args": tool_args})
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Tool execution error: {e}")
+        return {"ok": False, "error": str(e)}
+
 @app.post("/solve")
 async def solve_sse(request: Request):
     """

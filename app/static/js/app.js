@@ -121,6 +121,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       webllmEngine = await CreateMLCEngine(selectedModel, { initProgressCallback });
       
+      // Make WebLLM engine globally available
+      window.webllmEngine = webllmEngine;
+      window.modelLoaded = true;
+      
       console.log("✅ WebLLM engine created successfully:", webllmEngine);
 
       modelStatus.textContent = "Model loaded successfully!";
@@ -221,33 +225,261 @@ document.addEventListener('DOMContentLoaded', () => {
   // No additional setup needed for simplified layout
 
   // --- WebLLM Agent Implementation ---
-  const runWebLLMAgent = async (prompt, mode, scenario = 'sql') => {
+  const runWebLLMAgent = async (prompt, mode, scenario = 'sql', metrics = null, updateUI = null, abortSignal = null, incrementAttempt = null) => {
     console.log(`Running WebLLM agent in ${mode} mode, ${scenario} scenario with prompt: ${prompt}`);
     
-    // Clear log and reset UI
-    log.innerHTML = '<div class="log-ready">Running agent with WebLLM...</div>';
-    resetMetrics();
-    
-    const startTime = performance.now();
-    let metrics = { prompt_tokens: 0, completion_tokens: 0, latency: 0, llm_calls: 0 };
-    
-    try {
-      if (mode === 'multi_pass') {
-        await runMultiPassWebLLM(prompt, metrics, startTime, scenario);
-      } else {
-        await runSinglePassWebLLM(prompt, metrics, startTime, scenario);
-      }
-    } catch (error) {
-      console.error('WebLLM agent error:', error);
-      handleSseMessage({
-        phase: 'error',
-        message: `WebLLM error: ${error.message}`,
-        metrics: metrics
-      });
-    } finally {
-      runButton.disabled = false;
-      runButton.textContent = 'Run Agent';
+    // Check if WebLLM is available
+    if (!webllmEngine || !modelLoaded) {
+      throw new Error('WebLLM not initialized. Please wait for model loading to complete.');
     }
+    
+    // If no custom metrics/UI provided, use default behavior
+    if (!metrics) {
+      log.innerHTML = '<div class="log-ready">Running agent with WebLLM...</div>';
+      resetMetrics();
+      metrics = { prompt_tokens: 0, completion_tokens: 0, latency: 0, llm_calls: 0 };
+      const startTime = performance.now();
+      
+      try {
+        if (mode === 'multi_pass') {
+          await runMultiPassWebLLM(prompt, metrics, startTime, scenario);
+        } else {
+          await runSinglePassWebLLM(prompt, metrics, startTime, scenario);
+        }
+      } catch (error) {
+        console.error('WebLLM agent error:', error);
+        handleSseMessage({
+          phase: 'error',
+          message: `WebLLM error: ${error.message}`,
+          metrics: metrics
+        });
+      } finally {
+        runButton.disabled = false;
+        runButton.textContent = 'Run Agent';
+      }
+      return;
+    }
+    
+    // Race mode with custom UI callbacks
+    const startTime = performance.now();
+    let attemptNumber = 0;
+    const maxAttempts = mode === 'multi_pass' ? 3 : 2;
+    
+    if (mode === 'multi_pass') {
+      // Multi-pass: separate LLM calls for each attempt
+      while (attemptNumber < maxAttempts) {
+        if (abortSignal?.aborted) throw new Error('Race cancelled');
+        
+        attemptNumber++;
+        if (incrementAttempt) incrementAttempt();
+        if (updateUI) updateUI('propose');
+        
+        const systemPrompt = `You are a helpful assistant that uses tools to answer questions. When you encounter an error, you'll need to make a separate tool call to fix it.`;
+        const messages = [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ];
+
+        try {
+          const response = await webllmEngine.chat.completions.create({
+            messages: messages,
+            max_tokens: 200,
+            temperature: 0.7,
+            tools: getToolDefinitionsForScenario(scenario)
+          });
+
+          metrics.llm_calls += 1;
+          metrics.prompt_tokens += estimateTokens(messages);
+          metrics.completion_tokens += estimateTokens([{ role: 'assistant', content: response.choices[0].message.content }]);
+
+          const toolCall = response.choices[0].message.tool_calls?.[0];
+          if (toolCall) {
+            if (updateUI) updateUI('execute', { call: { name: toolCall.function.name, args: JSON.parse(toolCall.function.arguments) } });
+            
+            // Execute real tool via backend
+            const result = await executeRealToolCall(toolCall.function.name, JSON.parse(toolCall.function.arguments));
+            if (updateUI) updateUI('tool_result', { result });
+            
+            if (result.ok) {
+              // Second LLM call for summary
+              const summaryMessages = [
+                ...messages,
+                response.choices[0].message,
+                { role: 'tool', content: JSON.stringify(result), tool_call_id: toolCall.id }
+              ];
+
+              const summaryResponse = await webllmEngine.chat.completions.create({
+                messages: summaryMessages,
+                max_tokens: 100,
+                temperature: 0.7
+              });
+
+              metrics.llm_calls += 1;
+              metrics.completion_tokens += estimateTokens([{ role: 'assistant', content: summaryResponse.choices[0].message.content }]);
+              
+              if (updateUI) updateUI('success');
+              return;
+            } else {
+              if (updateUI) updateUI('patch');
+              // Continue to next attempt
+            }
+          } else {
+            if (updateUI) updateUI('success');
+            return;
+          }
+        } catch (error) {
+          throw new Error(`WebLLM error: ${error.message}`);
+        }
+      }
+    } else {
+      // Single-pass: conversation continues in same context
+      const systemPrompt = `You are a helpful assistant with self-correction capabilities. When tools fail, analyze the error and try again with corrected parameters in the same conversation.`;
+      let conversationHistory = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt }
+      ];
+      
+      while (attemptNumber < maxAttempts) {
+        if (abortSignal?.aborted) throw new Error('Race cancelled');
+        
+        attemptNumber++;
+        if (incrementAttempt) incrementAttempt();
+        if (updateUI) updateUI('propose');
+
+        try {
+          const response = await webllmEngine.chat.completions.create({
+            messages: conversationHistory,
+            max_tokens: 200,
+            temperature: 0.7,
+            tools: getToolDefinitionsForScenario(scenario)
+          });
+
+          metrics.llm_calls += 1;
+          metrics.prompt_tokens += estimateTokens(conversationHistory);
+          metrics.completion_tokens += estimateTokens([{ role: 'assistant', content: response.choices[0].message.content }]);
+
+          const toolCall = response.choices[0].message.tool_calls?.[0];
+          if (toolCall) {
+            if (updateUI) updateUI('execute', { call: { name: toolCall.function.name, args: JSON.parse(toolCall.function.arguments) } });
+            
+            // Execute real tool
+            const result = await executeRealToolCall(toolCall.function.name, JSON.parse(toolCall.function.arguments));
+            if (updateUI) updateUI('tool_result', { result });
+            
+            // Add to conversation history
+            conversationHistory.push(response.choices[0].message);
+            conversationHistory.push({ role: 'tool', content: JSON.stringify(result), tool_call_id: toolCall.id });
+            
+            if (result.ok) {
+              if (updateUI) updateUI('success');
+              return;
+            } else {
+              if (updateUI) updateUI('patch');
+              // Continue in same conversation
+            }
+          } else {
+            if (updateUI) updateUI('success');
+            return;
+          }
+        } catch (error) {
+          throw new Error(`WebLLM error: ${error.message}`);
+        }
+      }
+    }
+    
+    throw new Error('Max attempts reached');
+  };
+
+  // Helper functions for real execution
+  const getToolDefinitionsForScenario = (scenario) => {
+    const toolDefinitions = {
+      sql: [{
+        type: 'function',
+        function: {
+          name: 'sql_query',
+          description: 'Query database for specific information',
+          parameters: {
+            type: 'object',
+            properties: {
+              column: { type: 'string', description: 'Column to query' },
+              table: { type: 'string', description: 'Table name', default: 'analytics' }
+            },
+            required: ['column']
+          }
+        }
+      }],
+      research: [{
+        type: 'function',
+        function: {
+          name: 'web_search',
+          description: 'Search the web for information',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'Search query' }
+            },
+            required: ['query']
+          }
+        }
+      }],
+      data_analysis: [{
+        type: 'function',
+        function: {
+          name: 'analyze_data',
+          description: 'Analyze dataset for trends and insights',
+          parameters: {
+            type: 'object',
+            properties: {
+              dataset: { type: 'string', description: 'Dataset name' },
+              operation: { type: 'string', description: 'Analysis operation' }
+            },
+            required: ['dataset']
+          }
+        }
+      }],
+      math_tutor: [{
+        type: 'function',
+        function: {
+          name: 'solve_equation',
+          description: 'Solve mathematical equations',
+          parameters: {
+            type: 'object',
+            properties: {
+              equation: { type: 'string', description: 'Mathematical equation to solve' }
+            },
+            required: ['equation']
+          }
+        }
+      }]
+    };
+    
+    return toolDefinitions[scenario] || toolDefinitions.sql;
+  };
+
+  const executeRealToolCall = async (toolName, args) => {
+    // Execute tools via backend API
+    try {
+      const response = await fetch('/execute_tool', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: toolName, args: args })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      return { ok: false, error: `Tool execution failed: ${error.message}` };
+    }
+  };
+
+  const estimateTokens = (messages) => {
+    return messages.reduce((total, msg) => {
+      const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+      return total + Math.ceil(content.length / 4); // Rough estimation
+    }, 0);
   };
 
   const runMultiPassWebLLM = async (prompt, metrics, startTime, scenario = 'sql') => {
@@ -698,11 +930,11 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     };
     
     try {
-      // Simulate the agent execution
+      // Use real WebLLM execution
       if (mode === 'multi_pass') {
-        await simulateMultiPassRace(prompt, scenario, metrics, updateRaceUI, abortSignal, () => attemptCount++);
+        await runWebLLMAgent(prompt, 'multi_pass', scenario, metrics, updateRaceUI, abortSignal, () => attemptCount++);
       } else {
-        await simulateSinglePassRace(prompt, scenario, metrics, updateRaceUI, abortSignal, () => attemptCount++);
+        await runWebLLMAgent(prompt, 'single_pass', scenario, metrics, updateRaceUI, abortSignal, () => attemptCount++);
       }
       
       metrics.latency = (performance.now() - startTime) / 1000;

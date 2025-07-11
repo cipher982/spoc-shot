@@ -114,27 +114,54 @@ export class UncertaintyAnalyzer {
   async runSingleResponseAnalysis(prompt, scenario) {
     this.updateLog('info', `Analyzing prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`);
     
-    // Simulate analysis with actual prompt
-    await this.sleep(1000);
-    
-    // Use actual prompt for custom scenarios, fallback to predefined for quick examples
-    const response = scenario === 'custom' ? 
-      this.generateResponseForCustomPrompt(prompt) : 
-      this.getResponseForScenario(scenario);
+    try {
+      // Use real WebLLM inference instead of fake responses
+      const response = await this.runRealWebLLMAnalysis(prompt);
+      this.updateLog('response', response.text);
       
-    this.updateLog('response', response);
-    
-    await this.sleep(500);
-    this.simulateTokenHeatmap(response);
-    
-    await this.sleep(300);
-    this.updateSequenceMetrics({
-      entropy_avg: 1.5 + Math.random() * 0.6,
-      min_logprob: -3.2 - Math.random() * 1.0,
-      ppl: 4.5 + Math.random() * 1.5
-    });
-    
-    this.updateStatus('Complete');
+      // Use real logprobs and confidence data from model response
+      this.processRealTokenHeatmap(response.text, response.logprobs);
+      this.updateRealSequenceMetrics(response.metrics);
+      
+      this.updateStatus('Complete');
+    } catch (error) {
+      this.updateLog('error', `WebLLM analysis failed: ${error.message}`);
+      this.updateStatus('Error');
+    }
+  }
+
+  async runRealWebLLMAnalysis(prompt) {
+    // Check if WebLLM is available and initialized
+    if (!window.webllmEngine || !window.modelLoaded) {
+      throw new Error('WebLLM not initialized. Please wait for model loading to complete.');
+    }
+
+    this.updateLog('info', 'Running WebLLM inference...');
+
+    try {
+      // Generate response using WebLLM with logprobs enabled
+      const messages = [{ role: 'user', content: prompt }];
+      const response = await window.webllmEngine.chat.completions.create({
+        messages: messages,
+        max_tokens: 200,
+        temperature: 0.7,
+        logprobs: true,
+        top_logprobs: 5
+      });
+
+      const choice = response.choices[0];
+      return {
+        text: choice.message.content,
+        logprobs: choice.logprobs,
+        metrics: {
+          entropy_avg: this.calculateEntropy(choice.logprobs),
+          min_logprob: this.getMinLogprob(choice.logprobs),
+          ppl: this.calculatePerplexity(choice.logprobs)
+        }
+      };
+    } catch (error) {
+      throw new Error(`WebLLM inference failed: ${error.message}`);
+    }
   }
 
   async runMultiSampleAnalysis(prompt, scenario) {
@@ -173,15 +200,21 @@ export class UncertaintyAnalyzer {
     });
   }
 
-  simulateTokenHeatmap(text) {
-    const tokens = text.split(/(\s+)/);
-    const heatmapHTML = tokens.map(token => {
-      if (token.trim() === '') return token;
+  processRealTokenHeatmap(text, logprobs) {
+    if (!logprobs || !logprobs.content) {
+      // Fallback if no logprobs available
+      document.getElementById('heatmap-text').innerHTML = text;
+      return;
+    }
+
+    let heatmapHTML = '';
+    
+    logprobs.content.forEach(tokenData => {
+      const token = tokenData.token;
+      const logprob = tokenData.logprob;
+      const confidence = Math.exp(logprob); // Convert logprob to probability
       
-      const confidence = 0.3 + Math.random() * 0.7;
-      const logprob = Math.log(confidence);
-      
-      // Map confidence to CSS classes instead of inline styles
+      // Map real confidence to CSS classes
       const getConfidenceClass = (conf) => {
         if (conf >= 0.9) return 'token-confidence-very-high';
         if (conf >= 0.7) return 'token-confidence-high';
@@ -192,13 +225,13 @@ export class UncertaintyAnalyzer {
       };
       
       const confidenceClass = getConfidenceClass(confidence);
-      return `<span class="token ${confidenceClass}" title="Simulated LogProb: ${logprob.toFixed(3)}">${token}</span>`;
-    }).join('');
+      heatmapHTML += `<span class="token ${confidenceClass}" title="LogProb: ${logprob.toFixed(3)} | Confidence: ${(confidence * 100).toFixed(1)}%">${token}</span>`;
+    });
     
     document.getElementById('heatmap-text').innerHTML = heatmapHTML;
   }
 
-  updateSequenceMetrics(metrics) {
+  updateRealSequenceMetrics(metrics) {
     const confidence = Math.max(0, Math.min(100, 100 / metrics.ppl * 10));
     document.getElementById('confidence-bar').style.setProperty('--progress-width', `${confidence}%`);
     document.getElementById('confidence-value').textContent = `${confidence.toFixed(1)}%`;
@@ -207,62 +240,44 @@ export class UncertaintyAnalyzer {
     document.getElementById('logprob-value').textContent = metrics.min_logprob.toFixed(2);
     document.getElementById('perplexity-value').textContent = metrics.ppl.toFixed(2);
     
-    const selfScore = 0.4 + Math.random() * 0.5;
-    document.getElementById('self-score-value').textContent = selfScore.toFixed(2);
-  }
-
-  getResponseForScenario(scenario) {
-    const responses = {
-      sql: "Based on our database query, we had 1,247 conversions this week, representing a 15% increase from last week.",
-      research: "Recent climate research shows accelerating ice sheet loss in Antarctica, with new studies indicating a 20% faster melting rate than previously estimated.",
-      data_analysis: "User engagement analysis reveals a 12% increase in daily active users, with peak activity occurring between 2-4 PM on weekdays.",
-      math_tutor: "To solve 2x + 5 = 15: First, subtract 5 from both sides: 2x = 10. Then divide by 2: x = 5."
-    };
-    return responses[scenario] || responses.sql;
-  }
-
-  generateResponseForCustomPrompt(prompt) {
-    // Generate a simulated response based on the actual custom prompt
-    const promptLower = prompt.toLowerCase();
-    
-    // Simple keyword-based response generation for demo purposes
-    if (promptLower.includes('math') || promptLower.includes('solve') || promptLower.includes('equation')) {
-      return `Looking at this mathematical problem: "${prompt}", I need to work through the steps systematically to find the solution.`;
-    } else if (promptLower.includes('data') || promptLower.includes('analysis') || promptLower.includes('metrics')) {
-      return `Based on the data analysis request: "${prompt}", I've examined the relevant datasets and identified key trends and patterns.`;
-    } else if (promptLower.includes('research') || promptLower.includes('study') || promptLower.includes('findings')) {
-      return `Regarding your research question: "${prompt}", recent studies and literature provide several important insights worth considering.`;
-    } else if (promptLower.includes('sql') || promptLower.includes('database') || promptLower.includes('query')) {
-      return `For the database query: "${prompt}", I've executed the relevant SQL statements and compiled the results from our data warehouse.`;
-    } else {
-      // Generic response that incorporates part of the user's prompt
-      const firstPart = prompt.substring(0, 100);
-      return `Analyzing your request: "${firstPart}${prompt.length > 100 ? '...' : ''}", I've processed the information and generated a comprehensive response based on the available data and context.`;
+    // Remove fake self-score - use real metric if available
+    const selfScoreElement = document.getElementById('self-score-value');
+    if (selfScoreElement) {
+      selfScoreElement.textContent = metrics.self_score ? metrics.self_score.toFixed(2) : '--';
     }
   }
 
-  generateVariants(scenario) {
-    const variants = {
-      sql: [
-        { text: "We recorded 1,247 conversions this week (15% increase)", count: 3 },
-        { text: "This week's conversions total 1,245 (14.8% growth)", count: 2 }
-      ],
-      research: [
-        { text: "Antarctic ice loss accelerated 20% beyond projections", count: 2 },
-        { text: "New studies show 22% faster Antarctic melting rates", count: 2 },
-        { text: "Ice sheet dynamics indicate 18% acceleration in loss", count: 1 }
-      ],
-      data_analysis: [
-        { text: "Daily active users increased 12% with 2-4 PM peak", count: 3 },
-        { text: "User engagement up 11.8%, peak at 2-4 PM weekdays", count: 2 }
-      ],
-      math_tutor: [
-        { text: "Subtract 5, then divide by 2: x = 5", count: 4 },
-        { text: "2x = 10, therefore x = 5", count: 1 }
-      ]
-    };
-    return variants[scenario] || variants.sql;
+  // Real metric calculation functions
+  calculateEntropy(logprobs) {
+    if (!logprobs || !logprobs.content) return 0;
+    
+    let entropy = 0;
+    logprobs.content.forEach(tokenData => {
+      const prob = Math.exp(tokenData.logprob);
+      if (prob > 0) {
+        entropy -= prob * Math.log2(prob);
+      }
+    });
+    
+    return entropy / logprobs.content.length;
   }
+
+  getMinLogprob(logprobs) {
+    if (!logprobs || !logprobs.content) return 0;
+    
+    return Math.min(...logprobs.content.map(tokenData => tokenData.logprob));
+  }
+
+  calculatePerplexity(logprobs) {
+    if (!logprobs || !logprobs.content) return 1;
+    
+    const avgLogprob = logprobs.content.reduce((sum, tokenData) => sum + tokenData.logprob, 0) / logprobs.content.length;
+    return Math.exp(-avgLogprob);
+  }
+
+  // Removed fake response generation functions - using real WebLLM only
+
+  // Removed fake variant generation - would need real multi-sample WebLLM runs
 
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
