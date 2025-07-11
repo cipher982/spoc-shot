@@ -1,8 +1,130 @@
 /* Uncertainty Analysis Component - Windows 98 Style */
 
+/* ========================================
+   DASHBOARD LAYOUT SYSTEM
+   Target: 700px total height, zero-scroll
+   ======================================== */
+
+/* Dashboard Container - SYSTEM MONITOR DENSITY */
+.dashboard-container {
+  background: var(--win98-face);
+  border: 1px solid var(--win98-shadow);
+  padding: 8px; /* More generous padding */
+  max-width: 100%;
+  height: 700px; /* Taller container */
+  display: grid;
+  grid-template-rows: 30px 1fr; /* Bigger header + content */
+  gap: 8px; /* More generous gap */
+  font-family: 'MS Sans Serif', sans-serif;
+  font-size: 12px; /* Larger base font */
+}
+
+/* Dashboard Header - TASK MANAGER STYLE */
+.dashboard-header {
+  background: linear-gradient(to bottom, var(--win98-highlight) 0%, var(--win98-face) 50%, var(--win98-shadow) 100%);
+  border: 1px outset var(--win98-face);
+  padding: 3px 8px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  text-shadow: 1px 1px 1px rgba(255,255,255,0.5);
+}
+
+.dashboard-title {
+  font-size: var(--font-sm); /* Smaller for density */
+  font-weight: bold;
+  margin: 0;
+  color: var(--win98-text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dashboard-status {
+  font-size: var(--font-xs); /* Even smaller */
+  font-weight: bold;
+  padding: 1px 4px; /* Minimal padding */
+  background: var(--win98-gray-light);
+  border: 1px inset var(--win98-face);
+  color: var(--win98-text);
+}
+
+/* MAIN CONTENT AREA - PRIORITIZE TOKEN HEATMAP */
+.dashboard-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Two columns for metrics row */
+  grid-template-rows: 300px auto 120px; /* TOKEN HEATMAP GETS 300px!, metrics auto, terminal 120px */
+  gap: 8px;
+  background: var(--win98-shadow);
+}
+
+/* Grid Areas - Token gets full width and PRIMARY SPACE */
+.token-heatmap-section {
+  grid-column: 1 / 3; /* Full width */
+  grid-row: 1; /* Top row only */
+  height: 300px; /* LARGE height for primary feature */
+  overflow: auto; /* Allow scrolling if needed */
+}
+
+.metrics-panel-section {
+  grid-column: 1 / 3; /* Full width */
+  grid-row: 2; /* Middle row */
+  height: fit-content;
+}
+
+.terminal-section {
+  grid-column: 1 / 3; /* Full width */
+  grid-row: 3; /* Bottom row */
+  height: 120px; /* Larger terminal */
+  overflow: auto; /* Allow scrolling */
+}
+
+/* Dashboard Section - SYSTEM MONITOR PANELS */
+.dashboard-section {
+  background: var(--win98-face);
+  border: 1px inset var(--win98-face);
+  display: flex;
+  flex-direction: column;
+  align-self: start; /* Don't expand to fill grid area */
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.section-header {
+  background: linear-gradient(to bottom, var(--win98-highlight) 0%, var(--win98-face) 50%, var(--win98-shadow) 100%);
+  border: 1px outset var(--win98-face);
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--win98-text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  height: 16px;
+  line-height: 12px;
+  text-shadow: 1px 1px 1px rgba(255,255,255,0.5);
+}
+
 .uncertainty-analysis {
   /* Main container already handled by tab-content */
   display: block;
+}
+
+/* ========================================
+   TOKEN HEATMAP SECTION
+   ======================================== */
+
+.token-heatmap-section {
+  /* 60% width, ~400px height */
+}
+
+.token-heatmap {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Prompt Selection Interface */
@@ -136,20 +258,14 @@
   border-radius: 2px;
 }
 
-/* Two-column layout for efficient space usage */
+/* Legacy - replaced by dashboard grid */
 .uncertainty-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-md);
-  margin-bottom: var(--space-md);
+  display: none;
 }
 
+/* Legacy - replaced by dashboard sections */
 .uncertainty-section {
-  /* Minimal dark sections */
-  background: #111;
-  border: 1px solid #333;
-  padding: 4px;
-  margin-bottom: 4px;
+  display: none;
 }
 
 .uncertainty-section h4 {
@@ -171,20 +287,44 @@
 /* Legend removed - colors are self-explanatory */
 
 .heatmap-container {
-  /* Dark terminal-style background */
+  /* Win98 terminal-style with appropriate black background */
   background: #000;
-  border: 2px solid;
-  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-  padding: 4px;  /* Minimal padding */
-  min-height: 100px;
-  font-family: "Courier New", monospace;
-  font-size: 11px;  /* Smaller, denser text */
-  line-height: 1.2;  /* Tighter line spacing */
+  border: 1px inset var(--win98-face);
+  padding: 16px; /* More generous padding */
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", "Source Code Pro", "Menlo", "Consolas", monospace;
+  font-size: 14px; /* Larger, more readable font */
+  line-height: 1.6; /* More readable line height */
   overflow-y: auto;
-  max-height: 300px;
-  color: #fff;  /* White text on black */
+  color: #00ff00;
   white-space: pre-wrap;
   word-wrap: break-word;
+  font-weight: 400;
+  height: 250px; /* Much larger for primary content */
+  /* OVERRIDE win98.css global font settings for better readability */
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+  font-smooth: auto !important;
+}
+
+/* Custom scrollbar for Win98 aesthetic */
+.heatmap-container::-webkit-scrollbar {
+  width: 16px;
+  background: var(--win98-face);
+}
+
+.heatmap-container::-webkit-scrollbar-track {
+  background: var(--win98-face);
+  border: 2px inset var(--win98-face);
+}
+
+.heatmap-container::-webkit-scrollbar-thumb {
+  background: var(--win98-gray-light);
+  border: 2px outset var(--win98-face);
+}
+
+.heatmap-container::-webkit-scrollbar-thumb:hover {
+  background: var(--win98-gray-dark);
 }
 
 .token {
@@ -247,12 +387,9 @@
   margin-right: 3px;  /* Space between words */
 }
 
-/* Sequence-level metrics - REDESIGNED */
+/* Legacy - replaced by dense-metrics-panel */
 .confidence-metrics {
-  background: #000;
-  border: 1px solid #333;
-  padding: 4px;
-  font-family: "Courier New", monospace;
+  /* Use dashboard system instead */
 }
 
 /* Overall confidence with ASCII bar */
@@ -278,14 +415,8 @@
   font-size: 11px;
 }
 
-/* ASCII progress bar */
-.gauge-bar {
-  flex: 1;
-  font-family: "Courier New", monospace;
-  font-size: 10px;
-  color: #0f0;
-  letter-spacing: -1px;
-}
+/* Legacy - moved to dashboard system */
+/* See dashboard .gauge-bar above */
 
 .gauge-value {
   color: #0f0;
@@ -295,15 +426,10 @@
   text-align: right;
 }
 
-/* Uncertainty Metrics Grid - SINGLE SOURCE OF TRUTH for uncertainty analysis */
+/* Legacy - redirect to dashboard system */
 .uncertainty-metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);  /* 3 columns for density */
-  gap: 1px;
-  background: #333;  /* Gap color */
-  padding: 1px;
-  border: 1px solid #333;
-  font-size: 10px;
+  /* Use dashboard metrics panel instead */
+  display: none;
 }
 
 .metric-item {
@@ -342,20 +468,19 @@
   letter-spacing: -1px;
 }
 
-/* Color code the values based on their meaning */
-#entropy-value { color: #ff0; }
-#logprob-value { color: #f88; }
-#perplexity-value { color: #fa0; }
-#self-score-value { color: #0ff; }
-#variance-value { color: #f0f; }  /* Magenta for variance */
-#top-p-value { color: #8f8; }  /* Light green for top-p */
+/* Color code the values with HIGH CONTRAST for Win98 authenticity */
+#entropy-value { color: #000080; } /* Navy blue - high contrast */
+#logprob-value { color: #800000; } /* Dark red - high contrast */
+#perplexity-value { color: #804000; } /* Dark orange - high contrast */
+#self-score-value { color: #008080; } /* Dark teal - high contrast */
+#variance-value { color: #800080; } /* Dark magenta - high contrast */
+#top-p-value { color: #008000; } /* Dark green - high contrast */
+#calibration-value { color: #000080; } /* Navy blue - high contrast */
+#coherence-value { color: #800000; } /* Dark red - high contrast */
 
-/* Token distribution mini chart */
+/* Legacy - use mini-distribution instead */
 .token-distribution {
-  grid-column: 1 / -1;  /* Span full width */
-  padding: 4px;
-  background: #111;
-  margin-top: 2px;
+  display: none;
 }
 
 .distribution-label {
@@ -396,17 +521,9 @@
 
 /* Old gauge system removed - using ASCII bars instead */
 
-/* Model response log */
+/* Legacy - use .terminal-log instead */
 .uncertainty-log {
-  background: #000;
-  border: 1px solid #333;
-  padding: 4px;
-  height: 120px;  /* Smaller, denser */
-  overflow-y: auto;
-  font-family: "Courier New", monospace;
-  font-size: 10px;  /* Even smaller for density */
-  line-height: 1.2;
-  color: #0f0;  /* Terminal green */
+  /* Redirect to terminal-log class */
 }
 
 .log-entry {
@@ -440,11 +557,9 @@
   margin-right: 4px;
 }
 
-/* Variant analysis (optional - hidden by default) */
+/* Legacy - integrated into controls */
 .variant-section {
   display: none;
-  grid-column: 1 / -1;
-  margin-top: var(--space-md);
 }
 
 .variant-header {
@@ -505,13 +620,827 @@
   color: var(--win98-gray-dark);
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .uncertainty-grid {
+/* ========================================
+   DENSE METRICS PANEL SECTION (40% width)
+   ======================================== */
+
+.metrics-panel-section {
+  /* 40% width panel */
+}
+
+.dense-metrics-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px; /* Minimal gap */
+  padding: 2px; /* Minimal padding */
+  background: var(--win98-face);
+  overflow-y: auto;
+}
+
+/* Primary Confidence Gauge - Ultra Compact */
+.primary-gauge {
+  background: var(--win98-gray-light);
+  border: 1px inset var(--win98-face);
+  padding: 2px; /* Minimal padding */
+  margin-bottom: 2px; /* Minimal margin */
+}
+
+.gauge-label {
+  font-size: var(--font-xs);
+  font-weight: bold;
+  color: var(--win98-text);
+  margin-bottom: 2px;
+}
+
+.gauge-display {
+  display: flex;
+  align-items: center;
+  gap: 2px; /* Minimal gap */
+  margin-bottom: 1px; /* Minimal margin */
+}
+
+.gauge-bar {
+  flex: 1;
+  font-family: "Courier New", monospace;
+  font-size: var(--font-sm); /* Larger - was 10px */
+  color: var(--win98-text);
+  letter-spacing: -1px;
+  font-weight: bold; /* Make progress bar bolder */
+  /* Add Win98-style progress bar styling */
+  background: var(--win98-window-bg);
+  border: 1px inset var(--win98-face);
+  padding: 2px; /* More padding */
+}
+
+.gauge-value {
+  color: var(--win98-text);
+  font-family: "Courier New", monospace;
+  font-weight: bold;
+  font-size: var(--font-md); /* Much larger - was font-xs */
+  min-width: 50px;
+  text-align: right;
+}
+
+.confidence-trend {
+  font-family: "Courier New", monospace;
+  font-size: var(--font-sm); /* Much larger - was 8px */
+  color: var(--win98-text); /* Black for proper contrast */
+  text-align: center;
+  letter-spacing: -1px;
+  font-weight: bold; /* Make trend bolder */
+}
+
+/* Dense Metrics Grid - 4 columns */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  background: var(--win98-shadow);
+  padding: 2px;
+  border: 1px inset var(--win98-face);
+}
+
+.metric-item {
+  background: var(--win98-face);
+  border: 1px outset var(--win98-face);
+  padding: 8px 4px; /* More padding for bigger content */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: 80px; /* Taller to accommodate bigger text */
+  transition: background-color 0.1s ease;
+}
+
+.metric-item:hover {
+  background: var(--win98-gray-light);
+}
+
+/* Metric value highlighting */
+.metric-value.updating {
+  background: #FFFACD;
+  animation: metric-update 0.5s ease;
+}
+
+@keyframes metric-update {
+  0% { background: #FFFACD; }
+  100% { background: transparent; }
+}
+
+.metric-label {
+  font-size: var(--font-sm); /* Much larger - was 8px */
+  color: var(--win98-text); /* Black for proper contrast */
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.metric-value {
+  font-size: var(--font-md); /* Much larger - was font-xs */
+  font-weight: bold;
+  color: var(--win98-text); /* Default to black, overridden by specific colors above */
+  font-family: "Courier New", monospace;
+  margin-bottom: 4px;
+  /* Make it big and bold for readability */
+  text-shadow: none;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.metric-sparkline {
+  font-family: "Courier New", monospace;
+  font-size: var(--font-sm); /* Much larger - was 8px */
+  color: var(--win98-text); /* Black for proper contrast */
+  letter-spacing: -1px;
+  margin-bottom: 4px;
+  font-weight: bold; /* Make sparklines bolder */
+}
+
+.metric-delta {
+  font-size: var(--font-xs); /* Larger - was 7px */
+  font-weight: bold;
+  font-family: "Courier New", monospace;
+}
+
+.metric-delta.positive { color: #008000; }
+.metric-delta.negative { color: #800000; }
+.metric-delta.neutral { color: var(--win98-text); /* Black instead of grey */ }
+
+/* Mini Distribution Chart */
+.mini-distribution {
+  background: var(--win98-gray-light);
+  border: 1px inset var(--win98-face);
+  padding: 2px; /* Minimal padding */
+  margin-top: 2px; /* Minimal margin */
+}
+
+.dist-label {
+  font-size: var(--font-sm); /* Larger - was font-xs */
+  font-weight: bold;
+  color: var(--win98-text);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.dist-bars {
+  display: flex;
+  align-items: end;
+  gap: 3px; /* More space between bars */
+  height: 40px; /* Taller bars for better visibility */
+  justify-content: center;
+}
+
+.dist-bar {
+  width: 12px; /* Wider bars for better visibility */
+  background: linear-gradient(to top, #800000, #ff0000, #ffff00, #00ff00);
+  border: 2px solid var(--win98-shadow); /* Thicker border */
+  transition: all 0.1s ease;
+  min-height: 6px;
+  cursor: help;
+}
+
+.dist-bar:hover {
+  border-color: var(--win98-text);
+  transform: scaleY(1.1); /* Subtle Win98-style hover effect */
+}
+
+/* ========================================
+   TERMINAL LOG SECTION (40% width)
+   ======================================== */
+
+.terminal-section {
+  /* 40% width, 200px height */
+}
+
+.terminal-log {
+  flex: 1;
+  background: #000;
+  border: 2px inset var(--win98-face);
+  padding: 6px; /* More padding for bigger text */
+  font-family: "Courier New", monospace;
+  font-size: var(--font-sm); /* Much larger - was 9px */
+  line-height: 1.3; /* More readable line height */
+  color: #00ff00;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  font-weight: bold; /* Make terminal text bolder */
+}
+
+/* Terminal scrollbar styling */
+.terminal-log::-webkit-scrollbar {
+  width: 16px;
+  background: var(--win98-face);
+}
+
+.terminal-log::-webkit-scrollbar-track {
+  background: var(--win98-face);
+  border: 2px inset var(--win98-face);
+}
+
+.terminal-log::-webkit-scrollbar-thumb {
+  background: var(--win98-gray-light);
+  border: 2px outset var(--win98-face);
+}
+
+.terminal-log::-webkit-scrollbar-thumb:hover {
+  background: var(--win98-gray-dark);
+}
+
+.log-entry {
+  margin-bottom: 2px;
+  word-wrap: break-word;
+}
+
+.log-ready {
+  color: #00ff00; /* Terminal green instead of grey */
+}
+
+.log-info {
+  color: #0ff;
+}
+
+.log-response {
+  color: #fff;
+}
+
+.log-error {
+  color: #f00;
+  font-weight: bold;
+}
+
+.log-entry::before {
+  content: '>';
+  color: #00ff00; /* Terminal green instead of grey */
+  margin-right: 4px;
+}
+
+/* ========================================
+   ENHANCED CONTROLS SECTION (60% width)
+   ======================================== */
+
+.controls-section {
+  /* 60% width, 200px height */
+}
+
+.enhanced-controls {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px; /* Minimal gap */
+  padding: 2px; /* Minimal padding */
+  background: var(--win98-face);
+  overflow-y: auto;
+}
+
+.control-group {
+  background: var(--win98-gray-light);
+  border: 1px inset var(--win98-face);
+  padding: 2px; /* Minimal padding */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px; /* Small gap for usability */
+}
+
+.compact-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-sm); /* Larger - was font-xs */
+  font-weight: bold;
+  color: var(--win98-text);
+}
+
+.compact-slider {
+  margin: 0 4px;
+  accent-color: var(--win98-accent);
+}
+
+.compact-slider:focus {
+  outline: 1px dotted var(--win98-text);
+  outline-offset: 2px;
+}
+
+.compact-button {
+  padding: 4px 8px; /* More padding for bigger text */
+  font-size: var(--font-sm); /* Larger - was font-xs */
+  background: var(--win98-face);
+  border: 2px outset var(--win98-face);
+  cursor: pointer;
+  font-weight: bold;
+  color: var(--win98-text);
+}
+
+.compact-button:hover {
+  background: var(--win98-gray-light);
+}
+
+.compact-button:active {
+  border: 2px inset var(--win98-face);
+  background: var(--win98-gray-dark);
+}
+
+.compact-button:focus {
+  outline: 1px dotted var(--win98-text);
+  outline-offset: -3px;
+}
+
+.compact-button:disabled {
+  background: var(--win98-face);
+  color: var(--win98-gray-dark);
+  cursor: not-allowed;
+  border: 2px outset var(--win98-face);
+}
+
+.inline-metric {
+  font-size: var(--font-sm); /* Larger - was font-xs */
+  color: var(--win98-text);
+  font-family: "Courier New", monospace;
+  font-weight: bold; /* Make inline metrics bolder */
+}
+
+.param-row {
+  display: flex;
+  align-items: center;
+  gap: 4px; /* Consistent minimal spacing */
+  flex: 1;
+  min-width: 180px; /* Even more compact */
+}
+
+.sensitivity-indicator {
+  font-family: "Courier New", monospace;
+  font-size: var(--font-sm); /* Larger - was font-xs */
+  letter-spacing: 1px;
+  color: var(--win98-text); /* Black for proper contrast */
+  font-weight: bold; /* Make indicators bolder */
+}
+
+.mini-sensitivity-chart {
+  background: #000;
+  border: 1px inset var(--win98-face);
+  padding: 2px; /* Minimal padding */
+  flex: 1;
+  overflow: hidden;
+}
+
+#sensitivity-ascii {
+  margin: 0;
+  padding: 4px;
+  background: transparent;
+  color: #00ff00;
+  font-family: "Courier New", monospace;
+  font-size: var(--font-sm); /* Much larger - was 8px */
+  line-height: 1.2;
+  white-space: pre;
+  overflow: hidden;
+  font-weight: bold; /* Make ASCII chart bolder */
+  /* Ensure it looks like authentic terminal output */
+  text-shadow: 0 0 1px #00ff00;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS - MUCH LESS AGGRESSIVE
+   ======================================== */
+
+/* Only break dashboard grid on very small screens */
+@media (max-width: 1000px) {
+  .dashboard-container {
+    height: auto;
+    max-height: none;
+  }
+  
+  .dashboard-grid {
     grid-template-columns: 1fr;
+    height: auto;
+  }
+  
+  .dashboard-bottom {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile adjustments only for very small screens */
+@media (max-width: 600px) {
+  .dashboard-container {
+    padding: 2px;
+    gap: 2px;
   }
   
   .metrics-grid {
     grid-template-columns: 1fr;
   }
+  
+  .param-row {
+    min-width: 120px;
+  }
+  
+  .dashboard-bottom {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tablet adjustments - keep grid but make metrics more compact */
+@media (max-width: 1200px) and (min-width: 1001px) {
+  .metrics-grid {
+    grid-template-columns: repeat(3, 1fr); /* 3 columns instead of 4 */
+  }
+  
+  .metric-item {
+    min-height: 70px; /* Slightly shorter */
+  }
+}
+
+/* Legacy compatibility - keep existing classes working */
+.dense-metrics {
+  /* Redirect to new dashboard system */
+}
+
+/* Moved to main metrics section above */
+
+/* Legacy - use mini-distribution instead */
+.distribution-chart {
+  display: none;
+}
+
+.chart-label {
+  font-size: var(--font-xs);
+  font-weight: bold;
+  margin-bottom: var(--space-xs);
+  color: #00ff00;
+}
+
+.dist-bars {
+  display: flex;
+  align-items: end;
+  gap: 2px;
+  height: 60px;
+  margin-bottom: var(--space-xs);
+}
+
+.dist-bar {
+  width: 8px;
+  background: linear-gradient(to top, #ff0000, #ffff00, #00ff00);
+  border: 1px solid #333;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.dist-bar:hover {
+  border-color: #00ff00;
+  box-shadow: 0 0 4px #00ff00;
+}
+
+.dist-bar::before {
+  content: attr(data-range);
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-45deg);
+  font-size: 8px;
+  color: #00ff00;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  white-space: nowrap;
+}
+
+.dist-bar:hover::before {
+  opacity: 1;
+}
+
+.dist-labels {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 8px;
+  color: #00ff00;
+}
+
+/* Legacy - integrated into enhanced controls */
+.multi-sample-controls {
+  display: none;
+}
+
+.control-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-sm);
+  font-weight: bold;
+}
+
+.parameter-slider {
+  margin: 0 var(--space-xs);
+  accent-color: var(--win98-blue);
+}
+
+.secondary-button {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-sm);
+  background: var(--win98-bg-button);
+  border: 2px outset var(--win98-bg-button);
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.secondary-button:active {
+  border: 2px inset var(--win98-bg-button);
+}
+
+/* Legacy - integrated into dashboard */
+.multi-sample-results {
+  display: none;
+}
+
+/* Legacy - use inline-metric instead */
+.semantic-entropy {
+  display: none;
+}
+
+/* Legacy - use inline-metric instead */
+.large-metric {
+  display: none;
+}
+
+/* Legacy - simplified in dashboard */
+.entropy-gauge {
+  display: none;
+}
+
+/* Legacy */
+.entropy-fill {
+  display: none;
+}
+
+.response-variants {
+  padding: var(--space-sm);
+  background: var(--win98-bg-light);
+  border: 1px inset var(--win98-bg-light);
+}
+
+.variants-header {
+  font-weight: bold;
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-sm);
+  color: var(--win98-gray-dark);
+}
+
+.variant-list {
+  max-height: 150px;
+  overflow-y: auto;
+  font-size: var(--font-xs);
+}
+
+.variant-item {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-xs);
+  margin-bottom: var(--space-xs);
+  background: #fff;
+  border: 1px solid var(--win98-gray-light);
+}
+
+.variant-text {
+  flex: 1;
+  margin-right: var(--space-sm);
+}
+
+.variant-count {
+  font-weight: bold;
+  color: var(--win98-blue);
+  font-family: monospace;
+}
+
+/* Legacy - integrated into enhanced controls */
+.parameter-controls {
+  display: none;
+}
+
+.param-control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.sensitivity-indicator {
+  font-family: monospace;
+  font-size: var(--font-sm);
+  letter-spacing: 2px;
+  color: var(--win98-gray-dark);
+}
+
+/* Legacy - use mini-sensitivity-chart instead */
+.sensitivity-chart {
+  display: none;
+}
+
+.chart-title {
+  font-size: var(--font-sm);
+  font-weight: bold;
+  margin-bottom: var(--space-sm);
+  text-align: center;
+  color: #00ff00;
+}
+
+.sensitivity-plot {
+  font-size: var(--font-xs);
+  line-height: 1.2;
+}
+
+#sensitivity-ascii {
+  margin: 0;
+  padding: var(--space-sm);
+  background: transparent;
+  color: #00ff00;
+  font-family: monospace;
+  font-size: 10px;
+  line-height: 1.1;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* Animations for Dynamic Elements */
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.5); }
+  50% { box-shadow: 0 0 15px rgba(0, 255, 0, 0.8); }
+  100% { box-shadow: 0 0 5px rgba(0, 255, 0, 0.5); }
+}
+
+.metric-value.updating {
+  animation: pulse-glow 1s infinite;
+  color: #00ff00;
+}
+
+.sparkline-updating {
+  animation: pulse-glow 0.5s infinite;
+}
+
+/* Terminal-style scrolling animation */
+@keyframes scroll-up {
+  0% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.log-entry.new {
+  animation: scroll-up 0.3s ease-out;
+}
+
+/* Legacy responsive - replaced by dashboard responsive above */
+
+/* ========================================
+   SYSTEM MONITOR STYLES - ULTRA DENSE
+   ======================================== */
+
+/* System Terminal - Larger and More Readable */
+.sys-terminal {
+  flex: 1;
+  background: #000;
+  border: 1px inset var(--win98-face);
+  padding: 12px; /* More generous padding */
+  font-family: "Courier New", monospace;
+  font-size: 12px; /* Larger font */
+  line-height: 1.4; /* More readable line height */
+  color: #00ff00;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  height: 90px; /* Larger terminal */
+}
+
+/* System Controls Panel */
+.system-controls {
+  padding: 8px; /* More generous padding */
+  font-family: "Courier New", monospace;
+  font-size: 11px; /* Larger font */
+  line-height: 1.3; /* More readable */
+}
+
+.ctrl-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px; /* More generous padding */
+  margin-bottom: 6px; /* More space between rows */
+  gap: 8px;
+  font-weight: bold;
+  white-space: nowrap;
+  background: var(--win98-face);
+  border: 1px solid var(--win98-shadow);
+  font-size: 11px; /* Larger font */
+}
+
+.ctrl-row:hover {
+  background: var(--win98-gray-light);
+}
+
+.sys-slider {
+  width: 70px;
+  height: 14px;
+  margin: 0 4px;
+  accent-color: var(--win98-accent);
+}
+
+.sys-btn {
+  padding: 2px 6px;
+  font-size: 9px;
+  font-weight: bold;
+  background: var(--win98-face);
+  border: 2px outset var(--win98-face);
+  cursor: pointer;
+  color: var(--win98-text);
+}
+
+.sys-btn:hover {
+  background: var(--win98-gray-light);
+}
+
+.sys-btn:active {
+  border: 1px inset var(--win98-face);
+  background: var(--win98-gray-dark);
+}
+
+.ascii-chart {
+  margin-top: 4px;
+  font-size: 8px;
+  height: 80px;
+  overflow: hidden;
+  background: #000;
+  border: 1px inset var(--win98-face);
+  padding: 3px;
+}
+
+.ascii-chart pre {
+  margin: 0;
+  padding: 0;
+  color: #00ff00;
+  font-family: "Courier New", monospace;
+  line-height: 1.1;
+  font-size: 8px;
+}
+
+/* System Metrics Panel */
+.system-metrics {
+  display: flex;
+  flex-direction: column;
+  padding: 8px; /* More generous padding */
+  font-family: "Courier New", monospace;
+  font-size: 12px; /* Larger font */
+  line-height: 1.3; /* More readable */
+}
+
+.conf-bar {
+  padding: 2px 4px;
+  font-weight: bold;
+  border-bottom: 1px solid var(--win98-shadow);
+  margin-bottom: 3px;
+  font-size: 10px;
+  background: var(--win98-gray-light);
+}
+
+.metrics-table {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+}
+
+.metric-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--win98-face);
+  border: 1px solid var(--win98-shadow);
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.metric-row:hover {
+  background: var(--win98-gray-light);
+}
+
+.m-label {
+  font-weight: bold;
+  color: var(--win98-text);
+  font-size: 10px;
+  justify-self: start;
+}
+
+.m-val {
+  text-align: right;
+  font-weight: bold;
+  color: var(--win98-text);
+  font-family: "Courier New", monospace;
+  justify-self: center;
+}
+
+.m-spark {
+  text-align: center;
+  color: var(--win98-text);
+  font-size: 9px;
+  justify-self: end;
 }

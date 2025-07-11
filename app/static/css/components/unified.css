@@ -15,6 +15,55 @@
   align-items: flex-start;
 }
 
+/* Parameter Controls */
+.param-controls {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.param-label {
+  font-family: var(--font-family);
+  font-size: var(--font-xs);
+  font-weight: bold;
+  color: var(--win98-text);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.param-slider {
+  width: 60px;
+  height: 16px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--win98-face);
+  border: 1px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  cursor: pointer;
+}
+
+.param-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 14px;
+  background: var(--win98-face);
+  border: 1px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  cursor: pointer;
+}
+
+.param-slider::-moz-range-thumb {
+  width: 12px;
+  height: 14px;
+  background: var(--win98-face);
+  border: 1px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  cursor: pointer;
+  border-radius: 0;
+}
+
 /* Compact Select */
 .select-wrapper {
   position: relative;

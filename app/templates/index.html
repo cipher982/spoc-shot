@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SPOC-Shot Demo</title>
+  <title>Token Logits Playground</title>
   
   <!-- Capture WebGPU before other scripts -->
   <script>
@@ -16,8 +16,6 @@
   
   <!-- Stylesheets -->
   <link rel="stylesheet" href="/static/css/win98.css">
-  <link rel="stylesheet" href="/static/css/components/tabs.css">
-  <link rel="stylesheet" href="/static/css/components/race.css">
   <link rel="stylesheet" href="/static/css/components/uncertainty.css">
   <link rel="stylesheet" href="/static/css/components/unified.css">
 </head>
@@ -26,8 +24,8 @@
     
     <!-- Page Header -->
     <header class="header">
-      <h1>SPOC-Shot</h1>
-      <p class="subtitle">A Live Demo of Single-Pass Self-Correcting Agent Loops</p>
+      <h1>Token Logits Playground</h1>
+      <p class="subtitle">Real-time model uncertainty visualization and analysis</p>
     </header>
 
     <!-- Model Loading Overlay -->
@@ -65,199 +63,73 @@
           <div class="select-arrow">▼</div>
         </div>
         <textarea id="prompt-input" name="prompt" rows="2" class="compact-textarea" placeholder="Prompt...">How many conversions did we get this week?</textarea>
+        <div class="param-controls">
+          <label class="param-label">TEMP: <span id="temp-display">0.7</span></label>
+          <input type="range" id="temp-slider" min="0.1" max="2.0" step="0.1" value="0.7" class="param-slider">
+          <label class="param-label">TOP-P: <span id="top-p-display">0.9</span></label>
+          <input type="range" id="top-p-slider" min="0.1" max="1.0" step="0.05" value="0.9" class="param-slider">
+        </div>
         <button id="run-button" type="button" class="compact-execute-button">🚀 Execute</button>
       </div>
     </div>
 
-    <!-- Tab Navigation -->
-    <div class="tab-container">
-      <div class="tab-nav">
-        <button id="race-tab" class="tab-button active" data-tab="race">
-          🏁 Agent Comparison
-        </button>
-        <button id="uncertainty-tab" class="tab-button" data-tab="uncertainty">
-          🔬 Uncertainty Analysis
-        </button>
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
+      <!-- Compact Header -->
+      <div class="dashboard-header">
+        <h3 class="dashboard-title">🔬 Model Uncertainty Analysis</h3>
+        <span id="uncertainty-status" class="dashboard-status">Waiting for WebLLM</span>
+      </div>
+
+      <!-- Single Grid Content Area -->
+      <div class="dashboard-content">
+        <!-- Token Heatmap (spans full height) -->
+        <div class="dashboard-section token-heatmap-section">
+          <div class="section-header">TOKENS</div>
+          <div id="token-heatmap" class="token-heatmap">
+            <div class="heatmap-container">
+              <div id="heatmap-text" class="heatmap-text">
+                Execute analysis to see token-level confidence visualization...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compact Metrics Panel -->
+        <div class="dashboard-section metrics-panel-section">
+          <div class="section-header">METRICS</div>
+          <div class="system-metrics">
+            <!-- Confidence Bar -->
+            <div class="conf-bar">CONF: <span id="confidence-value">--</span>% [<span id="confidence-bar">░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░</span>]</div>
+            
+            <!-- Compact Metrics Table -->
+            <div class="metrics-table">
+              <div class="metric-row"><span class="m-label">ENTROPY</span><span id="entropy-value" class="m-val">--</span><span class="m-spark">░░░░░░</span></div>
+              <div class="metric-row"><span class="m-label">LOGPROB</span><span id="logprob-value" class="m-val">--</span><span class="m-spark">░░░░░</span></div>
+              <div class="metric-row"><span class="m-label">PERPLEXITY</span><span id="perplexity-value" class="m-val">--</span><span class="m-spark">░░░░</span></div>
+              <div class="metric-row"><span class="m-label">SCORE</span><span id="self-score-value" class="m-val">--</span><span class="m-spark">░░░░░</span></div>
+              <div class="metric-row"><span class="m-label">VARIANCE</span><span id="variance-value" class="m-val">--</span><span class="m-spark">░░░░░</span></div>
+              <div class="metric-row"><span class="m-label">TOP-P</span><span id="top-p-value" class="m-val">--</span><span class="m-spark">░░░░░</span></div>
+              <div class="metric-row"><span class="m-label">CALIBRATION</span><span id="calibration-value" class="m-val">--</span><span class="m-spark">░░░░░</span></div>
+              <div class="metric-row"><span class="m-label">COHERENCE</span><span id="coherence-value" class="m-val">--</span><span class="m-spark">░░░░░</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- System Terminal -->
+        <div class="dashboard-section terminal-section">
+          <div class="section-header">SYSTEM LOG</div>
+          <div id="uncertainty-log" class="sys-terminal">
+            <div class="log-ready">Ready to analyze uncertainty - click Execute above</div>
+          </div>
+        </div>
       </div>
       
-      <!-- Tab Content -->
-      <div class="tab-content">
-        <!-- Race Tab -->
-        <div id="race-content" class="tab-panel active">
-<!-- Race Tab Content -->
-<div class="agent-comparison">
-  <!-- Multi-Pass Agent -->
-  <div class="agent-card multi-pass-agent">
-    <div class="agent-header">
-      <h3 class="agent-title">
-        🐌 Multi-Pass Agent (Baseline)
-                        <span id="multi-pass-status" class="agent-status">Idle</span>
-      </h3>
-      <div class="agent-progress">
-        <div class="progress-header">
-          <span>Progress</span>
-          <span id="multi-pass-progress-text">0%</span>
-        </div>
-        <div class="progress-container">
-          <div id="multi-pass-progress" class="progress-fill" style="--progress-width: 0%"></div>
-        </div>
-      </div>
-    </div>
-    <div class="agent-body">
-      <div class="race-metrics-grid">
-        <div class="metric-item">
-          <div class="metric-label">Time</div>
-          <div id="multi-pass-time" class="metric-value">--</div>
-        </div>
-        <div class="metric-item">
-          <div class="metric-label">Tokens</div>
-          <div id="multi-pass-tokens" class="metric-value">--</div>
-        </div>
-        <div class="metric-item">
-          <div class="metric-label">Calls</div>
-          <div id="multi-pass-calls" class="metric-value">--</div>
-        </div>
-        <div class="metric-item">
-          <div class="metric-label">Cost</div>
-          <div id="multi-pass-cost" class="metric-value">--</div>
-        </div>
-      </div>
-      <div id="multi-pass-log" class="agent-log">
-        <div class="log-ready">Idle - ready to execute...</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Single-Pass Agent -->
-  <div class="agent-card single-pass-agent">
-    <div class="agent-header">
-      <h3 class="agent-title">
-        🚀 Single-Pass Agent (SPOC)
-                        <span id="single-pass-status" class="agent-status">Idle</span>
-      </h3>
-      <div class="agent-progress">
-        <div class="progress-header">
-          <span>Progress</span>
-          <span id="single-pass-progress-text">0%</span>
-        </div>
-        <div class="progress-container">
-          <div id="single-pass-progress" class="progress-fill" style="--progress-width: 0%"></div>
-        </div>
-      </div>
-    </div>
-    <div class="agent-body">
-      <div class="race-metrics-grid">
-        <div class="metric-item">
-          <div class="metric-label">Time</div>
-          <div id="single-pass-time" class="metric-value">--</div>
-        </div>
-        <div class="metric-item">
-          <div class="metric-label">Tokens</div>
-          <div id="single-pass-tokens" class="metric-value">--</div>
-        </div>
-        <div class="metric-item">
-          <div class="metric-label">Calls</div>
-          <div id="single-pass-calls" class="metric-value">--</div>
-        </div>
-        <div class="metric-item">
-          <div class="metric-label">Cost</div>
-          <div id="single-pass-cost" class="metric-value">--</div>
-        </div>
-      </div>
-      <div id="single-pass-log" class="agent-log">
-        <div class="log-ready">Idle - ready to execute...</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Race Results Summary -->
-<div id="race-results" class="race-results hidden">
-  <h3 class="results-title">🏆 Comparison Results</h3>
-  <div id="winner-announcement" class="winner-announcement"></div>
-  <div class="results-grid">
-    <div class="result-item">
-      <div class="result-label">Speed Advantage</div>
-      <div id="speed-advantage" class="result-value"></div>
-    </div>
-    <div class="result-item">
-      <div class="result-label">Token Efficiency</div>
-      <div id="token-efficiency" class="result-value"></div>
-    </div>
-    <div class="result-item">
-      <div class="result-label">Cost Savings</div>
-      <div id="cost-savings" class="result-value"></div>
-    </div>
-  </div>
-</div>
-        </div>
-
-        <!-- Uncertainty Tab -->
-        <div id="uncertainty-content" class="tab-panel">
-          <div class="results-header">
-            <h3 class="results-title">
-              🔬 Model Uncertainty Analysis
-              <span id="uncertainty-status" class="result-status">Ready</span>
-            </h3>
-            <p class="results-description">Analyze token-level confidence and model uncertainty for the prompt above</p>
-          </div>
-
-          <div class="uncertainty-results">
-            <!-- Token Heat Map -->
-            <div class="result-section">
-              <h4 class="section-title">Token-Level Confidence</h4>
-              <div id="token-heatmap" class="token-heatmap">
-                <div class="heatmap-container">
-                  <div id="heatmap-text" class="heatmap-text">
-                    Click "Execute Analysis" above to see token-level confidence visualization...
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Confidence Metrics -->
-            <div class="result-section">
-              <h4 class="section-title">Sequence-Level Metrics</h4>
-              <div class="confidence-metrics">
-                <div class="metric-gauge">
-                  <div class="gauge-label">Overall Confidence</div>
-                  <div class="gauge-container">
-                    <div class="gauge-bar" id="confidence-bar">[████████████████████████░░░░░░]</div>
-                    <span id="confidence-value" class="gauge-value">--</span>
-                  </div>
-                </div>
-                <div class="metrics-grid">
-                  <div class="metric-item">
-                    <div class="metric-label">Entropy</div>
-                    <div id="entropy-value" class="metric-value">--</div>
-                    <div class="metric-sparkline">▁▂▃▄▅▆▇█▇▆▅▄▃▂▁</div>
-                  </div>
-                  <div class="metric-item">
-                    <div class="metric-label">LogProb</div>
-                    <div id="logprob-value" class="metric-value">--</div>
-                    <div class="metric-sparkline">█▇▆▅▄▃▂▁▂▃▄▅▆▇█</div>
-                  </div>
-                  <div class="metric-item">
-                    <div class="metric-label">Perplexity</div>
-                    <div id="perplexity-value" class="metric-value">--</div>
-                    <div class="metric-sparkline">▁▁▂▃▄▅▆▇█▇▆▅▄▃▂</div>
-                  </div>
-                  <div class="metric-item">
-                    <div class="metric-label">Self-Score</div>
-                    <div id="self-score-value" class="metric-value">--</div>
-                    <div class="metric-sparkline">▅▆▇█▇▆▅▄▃▂▁▂▃▄▅</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Response Log -->
-            <div class="result-section">
-              <h4 class="section-title">Analysis Log</h4>
-              <div id="uncertainty-log" class="analysis-log">
-                <div class="log-ready">Ready to analyze uncertainty - click Execute above</div>
-              </div>
-            </div>
+      <!-- Hidden elements for compatibility -->
+      <div class="hidden">
+        <div id="multi-sample-results">
+          <div id="response-variants">
+            <div id="variant-list"></div>
           </div>
         </div>
       </div>

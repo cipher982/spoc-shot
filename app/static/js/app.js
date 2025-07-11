@@ -14,8 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const multiPassTemplate = document.getElementById('multi-pass-code');
   const singlePassTemplate = document.getElementById('single-pass-code');
 
-  // Race results
-  const raceResults = document.getElementById('race-results');
 
   // No additional elements needed for simplified layout
 
@@ -43,31 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
     codeView.innerHTML = multiPassTemplate.innerHTML;
   };
 
-  // Simplified functions for new layout
-  const resetRaceState = () => {
-    // Reset multi-pass
-    document.getElementById('multi-pass-status').textContent = 'Idle';
-    document.getElementById('multi-pass-progress').style.setProperty('--progress-width', '0%');
-    document.getElementById('multi-pass-progress-text').textContent = '0%';
-    document.getElementById('multi-pass-log').innerHTML = '<div class="log-ready">Idle - ready to execute...</div>';
-    document.getElementById('multi-pass-time').textContent = '--';
-    document.getElementById('multi-pass-tokens').textContent = '--';
-    document.getElementById('multi-pass-calls').textContent = '--';
-    document.getElementById('multi-pass-cost').textContent = '--';
-    
-    // Reset single-pass
-    document.getElementById('single-pass-status').textContent = 'Idle';
-    document.getElementById('single-pass-progress').style.setProperty('--progress-width', '0%');
-    document.getElementById('single-pass-progress-text').textContent = '0%';
-    document.getElementById('single-pass-log').innerHTML = '<div class="log-ready">Idle - ready to execute...</div>';
-    document.getElementById('single-pass-time').textContent = '--';
-    document.getElementById('single-pass-tokens').textContent = '--';
-    document.getElementById('single-pass-calls').textContent = '--';
-    document.getElementById('single-pass-cost').textContent = '--';
-    
-    // Hide results
-    raceResults.classList.add('hidden');
-  };
 
   // --- WebLLM Initialization ---
   const initializeWebLLM = async () => {
@@ -112,7 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log("🔄 Creating MLC Engine with model:", selectedModel);
       
       const initProgressCallback = (report) => {
-        console.log("📊 Progress:", report);
         const progress = Math.round((report.progress || 0) * 100);
         modelProgressText.textContent = `${progress}%`;
         modelProgressBar.style.setProperty('--progress-width', `${progress}%`);
@@ -124,6 +96,13 @@ document.addEventListener('DOMContentLoaded', () => {
       // Make WebLLM engine globally available
       window.webllmEngine = webllmEngine;
       window.modelLoaded = true;
+      
+      // Update uncertainty tab status
+      const uncertaintyStatus = document.getElementById('uncertainty-status');
+      if (uncertaintyStatus) {
+        uncertaintyStatus.textContent = 'WebLLM Ready';
+        uncertaintyStatus.style.color = '#008000';
+      }
       
       console.log("✅ WebLLM engine created successfully:", webllmEngine);
 
@@ -187,30 +166,15 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     
     try {
-      // Check which tab is active
-      const activeTab = document.querySelector('.tab-button.active');
-      const isUncertaintyTab = activeTab && activeTab.id === 'uncertainty-tab';
+      console.log('🚀 Execute button clicked - Starting uncertainty analysis');
       
-      console.log('🚀 Execute button clicked - Active tab:', isUncertaintyTab ? 'uncertainty' : 'race');
-      
-      if (isUncertaintyTab) {
-        // Call the uncertainty analyzer's method if available, otherwise fallback to local implementation
-        if (window.SPOCShot && window.SPOCShot.modules && window.SPOCShot.modules.uncertainty) {
-          console.log('📊 Using uncertainty module');
-          window.SPOCShot.modules.uncertainty.startAnalysis();
-        } else {
-          console.log('📊 Using fallback uncertainty analysis');
-          startUncertaintyAnalysis(); // Fallback to local implementation
-        }
+      // Call the uncertainty analyzer's method if available, otherwise fallback to local implementation
+      if (window.SPOCShot && window.SPOCShot.modules && window.SPOCShot.modules.uncertainty) {
+        console.log('📊 Using uncertainty module');
+        window.SPOCShot.modules.uncertainty.startAnalysis();
       } else {
-        // Call the race controller's method if available, otherwise fallback to local implementation
-        if (window.SPOCShot && window.SPOCShot.modules && window.SPOCShot.modules.race) {
-          console.log('🏁 Using race module');
-          window.SPOCShot.modules.race.startRace();
-        } else {
-          console.log('🏁 Using fallback race implementation');
-          startRace(); // Fallback to local implementation
-        }
+        console.log('📊 Using fallback uncertainty analysis');
+        startUncertaintyAnalysis(); // Fallback to local implementation
       }
     } catch (error) {
       console.error('❌ Error in execute button handler:', error);
@@ -777,367 +741,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     return { ok: false, hint: "Unknown tool or scenario" };
   };
 
-  // --- Racing Functionality ---
-  let raceControllers = { multiPass: null, singlePass: null };
-  let isRacing = false;
-  
-  const startRace = async () => {
-    const prompt = promptInput.value;
-    const scenario = scenarioSelect.value;
-    
-    // Reset race state
-    resetRaceState();
-    
-    // Update UI for racing state
-    isRacing = true;
-    runButton.disabled = true;
-    runButton.textContent = 'Racing...';
-    
-    // Create abort controllers for cancellation
-    raceControllers.multiPass = new AbortController();
-    raceControllers.singlePass = new AbortController();
-    
-    try {
-      // Start both agents simultaneously
-      const multiPassPromise = runRaceAgent(prompt, 'multi_pass', scenario, raceControllers.multiPass.signal);
-      const singlePassPromise = runRaceAgent(prompt, 'single_pass', scenario, raceControllers.singlePass.signal);
-      
-      const results = await Promise.allSettled([multiPassPromise, singlePassPromise]);
-      
-      // Only show results if race wasn't cancelled
-      if (isRacing) {
-        showRaceResults(results);
-      }
-    } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error('Race error:', error);
-      }
-    } finally {
-      stopRace();
-    }
-  };
-  
-  const stopRace = (cancelled = false) => {
-    if (isRacing && cancelled) {
-      // Cancel both agents
-      if (raceControllers.multiPass) raceControllers.multiPass.abort();
-      if (raceControllers.singlePass) raceControllers.singlePass.abort();
-      
-      // Update status to cancelled only if actually cancelled
-      document.getElementById('multi-pass-status').textContent = 'Cancelled';
-      document.getElementById('single-pass-status').textContent = 'Cancelled';
-    }
-    
-    // Reset UI state
-    isRacing = false;
-    runButton.disabled = false;
-    runButton.textContent = '🚀 Execute';
-    
-    // Reset controllers
-    raceControllers = { multiPass: null, singlePass: null };
-  };
-
-
-  const runRaceAgent = async (prompt, mode, scenario, abortSignal) => {
-    const startTime = performance.now();
-    let metrics = { prompt_tokens: 0, completion_tokens: 0, latency: 0, llm_calls: 0 };
-    const prefix = mode === 'multi_pass' ? 'multi-pass' : 'single-pass';
-    let attemptCount = 0;
-    let isComplete = false;
-    
-    const statusEl = document.getElementById(`${prefix}-status`);
-    const progressEl = document.getElementById(`${prefix}-progress`);
-    const progressTextEl = document.getElementById(`${prefix}-progress-text`);
-    const logEl = document.getElementById(`${prefix}-log`);
-    const timeEl = document.getElementById(`${prefix}-time`);
-    const tokensEl = document.getElementById(`${prefix}-tokens`);
-    const callsEl = document.getElementById(`${prefix}-calls`);
-    
-    const updateRaceUI = (phase, data = {}) => {
-      // Check if cancelled
-      if (abortSignal?.aborted) {
-        throw new Error('Race cancelled');
-      }
-      
-      // Better progress calculation based on actual progress
-      let progress = 0;
-      if (phase === 'success') {
-        progress = 100;
-        isComplete = true;
-      } else if (phase === 'execute' || phase === 'tool_result') {
-        // Each attempt represents progress towards solution
-        progress = Math.min(80, attemptCount * 15 + 10);
-      } else if (phase === 'propose') {
-        progress = Math.min(70, attemptCount * 15);
-      } else if (phase === 'patch') {
-        progress = Math.min(85, attemptCount * 15 + 5);
-      }
-      
-      progressEl.style.setProperty('--progress-width', `${progress}%`);
-      progressTextEl.textContent = `${progress}%`;
-      
-      const elapsed = (performance.now() - startTime) / 1000;
-      timeEl.textContent = `${elapsed.toFixed(1)}s`;
-      const totalTokens = metrics.prompt_tokens + metrics.completion_tokens;
-      tokensEl.textContent = totalTokens;
-      callsEl.textContent = metrics.llm_calls;
-      
-      // Update cost
-      const costEl = document.getElementById(`${prefix}-cost`);
-      if (costEl) {
-        const cost = (totalTokens * 0.00003).toFixed(4);
-        costEl.textContent = `$${cost}`;
-      }
-      
-      // Add log entry
-      const entry = document.createElement('div');
-      entry.className = 'log-entry';
-      const timestamp = `[${elapsed.toFixed(1)}s]`;
-      
-      switch (phase) {
-        case 'propose':
-          entry.innerHTML = `${timestamp} 🧠 Thinking...`;
-          statusEl.textContent = 'Thinking';
-          break;
-        case 'execute':
-          const toolArgs = JSON.stringify(data.call?.args || {});
-          entry.innerHTML = `${timestamp} ⚙️ <strong>TOOL CALL:</strong> ${data.call?.name}(${toolArgs})`;
-          statusEl.textContent = 'Executing';
-          break;
-        case 'tool_result':
-          const resultClass = data.result?.ok ? 'tool-success' : 'tool-error';
-          const resultJson = JSON.stringify(data.result);
-          entry.innerHTML = `${timestamp} <span class="${resultClass}">📦 <strong>TOOL RESPONSE:</strong> ${resultJson}</span>`;
-          break;
-        case 'patch':
-          entry.innerHTML = `${timestamp} 🔧 Self-correcting...`;
-          statusEl.textContent = 'Patching';
-          break;
-        case 'success':
-          entry.innerHTML = `${timestamp} ✅ Complete!`;
-          statusEl.textContent = 'Complete';
-          statusEl.className = 'agent-status agent-status-success';
-          break;
-        case 'error':
-          entry.innerHTML = `${timestamp} ❌ Error: ${data.message}`;
-          statusEl.textContent = 'Error';
-          statusEl.className = 'agent-status agent-status-error';
-          break;
-      }
-      
-      logEl.appendChild(entry);
-      logEl.scrollTop = logEl.scrollHeight;
-    };
-    
-    try {
-      // Use real WebLLM execution
-      if (mode === 'multi_pass') {
-        await runWebLLMAgent(prompt, 'multi_pass', scenario, metrics, updateRaceUI, abortSignal, () => attemptCount++);
-      } else {
-        await runWebLLMAgent(prompt, 'single_pass', scenario, metrics, updateRaceUI, abortSignal, () => attemptCount++);
-      }
-      
-      metrics.latency = (performance.now() - startTime) / 1000;
-      return { mode, metrics, success: true };
-    } catch (error) {
-      if (error.message === 'Race cancelled' || abortSignal?.aborted) {
-        return { mode, metrics, success: false, cancelled: true };
-      }
-      updateRaceUI('error', { message: error.message });
-      return { mode, metrics, success: false, error };
-    }
-  };
-
-  const simulateMultiPassRace = async (prompt, scenario, metrics, updateUI, abortSignal, incrementAttempt) => {
-    let attemptNumber = 0;
-    let lastHint = null;
-    
-    while (true) {
-      if (abortSignal?.aborted) throw new Error('Race cancelled');
-      
-      attemptNumber++;
-      incrementAttempt();
-      updateUI('propose');
-      await sleep(800 + Math.random() * 400); // Variable delay
-      
-      if (abortSignal?.aborted) throw new Error('Race cancelled');
-      
-      metrics.llm_calls += 1;
-      metrics.prompt_tokens += 150;
-      metrics.completion_tokens += 50;
-      
-      // Learn from previous failures
-      const toolCall = { 
-        name: getToolForScenario(scenario), 
-        args: getSmartArgsForScenario(scenario, attemptNumber, lastHint) 
-      };
-      updateUI('execute', { call: toolCall });
-      await sleep(500 + Math.random() * 300);
-      
-      if (abortSignal?.aborted) throw new Error('Race cancelled');
-      
-      const result = simulateToolCall(toolCall, scenario);
-      updateUI('tool_result', { result });
-      
-      // Save hint for next attempt
-      if (!result.ok && result.hint) {
-        lastHint = result.hint;
-      }
-      
-      if (result.ok) {
-        updateUI('propose');
-        await sleep(600 + Math.random() * 400);
-        
-        if (abortSignal?.aborted) throw new Error('Race cancelled');
-        
-        metrics.llm_calls += 1; // Separate final call
-        metrics.prompt_tokens += 100;
-        metrics.completion_tokens += 30;
-        updateUI('success');
-        return;
-      } else {
-        await sleep(300);
-      }
-    }
-  };
-
-  const simulateSinglePassRace = async (prompt, scenario, metrics, updateUI, abortSignal, incrementAttempt) => {
-    let attemptNumber = 0;
-    let lastHint = null;
-    
-    while (true) {
-      if (abortSignal?.aborted) throw new Error('Race cancelled');
-      
-      attemptNumber++;
-      incrementAttempt();
-      updateUI('propose');
-      await sleep(600 + Math.random() * 200); // Faster due to KV cache
-      
-      if (abortSignal?.aborted) throw new Error('Race cancelled');
-      
-      metrics.llm_calls += 1;
-      metrics.prompt_tokens += 120; // Lower due to context reuse
-      metrics.completion_tokens += 45;
-      
-      // Learn from previous failures
-      const toolCall = { 
-        name: getToolForScenario(scenario), 
-        args: getSmartArgsForScenario(scenario, attemptNumber, lastHint) 
-      };
-      updateUI('execute', { call: toolCall });
-      await sleep(400 + Math.random() * 200);
-      
-      if (abortSignal?.aborted) throw new Error('Race cancelled');
-      
-      const result = simulateToolCall(toolCall, scenario);
-      updateUI('tool_result', { result });
-      
-      // Save hint for next attempt
-      if (!result.ok && result.hint) {
-        lastHint = result.hint;
-      }
-      
-      if (result.ok) {
-        // Single-pass continues in same context
-        await sleep(200);
-        
-        if (abortSignal?.aborted) throw new Error('Race cancelled');
-        
-        metrics.completion_tokens += 25; // Less tokens for final answer
-        updateUI('success');
-        return;
-      } else {
-        updateUI('patch');
-        await sleep(100); // Faster recovery
-      }
-    }
-  };
-
-  const getToolForScenario = (scenario) => {
-    const tools = {
-      sql: 'sql_query',
-      research: 'web_search',
-      data_analysis: 'analyze_data',
-      math_tutor: 'solve_equation'
-    };
-    return tools[scenario] || 'sql_query';
-  };
-
-  const getArgsForScenario = (scenario) => {
-    const args = {
-      sql: { column: 'conversions' },
-      research: { query: 'climate change' },
-      data_analysis: { dataset: 'user_metrics', operation: 'summary' },
-      math_tutor: { equation: '2x + 5 = 15', step: 'isolate' }
-    };
-    return args[scenario] || { column: 'conversions' };
-  };
-
-  // Smart version that learns from hints
-  const getSmartArgsForScenario = (scenario, attemptNumber, lastHint) => {
-    if (scenario === 'sql') {
-      if (attemptNumber === 1) {
-        return { column: 'conversions' }; // First attempt - will fail
-      } else if (lastHint && lastHint.includes("'convs'")) {
-        return { column: 'convs' }; // Learn from hint
-      } else {
-        return { column: 'conversions' }; // Fallback
-      }
-    } else if (scenario === 'research') {
-      if (attemptNumber === 1) {
-        return { query: 'climate change' }; // First attempt - will fail
-      } else if (lastHint && lastHint.includes('recent')) {
-        return { query: 'recent climate change data' }; // Learn from hint
-      } else {
-        return { query: 'climate change' }; // Fallback
-      }
-    } else if (scenario === 'data_analysis') {
-      if (attemptNumber === 1) {
-        return { dataset: 'user_metrics', operation: 'summary' }; // First attempt - will fail
-      } else if (lastHint && lastHint.includes('trend')) {
-        return { dataset: 'user_metrics', operation: 'trend' }; // Learn from hint
-      } else {
-        return { dataset: 'user_metrics', operation: 'summary' }; // Fallback
-      }
-    } else if (scenario === 'math_tutor') {
-      if (attemptNumber === 1) {
-        return { equation: '2x + 5 = 15', step: 'isolate' }; // First attempt - will fail
-      } else if (lastHint && lastHint.includes('simplify')) {
-        return { equation: '2x + 5 = 15', step: 'simplify' }; // Learn from hint
-      } else {
-        return { equation: '2x + 5 = 15', step: 'isolate' }; // Fallback
-      }
-    }
-    
-    // Default fallback
-    return getArgsForScenario(scenario);
-  };
-
-  const showRaceResults = (results) => {
-    raceResults.classList.remove('hidden');
-    
-    const multiResult = results[0].status === 'fulfilled' ? results[0].value : null;
-    const singleResult = results[1].status === 'fulfilled' ? results[1].value : null;
-    
-    if (multiResult && singleResult) {
-      const speedAdvantage = ((multiResult.metrics.latency - singleResult.metrics.latency) / multiResult.metrics.latency * 100).toFixed(1);
-      const tokenSavings = ((multiResult.metrics.prompt_tokens + multiResult.metrics.completion_tokens) - (singleResult.metrics.prompt_tokens + singleResult.metrics.completion_tokens));
-      const costSavings = (tokenSavings * 0.00001 * 1000).toFixed(2); // Rough cost estimate
-      
-      document.getElementById('winner-announcement').innerHTML = 
-        singleResult.metrics.latency < multiResult.metrics.latency 
-          ? '🚀 Single-Pass Wins!' 
-          : '🐌 Multi-Pass Wins!';
-      
-      document.getElementById('speed-advantage').textContent = `${speedAdvantage}% faster`;
-      document.getElementById('token-efficiency').textContent = `${tokenSavings} tokens saved`;
-      document.getElementById('cost-savings').textContent = `$${costSavings} saved per 1K runs`;
-    }
-  };
-
-  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-  // --- Uncertainty Analysis Functions ---
   const startUncertaintyAnalysis = async () => {
     const prompt = promptInput.value;
     const scenario = scenarioSelect.value;
@@ -1204,6 +807,10 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     const logprobValue = document.getElementById('logprob-value');
     const perplexityValue = document.getElementById('perplexity-value');
     const selfScoreValue = document.getElementById('self-score-value');
+    const varianceValue = document.getElementById('variance-value');
+    const topPValue = document.getElementById('top-p-value');
+    const calibrationValue = document.getElementById('calibration-value');
+    const coherenceValue = document.getElementById('coherence-value');
     const uncertaintyLog = document.getElementById('uncertainty-log');
     const variantSection = document.getElementById('variant-section');
     
@@ -1213,39 +820,47 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     }
     
     uncertaintyStatus.textContent = 'Idle';
-    heatmapText.innerHTML = `
-      <span class="token token-confidence-high" title="Demo: High confidence">[Demo]</span>
-      <span class="token token-confidence-very-high" title="Demo: High confidence">Model</span>
-      <span class="token token-confidence-good" title="Demo: Good confidence">uncertainty</span>
-      <span class="token token-confidence-medium" title="Demo: Medium confidence">analysis</span>
-      <span class="token token-confidence-low" title="Demo: Low confidence">visualizes</span>
-      <span class="token token-confidence-very-low" title="Demo: Very low confidence">token-level</span>
-      <span class="token token-confidence-very-high" title="Demo: High confidence">confidence...</span>
-    `;
+    heatmapText.innerHTML = `<span style="color: #999; font-style: italic;">Waiting to analyze...</span>`;
     
-    // Update ASCII bar - it's text content, not width
-    confidenceBar.textContent = '[████████████████████████░░░░░░]';
+    // Update ASCII bar - reset to empty state
+    confidenceBar.textContent = '[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]';
     confidenceBar.classList.add('demo-opacity');
     
     if (confidenceValue) {
-      confidenceValue.textContent = '75%';
+      confidenceValue.textContent = '--';
       confidenceValue.classList.add('metrics-loading');
     }
     if (entropyValue) {
-      entropyValue.textContent = '1.45';
+      entropyValue.textContent = '--';
       entropyValue.classList.add('metrics-loading');
     }
     if (logprobValue) {
-      logprobValue.textContent = '-2.31';
+      logprobValue.textContent = '--';
       logprobValue.classList.add('metrics-loading');
     }
     if (perplexityValue) {
-      perplexityValue.textContent = '3.82';
+      perplexityValue.textContent = '--';
       perplexityValue.classList.add('metrics-loading');
     }
     if (selfScoreValue) {
-      selfScoreValue.textContent = '0.72';
+      selfScoreValue.textContent = '--';
       selfScoreValue.classList.add('metrics-loading');
+    }
+    if (varianceValue) {
+      varianceValue.textContent = '--';
+      varianceValue.classList.add('metrics-loading');
+    }
+    if (topPValue) {
+      topPValue.textContent = '--';
+      topPValue.classList.add('metrics-loading');
+    }
+    if (calibrationValue) {
+      calibrationValue.textContent = '--';
+      calibrationValue.classList.add('metrics-loading');
+    }
+    if (coherenceValue) {
+      coherenceValue.textContent = '--';
+      coherenceValue.classList.add('metrics-loading');
     }
     if (uncertaintyLog) {
       uncertaintyLog.innerHTML = `
@@ -1656,7 +1271,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
   // --- Initial Setup ---
   updateCodeView();
-  resetRaceState();
   setUncertaintyIdle();
   
   // Check server configuration and initialize accordingly
