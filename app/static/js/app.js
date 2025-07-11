@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentScenario = 'sql';
   let webllmEngine = null;
   let modelLoaded = false;
+  
+  // --- Utility Functions ---
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   // Scenario configurations
   const scenarioPrompts = {
@@ -167,15 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     try {
       console.log('🚀 Execute button clicked - Starting uncertainty analysis');
-      
-      // Call the uncertainty analyzer's method if available, otherwise fallback to local implementation
-      if (window.SPOCShot && window.SPOCShot.modules && window.SPOCShot.modules.uncertainty) {
-        console.log('📊 Using uncertainty module');
-        window.SPOCShot.modules.uncertainty.startAnalysis();
-      } else {
-        console.log('📊 Using fallback uncertainty analysis');
-        startUncertaintyAnalysis(); // Fallback to local implementation
-      }
+      startUncertaintyAnalysis();
     } catch (error) {
       console.error('❌ Error in execute button handler:', error);
       // Reset button state on error
@@ -903,40 +898,53 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
     updateUncertaintyLog('info', 'Generating response with logprobs...');
 
-    // Clear existing heatmap
-    const heatmapElement = document.getElementById('heatmap-text');
-    heatmapElement.innerHTML = '';
+    try {
+      // Clear existing heatmap
+      const heatmapElement = document.getElementById('heatmap-text');
+      heatmapElement.innerHTML = '';
 
-    const chunks = await webllmEngine.chat.completions.create({
-      messages,
-      temperature: 0.1,
-      stream: true,
-      logprobs: true,
-      top_logprobs: 1  // Request at least one for confidence
-    });
+      const chunks = await webllmEngine.chat.completions.create({
+        messages,
+        temperature: 0.7,
+        max_tokens: 200,
+        stream: true,
+        logprobs: true,
+        top_logprobs: 1
+      });
 
-    let fullResponse = '';
-    let tokens = [];
-    let logprobs = [];
+      let fullResponse = '';
+      let tokens = [];
+      let logprobs = [];
 
-    for await (const chunk of chunks) {
-      const delta = chunk.choices[0]?.delta;
-      if (delta?.content) {
-        fullResponse += delta.content;
-        tokens.push(delta.content);
-        if (delta.logprobs) {
-          logprobs.push(delta.logprobs);
+      for await (const chunk of chunks) {
+        const choice = chunk.choices[0];
+        const delta = choice?.delta;
+        if (delta?.content) {
+          fullResponse += delta.content;
+          tokens.push(delta.content);
+          
+          // Logprobs are in choice.logprobs, NOT delta.logprobs
+          const chunkLogprobs = choice?.logprobs;
+          if (chunkLogprobs) {
+            logprobs.push(chunkLogprobs);
+          }
+          appendTokenToHeatmap(delta.content, chunkLogprobs);
         }
-        appendTokenToHeatmap(delta.content, delta.logprobs);
       }
+
+      updateUncertaintyLog('response', fullResponse);
+
+      // After streaming, compute and update sequence metrics
+      updateSequenceLevelMetrics(tokens, logprobs);
+
+      document.getElementById('uncertainty-status').textContent = 'Complete';
+    } catch (error) {
+      console.error('WebLLM uncertainty analysis failed:', error);
+      updateUncertaintyLog('error', `WebLLM analysis failed: ${error.message}`);
+      
+      // Fallback to simulation
+      await simulateUncertaintyAnalysis(prompt, scenario);
     }
-
-    updateUncertaintyLog('response', fullResponse);
-
-    // After streaming, compute and update sequence metrics
-    updateSequenceLevelMetrics(tokens, logprobs);
-
-    document.getElementById('uncertainty-status').textContent = 'Complete';
   }
 
   function appendTokenToHeatmap(token, logprobs) {
@@ -951,24 +959,31 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     let confidence = 0.5; // Default middle confidence
     let logprob = Math.log(confidence);
 
-    if (logprobs && logprobs.content && logprobs.content.length > 0) {
-      logprob = logprobs.content[0].logprob;
-      confidence = Math.exp(logprob);
-    } else {
-      // Fallback simulation
-      confidence = 0.3 + Math.random() * 0.7;
-      logprob = Math.log(confidence);
+    if (!logprobs) {
+      throw new Error(`No logprobs provided for token: ${JSON.stringify(token)}`);
     }
+    if (!logprobs.content || logprobs.content.length === 0) {
+      throw new Error(`Invalid logprobs structure for token ${JSON.stringify(token)}: ${JSON.stringify(logprobs)}`);
+    }
+    
+    logprob = logprobs.content[0].logprob;
+    confidence = Math.exp(logprob);
 
     // Assign class based on confidence level
     if (isPunctuation) {
       span.className = 'token token-punctuation';
-    } else if (confidence > 0.7) {
-      span.className = 'token token-high-confidence';
-    } else if (confidence > 0.4) {
-      span.className = 'token token-medium-confidence';
+    } else if (confidence >= 0.9) {
+      span.className = 'token token-confidence-very-high';
+    } else if (confidence >= 0.7) {
+      span.className = 'token token-confidence-high';
+    } else if (confidence >= 0.5) {
+      span.className = 'token token-confidence-good';
+    } else if (confidence >= 0.3) {
+      span.className = 'token token-confidence-medium';
+    } else if (confidence >= 0.1) {
+      span.className = 'token token-confidence-low';
     } else {
-      span.className = 'token token-low-confidence';
+      span.className = 'token token-confidence-very-low';
     }
 
     // Add tooltip with confidence info
@@ -1147,20 +1162,24 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       barElement.textContent = '[' + '█'.repeat(filledBars) + '░'.repeat(emptyBars) + ']';
     }
 
-    // Update distribution chart
-    const distBins = [0, 0, 0, 0, 0]; // 5 bins: 0-20%, 20-40%, etc
-    confidences.forEach(conf => {
-      const bin = Math.min(Math.floor(conf * 5), 4);
-      distBins[bin]++;
-    });
-
+    // Update distribution chart (only if elements exist)
     const distBars = document.querySelectorAll('.dist-bar');
-    const maxBin = Math.max(...distBins);
-    distBins.forEach((count, i) => {
-      const height = maxBin > 0 ? (count / maxBin) * 100 : 0;
-      distBars[i].style.height = `${height}%`;
-      distBars[i].className = `dist-bar dist-bar-${i + 1}`;
-    });
+    if (distBars.length > 0) {
+      const distBins = [0, 0, 0, 0, 0]; // 5 bins: 0-20%, 20-40%, etc
+      confidences.forEach(conf => {
+        const bin = Math.min(Math.floor(conf * 5), 4);
+        distBins[bin]++;
+      });
+
+      const maxBin = Math.max(...distBins);
+      distBins.forEach((count, i) => {
+        if (distBars[i]) {
+          const height = maxBin > 0 ? (count / maxBin) * 100 : 0;
+          distBars[i].style.height = `${height}%`;
+          distBars[i].className = `dist-bar dist-bar-${i + 1}`;
+        }
+      });
+    }
 
     // Generate dynamic sparklines (simplified for now)
     updateSparklines(logprobValues);

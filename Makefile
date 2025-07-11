@@ -48,10 +48,16 @@ dev:
 
 # Run tests
 test:
-	@echo "🧪 Running tests..."
+	@echo "🧪 Running WebLLM integration tests..."
 	@[ ! -f .env ] && cp .env.example .env || true
+	@uv run python test_webllm_integration.py
+	@echo ""
+	@echo "🧪 Running REAL WebLLM logprobs test..."
+	@uv run python test_webllm_logprobs.py
+	@echo ""
+	@echo "🧪 Running additional tests..."
 	@uv run python test_setup.py 2>/dev/null || true
-	@uv run pytest -q 2>/dev/null || echo "No tests found"
+	@uv run pytest -q 2>/dev/null || echo "No pytest tests found"
 
 # Clean temporary files
 clean:
