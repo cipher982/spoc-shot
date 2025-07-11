@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="/static/css/components/tabs.css">
   <link rel="stylesheet" href="/static/css/components/race.css">
   <link rel="stylesheet" href="/static/css/components/uncertainty.css">
+  <link rel="stylesheet" href="/static/css/components/unified.css">
 </head>
 <body>
   <div class="main-container">
@@ -51,28 +52,20 @@
       </div>
     </div>
 
-    <!-- Control Panel -->
-    <div class="control-panel">
-      <div class="control-group">
-        <div class="scenario-group">
-          <label for="scenario-select" class="control-label">Scenario</label>
-          <select id="scenario-select" name="scenario" class="control-select">
-            <option value="sql" selected>🗃️ SQL Query Agent</option>
-            <option value="research">🔍 Research Agent</option>
-            <option value="data_analysis">📊 Data Analyst</option>
+    <!-- Compact Control Panel -->
+    <div class="compact-controls">
+      <div class="control-row">
+        <div class="select-wrapper">
+          <select id="scenario-select" name="scenario" class="compact-select">
+            <option value="sql" selected>🗃️ SQL Query</option>
+            <option value="research">🔍 Research</option>
+            <option value="data_analysis">📊 Data Analysis</option>
             <option value="math_tutor">🧮 Math Tutor</option>
           </select>
+          <div class="select-arrow">▼</div>
         </div>
-        <div class="prompt-group">
-          <label for="prompt-input" class="control-label">Prompt</label>
-          <textarea id="prompt-input" name="prompt" rows="2" class="control-textarea" placeholder="Enter your prompt here...">How many conversions did we get this week?</textarea>
-        </div>
-        <div class="button-group">
-          <label class="control-label">&nbsp;</label>
-          <button id="run-button" type="button" class="run-button">
-            🚀 Execute
-          </button>
-        </div>
+        <textarea id="prompt-input" name="prompt" rows="2" class="compact-textarea" placeholder="Prompt...">How many conversions did we get this week?</textarea>
+        <button id="run-button" type="button" class="compact-execute-button">🚀 Execute</button>
       </div>
     </div>
 
@@ -201,110 +194,71 @@
 
         <!-- Uncertainty Tab -->
         <div id="uncertainty-content" class="tab-panel">
-<!-- Uncertainty Tab Content -->
-<div class="uncertainty-analysis">
-  <div class="uncertainty-agent-card">
-    <div class="uncertainty-header">
-      <h3 class="uncertainty-title">
-        🔬 Model Uncertainty Analysis
-        <span id="uncertainty-status" class="agent-status">Idle</span>
-      </h3>
-    </div>
-    
-    <div class="uncertainty-body">
-      <!-- Token Heat Map -->
-      <div class="uncertainty-section">
-        <h4 class="section-title">Token-Level Confidence</h4>
-        <div id="token-heatmap" class="token-heatmap">
+          <div class="results-header">
+            <h3 class="results-title">
+              🔬 Model Uncertainty Analysis
+              <span id="uncertainty-status" class="result-status">Ready</span>
+            </h3>
+            <p class="results-description">Analyze token-level confidence and model uncertainty for the prompt above</p>
+          </div>
 
-          <div class="heatmap-container smooth-transitions">
-            <div id="heatmap-text" class="heatmap-text">
-              Run analysis to see token-level confidence visualization...
+          <div class="uncertainty-results">
+            <!-- Token Heat Map -->
+            <div class="result-section">
+              <h4 class="section-title">Token-Level Confidence</h4>
+              <div id="token-heatmap" class="token-heatmap">
+                <div class="heatmap-container">
+                  <div id="heatmap-text" class="heatmap-text">
+                    Click "Execute Analysis" above to see token-level confidence visualization...
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Confidence Metrics -->
-      <div class="uncertainty-section">
-        <h4 class="section-title">Sequence-Level Metrics</h4>
-        <div class="confidence-metrics">
-          <div class="metric-gauge">
-            <div class="gauge-label">Overall</div>
-            <div class="gauge-container">
-              <div class="gauge-bar" id="confidence-bar">[████████████████████████░░░░░░]</div>
-              <span id="confidence-value" class="gauge-value">--</span>
+            <!-- Confidence Metrics -->
+            <div class="result-section">
+              <h4 class="section-title">Sequence-Level Metrics</h4>
+              <div class="confidence-metrics">
+                <div class="metric-gauge">
+                  <div class="gauge-label">Overall Confidence</div>
+                  <div class="gauge-container">
+                    <div class="gauge-bar" id="confidence-bar">[████████████████████████░░░░░░]</div>
+                    <span id="confidence-value" class="gauge-value">--</span>
+                  </div>
+                </div>
+                <div class="metrics-grid">
+                  <div class="metric-item">
+                    <div class="metric-label">Entropy</div>
+                    <div id="entropy-value" class="metric-value">--</div>
+                    <div class="metric-sparkline">▁▂▃▄▅▆▇█▇▆▅▄▃▂▁</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">LogProb</div>
+                    <div id="logprob-value" class="metric-value">--</div>
+                    <div class="metric-sparkline">█▇▆▅▄▃▂▁▂▃▄▅▆▇█</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">Perplexity</div>
+                    <div id="perplexity-value" class="metric-value">--</div>
+                    <div class="metric-sparkline">▁▁▂▃▄▅▆▇█▇▆▅▄▃▂</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">Self-Score</div>
+                    <div id="self-score-value" class="metric-value">--</div>
+                    <div class="metric-sparkline">▅▆▇█▇▆▅▄▃▂▁▂▃▄▅</div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="uncertainty-metrics-grid">
-            <div class="metric-item">
-              <div class="metric-label">Entropy</div>
-              <div id="entropy-value" class="metric-value">--</div>
-              <div class="metric-sparkline">▁▂▃▄▅▆▇█▇▆▅▄▃▂▁</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">LogProb</div>
-              <div id="logprob-value" class="metric-value">--</div>
-              <div class="metric-sparkline">█▇▆▅▄▃▂▁▂▃▄▅▆▇█</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">Perplexity</div>
-              <div id="perplexity-value" class="metric-value">--</div>
-              <div class="metric-sparkline">▁▁▂▃▄▅▆▇█▇▆▅▄▃▂</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">Self-Score</div>
-              <div id="self-score-value" class="metric-value">--</div>
-              <div class="metric-sparkline">▅▆▇█▇▆▅▄▃▂▁▂▃▄▅</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">Variance</div>
-              <div id="variance-value" class="metric-value">--</div>
-              <div class="metric-sparkline">▂▃▄▅▆▇█▇▆▅▄▃▂▁▂</div>
-            </div>
-            <div class="metric-item">
-              <div class="metric-label">Top-P</div>
-              <div id="top-p-value" class="metric-value">--</div>
-              <div class="metric-sparkline">█████▇▇▆▆▅▅▄▄▃▃</div>
-            </div>
-          </div>
-          <div class="token-distribution">
-            <div class="distribution-label">TOKEN CONFIDENCE DISTRIBUTION</div>
-            <div class="distribution-bars" id="dist-bars">
-              <div class="dist-bar" style="height: 20%" data-label="0-20"></div>
-              <div class="dist-bar" style="height: 35%" data-label="20-40"></div>
-              <div class="dist-bar" style="height: 60%" data-label="40-60"></div>
-              <div class="dist-bar" style="height: 85%" data-label="60-80"></div>
-              <div class="dist-bar" style="height: 95%" data-label="80-100"></div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Multi-Sample Variants -->
-      <div id="variant-section" class="uncertainty-section hidden">
-        <h4 class="section-title">Response Variants</h4>
-        <div id="variant-viewer" class="variant-viewer">
-          <div class="variant-summary">
-            <span id="semantic-entropy">Semantic Entropy: --</span>
-            <button id="toggle-variants" class="toggle-variants">Show Variants</button>
+            <!-- Response Log -->
+            <div class="result-section">
+              <h4 class="section-title">Analysis Log</h4>
+              <div id="uncertainty-log" class="analysis-log">
+                <div class="log-ready">Ready to analyze uncertainty - click Execute above</div>
+              </div>
+            </div>
           </div>
-          <div id="variant-list" class="variant-list hidden">
-            <!-- Variants will be populated here -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Response Log -->
-      <div class="uncertainty-section">
-        <h4 class="section-title">Model Response</h4>
-        <div id="uncertainty-log" class="uncertainty-log">
-          <div class="log-ready">Idle - ready for uncertainty analysis...</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
         </div>
       </div>
     </div>

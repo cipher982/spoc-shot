@@ -5,6 +5,109 @@
   display: block;
 }
 
+/* Prompt Selection Interface */
+.prompt-selection {
+  background: var(--win98-face);
+  border: 2px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.quick-examples {
+  margin-bottom: var(--space-md);
+}
+
+.example-buttons {
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+  margin-top: var(--space-sm);
+}
+
+.example-btn {
+  background: var(--win98-face);
+  border: 2px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-family);
+  font-size: var(--font-sm);
+  font-weight: bold;
+  color: var(--win98-text);
+  cursor: pointer;
+  transition: all 0.1s ease;
+  white-space: nowrap;
+}
+
+.example-btn:hover {
+  background: #E0E0E0;
+}
+
+.example-btn:active {
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  background: #D0D0D0;
+}
+
+.custom-prompt {
+  border-top: 1px solid var(--win98-shadow);
+  padding-top: var(--space-md);
+}
+
+.custom-input-group {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  align-items: flex-start;
+}
+
+.custom-textarea {
+  flex: 1;
+  background: white;
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  padding: var(--space-xs);
+  font-family: var(--font-family);
+  font-size: var(--font-sm);
+  color: var(--win98-text);
+  resize: vertical;
+  min-height: 60px;
+}
+
+.custom-textarea:focus {
+  outline: none;
+  background: #FFFACD;
+}
+
+.analyze-button {
+  background: var(--win98-face);
+  border: 2px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  padding: var(--space-xs) var(--space-sm);
+  font-family: var(--font-family);
+  font-size: var(--font-sm);
+  font-weight: bold;
+  color: var(--win98-text);
+  cursor: pointer;
+  transition: all 0.1s ease;
+  white-space: nowrap;
+  height: fit-content;
+}
+
+.analyze-button:hover {
+  background: #E0E0E0;
+}
+
+.analyze-button:active {
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  background: #D0D0D0;
+}
+
+.analyze-button:disabled {
+  background: #C0C0C0;
+  color: #808080;
+  cursor: not-allowed;
+}
+
 .uncertainty-header {
   /* Header with gradient for depth */
   background: linear-gradient(to bottom, var(--win98-face) 0%, #B0B0B0 100%);

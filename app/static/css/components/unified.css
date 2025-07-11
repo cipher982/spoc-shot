@@ -1,0 +1,190 @@
+/* Compact Interface Styling - Windows 98 Theme */
+
+/* Compact Control Panel */
+.compact-controls {
+  background: var(--win98-face);
+  border: 2px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  margin: var(--space-sm) 0;
+  padding: var(--space-sm);
+}
+
+.control-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+}
+
+/* Compact Select */
+.select-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  width: 140px;
+}
+
+.compact-select {
+  width: 100%;
+  background: white;
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  padding: 4px 20px 4px 6px;
+  font-family: var(--font-family);
+  font-size: var(--font-sm);
+  color: var(--win98-text);
+  appearance: none;
+  cursor: pointer;
+}
+
+.compact-select:focus {
+  outline: none;
+  background: #FFFACD;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 10px;
+  color: #666;
+}
+
+/* Compact Textarea */
+.compact-textarea {
+  flex: 1;
+  background: white;
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  padding: 4px 6px;
+  font-family: var(--font-family);
+  font-size: var(--font-sm);
+  color: var(--win98-text);
+  resize: none;
+  min-height: 40px;
+}
+
+.compact-textarea:focus {
+  outline: none;
+  background: #FFFACD;
+}
+
+/* Compact Execute Button */
+.compact-execute-button {
+  background: var(--win98-face);
+  border: 2px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  padding: 4px 12px;
+  font-family: var(--font-family);
+  font-size: var(--font-sm);
+  font-weight: bold;
+  color: var(--win98-text);
+  cursor: pointer;
+  transition: all 0.1s ease;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.compact-execute-button:hover {
+  background: #E0E0E0;
+}
+
+.compact-execute-button:active {
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  background: #D0D0D0;
+}
+
+.compact-execute-button:disabled {
+  background: #C0C0C0;
+  color: #808080;
+  cursor: not-allowed;
+}
+
+/* Results Header Styling */
+.results-header {
+  background: var(--win98-face);
+  border: 2px solid;
+  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  text-align: center;
+}
+
+.results-title {
+  font-size: var(--font-lg);
+  font-weight: bold;
+  margin: 0 0 var(--space-xs) 0;
+  color: var(--win98-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.results-description {
+  font-size: var(--font-sm);
+  color: #666;
+  margin: 0;
+}
+
+.result-status {
+  background: #E0E0E0;
+  border: 1px solid var(--win98-shadow);
+  padding: 2px 6px;
+  font-size: var(--font-xs);
+  border-radius: 2px;
+}
+
+/* Result Sections */
+.result-section {
+  background: #111;
+  border: 1px solid #333;
+  padding: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.result-section h4 {
+  background: none;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  padding: 2px 0;
+  margin: -var(--space-sm) -var(--space-sm) var(--space-sm) -var(--space-sm);
+  font-size: 10px;
+  font-weight: bold;
+  color: #000;
+  text-transform: uppercase;
+  font-family: "Courier New", monospace;
+  letter-spacing: 1px;
+}
+
+/* Analysis Log */
+.analysis-log {
+  background: #000;
+  border: 2px solid;
+  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  padding: var(--space-sm);
+  min-height: 120px;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  color: #fff;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .control-step {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .step-number {
+    margin-bottom: var(--space-xs);
+  }
+  
+  .unified-execute-button {
+    font-size: var(--font-sm);
+    padding: var(--space-xs) var(--space-md);
+  }
+}

@@ -9,6 +9,37 @@
     </div>
     
     <div class="uncertainty-body">
+      <!-- Prompt Selection Section -->
+      <div class="uncertainty-section">
+        <div class="prompt-selection">
+          <div class="quick-examples">
+            <h4 class="section-title">Quick Examples:</h4>
+            <div class="example-buttons">
+              <button class="example-btn" data-scenario="sql" data-prompt="How many conversions did we get this week?">
+                🔍 SQL Query
+              </button>
+              <button class="example-btn" data-scenario="research" data-prompt="What are the latest developments in climate change research?">
+                📊 Research
+              </button>
+              <button class="example-btn" data-scenario="data_analysis" data-prompt="Analyze the user engagement trends from our metrics data">
+                📈 Data Analysis
+              </button>
+              <button class="example-btn" data-scenario="math_tutor" data-prompt="Solve the equation: 2x + 5 = 15">
+                🧮 Math
+              </button>
+            </div>
+          </div>
+          
+          <div class="custom-prompt">
+            <h4 class="section-title">Or analyze your own prompt:</h4>
+            <div class="custom-input-group">
+              <textarea id="uncertainty-prompt-input" rows="3" class="custom-textarea" placeholder="Type anything you want to analyze..."></textarea>
+              <button id="uncertainty-analyze-btn" class="analyze-button">🚀 Analyze</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <!-- Token Heat Map -->
       <div class="uncertainty-section">
         <h4 class="section-title">Token-Level Confidence</h4>

@@ -5,10 +5,17 @@ export class UncertaintyAnalyzer {
   }
 
   init() {
-    // No separate analyze button - analysis is triggered by main execute button
+    // Set up event listeners for the new UI
+    this.setupEventListeners();
+  }
+
+  setupEventListeners() {
+    // No separate event listeners needed - unified interface handles everything
+    console.log('✅ Uncertainty analyzer initialized - using unified controls');
   }
 
   async startAnalysis() {
+    // Legacy method for shared control panel (Tab A compatibility)
     const prompt = document.getElementById('prompt-input').value;
     const scenario = document.getElementById('scenario-select').value;
     
@@ -19,6 +26,17 @@ export class UncertaintyAnalyzer {
       runButton.textContent = 'Analyzing...';
     }
     
+    await this.startAnalysisWithPrompt(prompt, scenario);
+    
+    // Reset button state
+    if (runButton) {
+      runButton.disabled = false;
+      runButton.textContent = '🚀 Execute';
+    }
+  }
+
+  async startAnalysisWithPrompt(prompt, scenario) {
+    // New method that actually uses the provided prompt
     this.resetUI();
     this.updateStatus('Analyzing...');
     
@@ -27,12 +45,6 @@ export class UncertaintyAnalyzer {
     } catch (error) {
       console.error('Uncertainty analysis error:', error);
       this.updateLog('error', `Analysis failed: ${error.message}`);
-    } finally {
-      // Reset button state
-      if (runButton) {
-        runButton.disabled = false;
-        runButton.textContent = '🚀 Execute';
-      }
     }
   }
 
@@ -100,11 +112,16 @@ export class UncertaintyAnalyzer {
   }
 
   async runSingleResponseAnalysis(prompt, scenario) {
-    this.updateLog('info', 'Running single response analysis...');
+    this.updateLog('info', `Analyzing prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`);
     
-    // Simulate analysis
+    // Simulate analysis with actual prompt
     await this.sleep(1000);
-    const response = this.getResponseForScenario(scenario);
+    
+    // Use actual prompt for custom scenarios, fallback to predefined for quick examples
+    const response = scenario === 'custom' ? 
+      this.generateResponseForCustomPrompt(prompt) : 
+      this.getResponseForScenario(scenario);
+      
     this.updateLog('response', response);
     
     await this.sleep(500);
@@ -202,6 +219,26 @@ export class UncertaintyAnalyzer {
       math_tutor: "To solve 2x + 5 = 15: First, subtract 5 from both sides: 2x = 10. Then divide by 2: x = 5."
     };
     return responses[scenario] || responses.sql;
+  }
+
+  generateResponseForCustomPrompt(prompt) {
+    // Generate a simulated response based on the actual custom prompt
+    const promptLower = prompt.toLowerCase();
+    
+    // Simple keyword-based response generation for demo purposes
+    if (promptLower.includes('math') || promptLower.includes('solve') || promptLower.includes('equation')) {
+      return `Looking at this mathematical problem: "${prompt}", I need to work through the steps systematically to find the solution.`;
+    } else if (promptLower.includes('data') || promptLower.includes('analysis') || promptLower.includes('metrics')) {
+      return `Based on the data analysis request: "${prompt}", I've examined the relevant datasets and identified key trends and patterns.`;
+    } else if (promptLower.includes('research') || promptLower.includes('study') || promptLower.includes('findings')) {
+      return `Regarding your research question: "${prompt}", recent studies and literature provide several important insights worth considering.`;
+    } else if (promptLower.includes('sql') || promptLower.includes('database') || promptLower.includes('query')) {
+      return `For the database query: "${prompt}", I've executed the relevant SQL statements and compiled the results from our data warehouse.`;
+    } else {
+      // Generic response that incorporates part of the user's prompt
+      const firstPart = prompt.substring(0, 100);
+      return `Analyzing your request: "${firstPart}${prompt.length > 100 ? '...' : ''}", I've processed the information and generated a comprehensive response based on the available data and context.`;
+    }
   }
 
   generateVariants(scenario) {

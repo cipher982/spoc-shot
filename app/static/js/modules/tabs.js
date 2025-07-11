@@ -44,5 +44,14 @@ export class TabManager {
     } else {
       console.error('❌ Target panel not found:', `${targetTab}-content`);
     }
+    
+    // Handle tab-specific UI behavior
+    this.updateUIForTab(targetTab);
+  }
+
+  updateUIForTab(targetTab) {
+    // With unified interface, no need to change controls between tabs
+    // Controls stay static, only results change
+    console.log('✅ Tab switched to:', targetTab, '- controls remain consistent');
   }
 }
