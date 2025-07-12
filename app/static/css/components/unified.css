@@ -107,7 +107,7 @@
   border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
   padding: 4px 6px;
   font-family: var(--font-family);
-  font-size: var(--font-sm);
+  font-size: var(--font-base); /* Increased from --font-sm to --font-base */
   color: var(--win98-text);
   resize: none;
   min-height: 40px;

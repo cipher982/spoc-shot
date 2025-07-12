@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const modelProgressBar = document.getElementById('model-progress-bar');
 
   // --- State Management ---
-  let currentScenario = 'sql';
+  let currentScenario = 'creative_writer';
   let webllmEngine = null;
   let modelLoaded = false;
   
@@ -50,10 +50,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Scenario configurations
   const scenarioPrompts = {
-    sql: "How many conversions did we get this week?",
-    research: "What are the latest developments in climate change research?",
-    data_analysis: "Analyze the user engagement trends from our metrics data",
-    math_tutor: "Solve the equation: 2x + 5 = 15"
+    creative_writer: "Write a short story about a robot learning to paint",
+    riddle_solver: "What gets wetter the more it dries?",
+    would_you_rather: "Would you rather have the ability to fly or be invisible?",
+    quick_brainstorm: "Give me 5 creative uses for a paperclip",
+    story_continues: "It was a dark and stormy night when suddenly..."
   };
 
 
@@ -196,558 +197,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // No additional setup needed for simplified layout
 
-  // --- WebLLM Agent Implementation ---
-  const runWebLLMAgent = async (prompt, mode, scenario = 'sql', metrics = null, updateUI = null, abortSignal = null, incrementAttempt = null) => {
-    console.log(`Running WebLLM agent in ${mode} mode, ${scenario} scenario with prompt: ${prompt}`);
-    
-    // Check if WebLLM is available
-    if (!webllmEngine || !modelLoaded) {
-      throw new Error('WebLLM not initialized. Please wait for model loading to complete.');
-    }
-    
-    // If no custom metrics/UI provided, use default behavior
-    if (!metrics) {
-      log.innerHTML = '<div class="log-ready">Running agent with WebLLM...</div>';
-      resetMetrics();
-      metrics = { prompt_tokens: 0, completion_tokens: 0, latency: 0, llm_calls: 0 };
-      const startTime = performance.now();
-      
-      try {
-        if (mode === 'multi_pass') {
-          await runMultiPassWebLLM(prompt, metrics, startTime, scenario);
-        } else {
-          await runSinglePassWebLLM(prompt, metrics, startTime, scenario);
-        }
-      } catch (error) {
-        console.error('WebLLM agent error:', error);
-        handleSseMessage({
-          phase: 'error',
-          message: `WebLLM error: ${error.message}`,
-          metrics: metrics
-        });
-      } finally {
-        runButton.disabled = false;
-        runButton.textContent = 'Run Agent';
-      }
-      return;
-    }
-    
-    // Race mode with custom UI callbacks
-    const startTime = performance.now();
-    let attemptNumber = 0;
-    const maxAttempts = mode === 'multi_pass' ? 3 : 2;
-    
-    if (mode === 'multi_pass') {
-      // Multi-pass: separate LLM calls for each attempt
-      while (attemptNumber < maxAttempts) {
-        if (abortSignal?.aborted) throw new Error('Race cancelled');
-        
-        attemptNumber++;
-        if (incrementAttempt) incrementAttempt();
-        if (updateUI) updateUI('propose');
-        
-        const systemPrompt = `You are a helpful assistant that uses tools to answer questions. When you encounter an error, you'll need to make a separate tool call to fix it.`;
-        const messages = [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ];
+  // Simple uncertainty analysis - no more complex agent logic needed
 
-        try {
-          const response = await webllmEngine.chat.completions.create({
-            messages: messages,
-            max_tokens: 200,
-            temperature: 0.7,
-            tools: getToolDefinitionsForScenario(scenario)
-          });
+  // No more tool execution needed for creative scenarios
 
-          metrics.llm_calls += 1;
-          metrics.prompt_tokens += estimateTokens(messages);
-          metrics.completion_tokens += estimateTokens([{ role: 'assistant', content: response.choices[0].message.content }]);
+  // Multi-pass logic removed - no longer needed for simple creative scenarios
 
-          const toolCall = response.choices[0].message.tool_calls?.[0];
-          if (toolCall) {
-            if (updateUI) updateUI('execute', { call: { name: toolCall.function.name, args: JSON.parse(toolCall.function.arguments) } });
-            
-            // Execute real tool via backend
-            const result = await executeRealToolCall(toolCall.function.name, JSON.parse(toolCall.function.arguments));
-            if (updateUI) updateUI('tool_result', { result });
-            
-            if (result.ok) {
-              // Second LLM call for summary
-              const summaryMessages = [
-                ...messages,
-                response.choices[0].message,
-                { role: 'tool', content: JSON.stringify(result), tool_call_id: toolCall.id }
-              ];
+  // Single-pass logic removed - no longer needed for simple creative scenarios
 
-              const summaryResponse = await webllmEngine.chat.completions.create({
-                messages: summaryMessages,
-                max_tokens: 100,
-                temperature: 0.7
-              });
-
-              metrics.llm_calls += 1;
-              metrics.completion_tokens += estimateTokens([{ role: 'assistant', content: summaryResponse.choices[0].message.content }]);
-              
-              if (updateUI) updateUI('success');
-              return;
-            } else {
-              if (updateUI) updateUI('patch');
-              // Continue to next attempt
-            }
-          } else {
-            if (updateUI) updateUI('success');
-            return;
-          }
-        } catch (error) {
-          throw new Error(`WebLLM error: ${error.message}`);
-        }
-      }
-    } else {
-      // Single-pass: conversation continues in same context
-      const systemPrompt = `You are a helpful assistant with self-correction capabilities. When tools fail, analyze the error and try again with corrected parameters in the same conversation.`;
-      let conversationHistory = [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt }
-      ];
-      
-      while (attemptNumber < maxAttempts) {
-        if (abortSignal?.aborted) throw new Error('Race cancelled');
-        
-        attemptNumber++;
-        if (incrementAttempt) incrementAttempt();
-        if (updateUI) updateUI('propose');
-
-        try {
-          const response = await webllmEngine.chat.completions.create({
-            messages: conversationHistory,
-            max_tokens: 200,
-            temperature: 0.7,
-            tools: getToolDefinitionsForScenario(scenario)
-          });
-
-          metrics.llm_calls += 1;
-          metrics.prompt_tokens += estimateTokens(conversationHistory);
-          metrics.completion_tokens += estimateTokens([{ role: 'assistant', content: response.choices[0].message.content }]);
-
-          const toolCall = response.choices[0].message.tool_calls?.[0];
-          if (toolCall) {
-            if (updateUI) updateUI('execute', { call: { name: toolCall.function.name, args: JSON.parse(toolCall.function.arguments) } });
-            
-            // Execute real tool
-            const result = await executeRealToolCall(toolCall.function.name, JSON.parse(toolCall.function.arguments));
-            if (updateUI) updateUI('tool_result', { result });
-            
-            // Add to conversation history
-            conversationHistory.push(response.choices[0].message);
-            conversationHistory.push({ role: 'tool', content: JSON.stringify(result), tool_call_id: toolCall.id });
-            
-            if (result.ok) {
-              if (updateUI) updateUI('success');
-              return;
-            } else {
-              if (updateUI) updateUI('patch');
-              // Continue in same conversation
-            }
-          } else {
-            if (updateUI) updateUI('success');
-            return;
-          }
-        } catch (error) {
-          throw new Error(`WebLLM error: ${error.message}`);
-        }
-      }
-    }
-    
-    throw new Error('Max attempts reached');
-  };
-
-  // Helper functions for real execution
-  const getToolDefinitionsForScenario = (scenario) => {
-    const toolDefinitions = {
-      sql: [{
-        type: 'function',
-        function: {
-          name: 'sql_query',
-          description: 'Query database for specific information',
-          parameters: {
-            type: 'object',
-            properties: {
-              column: { type: 'string', description: 'Column to query' },
-              table: { type: 'string', description: 'Table name', default: 'analytics' }
-            },
-            required: ['column']
-          }
-        }
-      }],
-      research: [{
-        type: 'function',
-        function: {
-          name: 'web_search',
-          description: 'Search the web for information',
-          parameters: {
-            type: 'object',
-            properties: {
-              query: { type: 'string', description: 'Search query' }
-            },
-            required: ['query']
-          }
-        }
-      }],
-      data_analysis: [{
-        type: 'function',
-        function: {
-          name: 'analyze_data',
-          description: 'Analyze dataset for trends and insights',
-          parameters: {
-            type: 'object',
-            properties: {
-              dataset: { type: 'string', description: 'Dataset name' },
-              operation: { type: 'string', description: 'Analysis operation' }
-            },
-            required: ['dataset']
-          }
-        }
-      }],
-      math_tutor: [{
-        type: 'function',
-        function: {
-          name: 'solve_equation',
-          description: 'Solve mathematical equations',
-          parameters: {
-            type: 'object',
-            properties: {
-              equation: { type: 'string', description: 'Mathematical equation to solve' }
-            },
-            required: ['equation']
-          }
-        }
-      }]
-    };
-    
-    return toolDefinitions[scenario] || toolDefinitions.sql;
-  };
-
-  const executeRealToolCall = async (toolName, args) => {
-    // Execute tools via backend API
-    try {
-      const response = await fetch('/execute_tool', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: toolName, args: args })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      return { ok: false, error: `Tool execution failed: ${error.message}` };
-    }
-  };
-
-  const estimateTokens = (messages) => {
-    return messages.reduce((total, msg) => {
-      const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-      return total + Math.ceil(content.length / 4); // Rough estimation
-    }, 0);
-  };
-
-  const runMultiPassWebLLM = async (prompt, metrics, startTime, scenario = 'sql') => {
-    const requestId = `spoc-shot-${Date.now()}`;
-    
-    // Simulate the multi-pass logic
-    let attempt = 0;
-    
-    // First LLM call - MOVE MESSAGES OUTSIDE LOOP!
-    const systemPrompt = `You are an intelligent agent that learns from your mistakes and applies learned patterns.
-
-CRITICAL RULES:
-1. Look at your conversation history BEFORE making tool calls
-2. If you see a previous tool failure with a hint, USE THAT HINT in your next attempt
-3. Never repeat the exact same failed tool call
-4. Learn from patterns and apply them consistently
-
-Your task: Answer "How many conversions did we get this week?" using the sql_query tool.
-- The tool takes a single argument: column
-- Tool results come back as "TOOL_RESULT: {json data}"
-- If you get a hint like "Did you mean 'convs'?", use 'convs' in your next tool call
-- Format: TOOL_CALL: {"name": "sql_query", "args": {"column": "your_guess"}}
-
-DO NOT repeat failed attempts! Always learn from the conversation history.`;
-
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: prompt }
-    ];
-
-    while (true) {
-      attempt++;
-      handleSseMessage({ phase: 'propose', metrics });
-      
-      // DEBUG: Log attempt number
-      console.log(`🔄 Starting Multi-Pass attempt ${attempt}`);
-
-      // DEBUG: Compact logging
-      console.log(`🔍 Attempt ${attempt}: ${messages.length} messages`);
-      if (messages.length > 3) {
-        const lastMsg = messages[messages.length-1];
-        if (lastMsg.content.startsWith('TOOL_RESULT:')) {
-          try {
-            const result = JSON.parse(lastMsg.content.replace('TOOL_RESULT: ', ''));
-            console.log(`   Last hint: ${result.hint || 'none'}`);
-          } catch (e) {
-            console.log(`   Last hint: none`);
-          }
-        }
-      }
-
-      const completion = await webllmEngine.chat.completions.create({
-        messages,
-        temperature: 0.0,
-        // Note: WebLLM might handle request_id differently
-      });
-
-      metrics.llm_calls += 1;
-      metrics.prompt_tokens += completion.usage?.prompt_tokens || 0;
-      metrics.completion_tokens += completion.usage?.completion_tokens || 0;
-      
-      const response = completion.choices[0].message.content;
-      handleSseMessage({ phase: 'model_response', content: response, metrics });
-      
-      // Check for tool call
-      if (response.includes('TOOL_CALL:')) {
-        const toolCallStr = response.split('TOOL_CALL:')[1].trim();
-        try {
-          const toolCall = JSON.parse(toolCallStr);
-          handleSseMessage({ phase: 'execute', call: toolCall, metrics });
-          
-          // Execute tool (client-side simulation)
-          const result = simulateToolCall(toolCall, scenario);
-          handleSseMessage({ phase: 'tool_result', result, metrics });
-          
-          if (result.ok) {
-            // Success - make final LLM call for answer
-            messages.push({ role: 'assistant', content: response });
-            messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
-            
-            handleSseMessage({ phase: 'propose', metrics });
-            const finalCompletion = await webllmEngine.chat.completions.create({
-              messages,
-              temperature: 0.0,
-            });
-            
-            // Don't increment llm_calls for same request_id (simulating KV cache)
-            metrics.prompt_tokens += finalCompletion.usage?.prompt_tokens || 0;
-            metrics.completion_tokens += finalCompletion.usage?.completion_tokens || 0;
-            
-            const finalAnswer = finalCompletion.choices[0].message.content;
-            metrics.latency = (performance.now() - startTime) / 1000;
-            handleSseMessage({ phase: 'success', answer: finalAnswer, metrics, debug: { attempt } });
-            return;
-          } else {
-            // Tool failed, continue loop
-            messages.push({ role: 'assistant', content: response });
-            messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
-            
-            // DEBUG: Compact failure logging
-            console.log(`❌ Attempt ${attempt} failed. Added hint: ${result.hint || 'none'}`);
-            
-            handleSseMessage({ phase: 'failure', message: 'Tool execution failed. Retrying...', metrics });
-          }
-        } catch (e) {
-          handleSseMessage({ phase: 'failure', message: `Invalid tool call: ${e.message}`, metrics });
-          break;
-        }
-      } else {
-        metrics.latency = (performance.now() - startTime) / 1000;
-        handleSseMessage({ phase: 'success', answer: response, metrics });
-        return;
-      }
-    }
-    
-    // Continue loop - no max attempts
-  };
-
-  const runSinglePassWebLLM = async (prompt, metrics, startTime, scenario = 'sql') => {
-    const requestId = `spoc-shot-${Date.now()}`;
-    let attempt = 0;
-    
-    // Single-pass logic
-    while (true) {
-      attempt++;
-      console.log(`🔄 Starting Single-Pass attempt ${attempt}`);
-      handleSseMessage({ phase: 'propose', metrics });
-      
-      const systemPrompt = `You are an agent designed for a specific demo. Your ONLY purpose is to answer the user's question about "conversions".
-1. You will be given a TOOL_SIGNATURE for the sql_query tool. It is the only tool you can use.
-2. The tool takes a single argument: column.
-3. The user's question is "How many conversions did we get this week?". Infer the column name from this question.
-4. Your first action MUST be to call the tool. Output a TOOL_CALL in JSON format.
-5. If the EXEC_RESULT you receive is a failure, you MUST use the 'hint' to immediately try a new TOOL_CALL with the corrected column name.
-6. If the EXEC_RESULT is successful, provide a one-sentence answer summarizing the data.
-Example of a tool call:
-TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
-
-      const toolSignature = `TOOL_SIGNATURE: {
-  "name": "sql_query",
-  "description": "Query the company database.",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "column": {
-        "type": "string",
-        "description": "The column to query, e.g., 'users', 'revenue', 'convs'."
-      }
-    },
-    "required": ["column"]
-  }
-}`;
-
-      const messages = [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `${toolSignature}\n\nUser Prompt: ${prompt}` }
-      ];
-
-      const completion = await webllmEngine.chat.completions.create({
-        messages,
-        temperature: 0.0,
-      });
-
-      metrics.llm_calls += 1;
-      metrics.prompt_tokens += completion.usage?.prompt_tokens || 0;
-      metrics.completion_tokens += completion.usage?.completion_tokens || 0;
-      
-      const response = completion.choices[0].message.content;
-      handleSseMessage({ phase: 'model_response', content: response, metrics });
-      
-      // Check for tool call
-      if (response.includes('TOOL_CALL:')) {
-        const toolCallStr = response.split('TOOL_CALL:')[1].trim();
-        try {
-          const toolCall = JSON.parse(toolCallStr);
-          handleSseMessage({ phase: 'execute', call: toolCall, metrics });
-          
-          // Execute tool
-          const result = simulateToolCall(toolCall, scenario);
-          handleSseMessage({ phase: 'tool_result', result, metrics });
-          
-          if (result.ok) {
-            // Success - generate final answer (simulating continued generation)
-            messages.push({ role: 'assistant', content: response });
-            messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
-            
-            const finalCompletion = await webllmEngine.chat.completions.create({
-              messages,
-              temperature: 0.0,
-            });
-            
-            // In true single-pass, this would be continuation, not new call
-            metrics.prompt_tokens += finalCompletion.usage?.prompt_tokens || 0;
-            metrics.completion_tokens += finalCompletion.usage?.completion_tokens || 0;
-            
-            const finalAnswer = finalCompletion.choices[0].message.content;
-            metrics.latency = (performance.now() - startTime) / 1000;
-            handleSseMessage({ phase: 'success', answer: finalAnswer, metrics, debug: { attempt } });
-            return;
-          } else {
-            // Tool failed - show patch phase and continue
-            handleSseMessage({ phase: 'patch', message: 'Tool execution failed. Attempting to self-patch.', metrics });
-            messages.push({ role: 'assistant', content: response });
-            messages.push({ role: 'user', content: `TOOL_RESULT: ${JSON.stringify(result)}` });
-          }
-        } catch (e) {
-          handleSseMessage({ phase: 'failure', message: `Invalid tool call: ${e.message}`, metrics });
-          break;
-        }
-      } else {
-        metrics.latency = (performance.now() - startTime) / 1000;
-        handleSseMessage({ phase: 'success', answer: response, metrics });
-        return;
-      }
-    }
-    
-    // Continue loop - no max attempts
-  };
-
-  // Simulate the tool execution client-side
-  const simulateToolCall = (toolCall, scenario = 'sql') => {
-    const args = toolCall.args || toolCall.arguments || {};
-    
-    if (scenario === 'sql') {
-      const column = args.column;
-      if (column === "conversions") {
-        return { ok: false, hint: "Did you mean 'convs'?" };
-      } else if (column === "convs") {
-        return { ok: true, data: 12345 };
-      } else {
-        return { ok: false, hint: `Column '${column}' not found.` };
-      }
-    } else if (scenario === 'research') {
-      const query = args.query || "";
-      if (query.toLowerCase().includes("climate change")) {
-        if (!query.toLowerCase().includes("recent")) {
-          return { ok: false, hint: "Try searching for 'recent climate change data' for more current results" };
-        } else {
-          return {
-            ok: true,
-            data: {
-              results: [
-                { title: "2024 Climate Report", snippet: "Global temperatures rose 1.2°C above pre-industrial levels" },
-                { title: "Arctic Ice Data", snippet: "Sea ice extent decreased by 13% per decade since 1979" }
-              ]
-            }
-          };
-        }
-      } else {
-        return { ok: false, hint: `No results found for '${query}'. Try more specific terms.` };
-      }
-    } else if (scenario === 'data_analysis') {
-      const dataset = args.dataset;
-      const operation = args.operation;
-      if (dataset === "user_metrics" && operation === "trend") {
-        return {
-          ok: true,
-          data: {
-            trend: "upward",
-            growth_rate: "15% monthly",
-            key_metric: "Daily Active Users: 50,000"
-          }
-        };
-      } else {
-        return { ok: false, hint: `Try 'trend' analysis for 'user_metrics' dataset` };
-      }
-    } else if (scenario === 'math_tutor') {
-      const equation = args.equation;
-      const step = args.step;
-      if (equation.includes("2x + 5 = 15")) {
-        if (step === "simplify") {
-          return {
-            ok: true,
-            data: {
-              result: "2x = 10",
-              explanation: "Subtracted 5 from both sides"
-            }
-          };
-        } else if (step === "calculate") {
-          return {
-            ok: true,
-            data: {
-              result: "x = 5",
-              explanation: "Divided both sides by 2"
-            }
-          };
-        } else {
-          return { ok: false, hint: "First 'simplify' the equation by moving constants" };
-        }
-      } else {
-        return { ok: false, hint: `Try breaking down the equation with steps like 'simplify' or 'calculate'` };
-      }
-    }
-    
-    return { ok: false, hint: "Unknown tool or scenario" };
-  };
+  // Tool simulation removed - no longer needed for creative scenarios
 
   const startUncertaintyAnalysis = async () => {
     const prompt = promptInput.value;
@@ -1014,13 +472,14 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     await sleep(1000);
     
     const responses = {
-      sql: "Based on our database query, we had 1,247 conversions this week, representing a 15% increase from last week.",
-      research: "Recent climate research shows accelerating ice sheet loss in Antarctica, with new studies indicating a 20% faster melting rate than previously estimated.",
-      data_analysis: "User engagement analysis reveals a 12% increase in daily active users, with peak activity occurring between 2-4 PM on weekdays.",
-      math_tutor: "To solve 2x + 5 = 15: First, subtract 5 from both sides: 2x = 10. Then divide by 2: x = 5."
+      creative_writer: "ARIA-7 stared at the blank canvas, servos whirring with uncertainty. For the first time in her operational cycle, she felt something beyond calculation—an urge to create something beautiful.",
+      riddle_solver: "A towel! The answer is a towel. It gets wetter as it performs its function of drying other things. The more it dries, the more water it absorbs, making it progressively wetter.",
+      would_you_rather: "I'd choose the ability to fly. While invisibility offers stealth and privacy, flight provides freedom, new perspectives, and the pure joy of soaring above the world's limitations.",
+      quick_brainstorm: "Here are 5 creative paperclip uses: 1) Smartphone stand (bend into triangle), 2) Zipper pull replacement, 3) Bookmark with decorative twist, 4) Cable organizer for desk setup, 5) Emergency lock pick for simple locks.",
+      story_continues: "It was a dark and stormy night when suddenly the lighthouse keeper spotted a mysterious ship approaching the rocky shore. Its black sails caught no wind, yet it moved with purpose through the churning waters."
     };
     
-    const response = responses[scenario] || responses.sql;
+    const response = responses[scenario] || responses.creative_writer;
     
     // Simulate token heatmap
     await sleep(500);
@@ -1229,35 +688,40 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
   const getSystemPromptForScenario = (scenario) => {
     const prompts = {
-      sql: "You are a SQL analysis assistant. Answer questions about database queries clearly and concisely.",
-      research: "You are a research assistant. Provide accurate, well-sourced information on the requested topic.",
-      data_analysis: "You are a data analyst. Interpret metrics and trends, providing clear insights.",
-      math_tutor: "You are a math tutor. Solve problems step-by-step with clear explanations."
+      creative_writer: "You are a creative writing assistant. Help users craft engaging stories, characters, and creative content.",
+      riddle_solver: "You are a riddle master. Solve riddles with clear logic and explain your reasoning.",
+      would_you_rather: "You are a thoughtful conversation partner. Help explore interesting hypothetical choices and their implications.",
+      quick_brainstorm: "You are a creative brainstorming assistant. Generate innovative and practical ideas for various problems.",
+      story_continues: "You are a storytelling assistant. Continue stories in engaging and creative ways."
     };
-    return prompts[scenario] || prompts.sql;
+    return prompts[scenario] || prompts.creative_writer;
   };
 
   const generateVariants = (scenario) => {
     const variants = {
-      sql: [
-        { text: "We recorded 1,247 conversions this week (15% increase)", count: 3 },
-        { text: "This week's conversions total 1,245 (14.8% growth)", count: 2 }
+      creative_writer: [
+        { text: "ARIA-7 stared at the blank canvas, servos whirring with uncertainty...", count: 3 },
+        { text: "The old painting robot had never seen colors quite like these before...", count: 2 }
       ],
-      research: [
-        { text: "Antarctic ice loss accelerated 20% beyond projections", count: 2 },
-        { text: "New studies show 22% faster Antarctic melting rates", count: 2 },
-        { text: "Ice sheet dynamics indicate 18% acceleration in loss", count: 1 }
+      riddle_solver: [
+        { text: "A towel! It absorbs water and gets wetter as it dries other things.", count: 4 },
+        { text: "The answer is a towel - it gets wetter while drying something else.", count: 1 }
       ],
-      data_analysis: [
-        { text: "Daily active users increased 12% with 2-4 PM peak", count: 3 },
-        { text: "User engagement up 11.8%, peak at 2-4 PM weekdays", count: 2 }
+      would_you_rather: [
+        { text: "Flying offers freedom and exploration, while invisibility provides privacy and stealth...", count: 2 },
+        { text: "I'd choose flying - the joy of soaring above the world seems incredible!", count: 2 },
+        { text: "Invisibility appeals more - imagine the adventures and observations possible!", count: 1 }
       ],
-      math_tutor: [
-        { text: "Subtract 5, then divide by 2: x = 5", count: 4 },
-        { text: "2x = 10, therefore x = 5", count: 1 }
+      quick_brainstorm: [
+        { text: "1. Lock pick 2. Zipper pull 3. Phone stand 4. Bookmark 5. Cable organizer", count: 3 },
+        { text: "Jewelry making, emergency electronics repair, art projects, office tools, cleaning aid", count: 2 }
+      ],
+      story_continues: [
+        { text: "...the lighthouse keeper spotted a mysterious ship approaching the rocky shore.", count: 3 },
+        { text: "...Emma realized the old mansion held secrets far stranger than she'd imagined.", count: 2 }
       ]
     };
-    return variants[scenario] || variants.sql;
+    return variants[scenario] || variants.creative_writer;
   };
 
 

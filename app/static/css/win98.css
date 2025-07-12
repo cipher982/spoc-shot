@@ -4,7 +4,7 @@
 :root {
   /* ===== SCALING SYSTEM ===== */
   /* Master controls - change these to scale everything */
-  --base-font-size: 13px;
+  --base-font-size: 11px;
   --scale-ratio: 1.125;
   --line-height-base: 1.4;
   
@@ -58,7 +58,7 @@
 /* ===== PIXEL-PERFECT RENDERING ===== */
 html:root {
   /* Higher specificity selector - this controls rem scaling */
-  font-size: 13px; /* 1rem = 13px - slightly bigger */  
+  font-size: 11px; /* 1rem = 11px - authentic Win98 8pt */  
 }
 
 html {

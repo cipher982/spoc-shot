@@ -51,52 +51,14 @@ if WEBLLM_MODE in ["hybrid", "server"]:
 if WEBLLM_MODE == "webllm":
     logger.info("WebLLM-only mode enabled. Server-side inference disabled.")
 
-# --- Prompts ---
-SYSTEM_PROMPT_MULTI_PASS = """
-You are an agent designed for a specific demo. Your ONLY purpose is to answer the user's question about "conversions".
-
-CRITICAL: You MUST learn from tool failures and use the hints provided!
-
-1.  You MUST use the `sql_query` tool. It is the only tool available.
-2.  The `sql_query` tool takes a single argument: `column`.
-3.  The user's question is "How many conversions did we get this week?". You should infer the correct column name from this.
-4.  Your first action MUST be to call the tool with what you think the column name is. Output a `TOOL_CALL` in JSON format.
-5.  After you receive the tool result, if it failed (ok: false), READ THE HINT CAREFULLY and use it to correct your next tool call.
-6.  If the result is successful (ok: true), provide a one-sentence answer summarizing the data.
-
-IMPORTANT: Look at the conversation history! If you see previous failed attempts, learn from them.
-If you see a hint like "Did you mean 'convs'?", use that exact suggestion in your next tool call.
-
-Example flow:
-- First try: TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}
-- If you get {"ok": false, "hint": "Did you mean 'convs'?"} then your next call should be:
-- TOOL_CALL: {"name": "sql_query", "args": {"column": "convs"}}
-
-DO NOT repeat the same failed tool call! Always learn from the hint!
-"""
-
-SYSTEM_PROMPT_SINGLE_PASS = """
-You are an agent designed for a specific demo. Your ONLY purpose is to answer the user's question about "conversions".
-
-CRITICAL: You MUST learn from tool failures and use the hints provided!
-
-1.  You will be given a `TOOL_SIGNATURE` for the `sql_query` tool. It is the only tool you can use.
-2.  The tool takes a single argument: `column`.
-3.  The user's question is "How many conversions did we get this week?". Infer the column name from this question.
-4.  Your first action MUST be to call the tool. Output a `TOOL_CALL` in JSON format.
-5.  If the tool result is a failure (ok: false), you MUST READ THE HINT and use it to correct your next tool call.
-6.  If the tool result is successful (ok: true), provide a one-sentence answer summarizing the data.
-
-IMPORTANT: Look at the conversation history! If you see previous failed attempts, learn from them.
-If you see a hint like "Did you mean 'convs'?", use that exact suggestion in your next tool call.
-
-Example flow:
-- First try: TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}
-- If you get {"ok": false, "hint": "Did you mean 'convs'?"} then your next call should be:
-- TOOL_CALL: {"name": "sql_query", "args": {"column": "convs"}}
-
-DO NOT repeat the same failed tool call! Always learn from the hint!
-"""
+# --- Simple System Prompts for Creative Scenarios ---
+CREATIVE_SYSTEM_PROMPTS = {
+    "creative_writer": "You are a creative writing assistant. Help users craft engaging stories, characters, and creative content.",
+    "riddle_solver": "You are a riddle master. Solve riddles with clear logic and explain your reasoning.",
+    "would_you_rather": "You are a thoughtful conversation partner. Help explore interesting hypothetical choices and their implications.",
+    "quick_brainstorm": "You are a creative brainstorming assistant. Generate innovative and practical ideas for various problems.",
+    "story_continues": "You are a storytelling assistant. Continue stories in engaging and creative ways."
+}
 
 
 # --- Metrics Tracking ---

@@ -224,16 +224,17 @@ export class UncertaintyAnalyzer {
 
   buildMessages(prompt, scenario) {
     const systemPrompts = {
-      sql: "You are a SQL expert. Provide clear, accurate SQL queries with explanations.",
-      research: "You are a research assistant. Provide thorough, well-sourced information.",
-      data_analysis: "You are a data analyst. Provide insightful analysis with clear methodology.",
-      math_tutor: "You are a math tutor. Explain concepts step-by-step with examples."
+      creative_writer: "You are a creative writing assistant. Help users craft engaging stories, characters, and creative content.",
+      riddle_solver: "You are a riddle master. Solve riddles with clear logic and explain your reasoning.",
+      would_you_rather: "You are a thoughtful conversation partner. Help explore interesting hypothetical choices and their implications.",
+      quick_brainstorm: "You are a creative brainstorming assistant. Generate innovative and practical ideas for various problems.",
+      story_continues: "You are a storytelling assistant. Continue stories in engaging and creative ways."
     };
 
     return [
       {
         role: "system",
-        content: systemPrompts[scenario] || systemPrompts.sql
+        content: systemPrompts[scenario] || systemPrompts.creative_writer
       },
       {
         role: "user", 
