@@ -267,7 +267,6 @@ export class RaceController {
       try {
         const response = await window.webllmEngine.chat.completions.create({
           messages: messages,
-          max_tokens: 200,
           temperature: 0.7,
           tools: this.getToolDefinitions()
         });
@@ -343,7 +342,6 @@ export class RaceController {
       try {
         const response = await window.webllmEngine.chat.completions.create({
           messages: conversationHistory,
-          max_tokens: 200,
           temperature: 0.7,
           tools: this.getToolDefinitions()
         });

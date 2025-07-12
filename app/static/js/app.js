@@ -368,7 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
         messages,
         temperature: temperature,
         top_p: topP,
-        max_tokens: 200,
         stream: true,
         logprobs: true,
         top_logprobs: 1

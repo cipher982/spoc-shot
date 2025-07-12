@@ -138,7 +138,6 @@ export class UncertaintyAnalyzer {
       const messages = [{ role: 'user', content: prompt }];
       const chunks = await webllmEngine.chat.completions.create({
         messages: messages,
-        max_tokens: 200,
         temperature: 0.7,
         stream: true,
         logprobs: true,
@@ -553,7 +552,6 @@ export class UncertaintyAnalyzer {
     const messages = [{ role: 'user', content: prompt }];
     const response = await webllmEngine.chat.completions.create({
       messages: messages,
-      max_tokens: 200,
       temperature: params.temperature,
       top_p: params.top_p,
       logprobs: true,
