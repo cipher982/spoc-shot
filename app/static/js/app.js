@@ -14,6 +14,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const multiPassTemplate = document.getElementById('multi-pass-code');
   const singlePassTemplate = document.getElementById('single-pass-code');
 
+  // Slider elements
+  const tempSlider = document.getElementById('temp-slider');
+  const tempDisplay = document.getElementById('temp-display');
+  const topPSlider = document.getElementById('top-p-slider');
+  const topPDisplay = document.getElementById('top-p-display');
+
+  // Setup slider event listeners for real-time display updates
+  if (tempSlider && tempDisplay) {
+    tempSlider.addEventListener('input', (e) => {
+      tempDisplay.textContent = e.target.value;
+    });
+  }
+
+  if (topPSlider && topPDisplay) {
+    topPSlider.addEventListener('input', (e) => {
+      topPDisplay.textContent = e.target.value;
+    });
+  }
 
   // No additional elements needed for simplified layout
 
@@ -739,6 +757,8 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
   const startUncertaintyAnalysis = async () => {
     const prompt = promptInput.value;
     const scenario = scenarioSelect.value;
+    const temperature = parseFloat(document.getElementById('temp-slider')?.value || '0.7');
+    const topP = parseFloat(document.getElementById('top-p-slider')?.value || '0.9');
     
     // Reset uncertainty UI
     resetUncertaintyUI();
@@ -749,7 +769,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     
     try {
       // Always run single response analysis (simplified)
-      await runSingleResponseAnalysis(prompt, scenario);
+      await runSingleResponseAnalysis(prompt, scenario, temperature, topP);
     } catch (error) {
       console.error('Uncertainty analysis error:', error);
       updateUncertaintyLog('error', `Analysis failed: ${error.message}`);
@@ -870,12 +890,12 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     }
   };
 
-  const runSingleResponseAnalysis = async (prompt, scenario) => {
+  const runSingleResponseAnalysis = async (prompt, scenario, temperature, topP) => {
     updateUncertaintyLog('info', 'Running single response analysis...');
     
     // Use existing WebLLM or simulate if not available
     if (modelLoaded && webllmEngine) {
-      await runWebLLMUncertaintyAnalysis(prompt, scenario);
+      await runWebLLMUncertaintyAnalysis(prompt, scenario, temperature, topP);
     } else {
       await simulateUncertaintyAnalysis(prompt, scenario);
     }
@@ -889,7 +909,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     await simulateMultiSampleAnalysis(prompt, scenario);
   };
 
-  async function runWebLLMUncertaintyAnalysis(prompt, scenario) {
+  async function runWebLLMUncertaintyAnalysis(prompt, scenario, temperature = 0.7, topP = 0.9) {
     const systemPrompt = getSystemPromptForScenario(scenario);
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -905,7 +925,8 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
       const chunks = await webllmEngine.chat.completions.create({
         messages,
-        temperature: 0.7,
+        temperature: temperature,
+        top_p: topP,
         max_tokens: 200,
         stream: true,
         logprobs: true,
