@@ -704,6 +704,226 @@ document.addEventListener('DOMContentLoaded', () => {
       const emptyBars = 30 - filledBars;
       barElement.textContent = '█'.repeat(filledBars) + '░'.repeat(emptyBars);
     }
+    
+    // Update sparklines with real data trends
+    updateDynamicSparklines(metrics);
+  }
+
+  // Smart Sparkline System - Real Data Visualization
+  const sparklineBuffers = {
+    confidence: [],
+    entropy: [],
+    logprob: [],
+    perplexity: [],
+    selfScore: [],
+    variance: [],
+    topP: [],
+    calibration: [],
+    coherence: []
+  };
+
+  const SPARKLINE_CHARS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+  const BUFFER_SIZE = 12; // Show last 12 data points
+
+  function updateDynamicSparklines(metrics) {
+    // Add new values to rolling buffers
+    sparklineBuffers.confidence.push(metrics.confidence);
+    sparklineBuffers.entropy.push(metrics.entropy);
+    sparklineBuffers.logprob.push(Math.abs(metrics.logprob)); // Use absolute value for display
+    sparklineBuffers.perplexity.push(metrics.perplexity);
+    sparklineBuffers.selfScore.push(metrics.selfScore);
+    sparklineBuffers.variance.push(metrics.variance);
+    sparklineBuffers.topP.push(metrics.topP);
+    
+    if (metrics.calibration !== undefined) {
+      sparklineBuffers.calibration.push(metrics.calibration);
+    }
+    if (metrics.coherence !== undefined) {
+      sparklineBuffers.coherence.push(metrics.coherence);
+    }
+
+    // Trim buffers to size
+    Object.keys(sparklineBuffers).forEach(key => {
+      if (sparklineBuffers[key].length > BUFFER_SIZE) {
+        sparklineBuffers[key] = sparklineBuffers[key].slice(-BUFFER_SIZE);
+      }
+    });
+
+    // Generate sparklines for each metric
+    const sparks = document.querySelectorAll('.metric-row .m-spark');
+    const sparklineLabels = ['confidence', 'entropy', 'logprob', 'perplexity', 'selfScore', 'variance', 'topP', 'calibration', 'coherence'];
+    
+    sparks.forEach((spark, index) => {
+      if (index < sparklineLabels.length) {
+        const metricKey = sparklineLabels[index];
+        const buffer = sparklineBuffers[metricKey];
+        
+        if (buffer && buffer.length > 0) {
+          spark.textContent = generateSmartSparkline(buffer, metricKey);
+        }
+      }
+    });
+  }
+
+  function generateSmartSparkline(values, metricType) {
+    if (values.length === 0) return '▄▄▄▄▄▄'; // 6 chars placeholder
+    if (values.length === 1) return '▄▄▄▄▄▄'; // Same 6 chars for single value
+
+    // Create a copy to avoid mutations
+    const data = [...values];
+    
+    // Apply metric-specific preprocessing
+    const processedData = preprocessMetricData(data, metricType);
+    
+    // Smart normalization based on metric characteristics
+    const normalized = smartNormalize(processedData, metricType);
+    
+    // Convert to sparkline characters with trend awareness
+    return convertToSparklineChars(normalized, metricType);
+  }
+
+  function preprocessMetricData(data, metricType) {
+    switch (metricType) {
+      case 'confidence':
+      case 'selfScore':
+      case 'topP':
+        // For probability-like metrics, emphasize changes from baseline
+        return data.map(v => Math.max(0, Math.min(1, v)));
+        
+      case 'entropy':
+      case 'variance':
+        // For variance metrics, use square root to reduce extreme outliers
+        return data.map(v => Math.sqrt(Math.max(0, v)));
+        
+      case 'logprob':
+        // For log probabilities, use exponential scaling to show relative differences
+        const maxLogprob = Math.max(...data);
+        return data.map(v => Math.exp(v - maxLogprob));
+        
+      case 'perplexity':
+        // For perplexity, use log scaling to handle wide ranges
+        return data.map(v => Math.log(Math.max(1, v)));
+        
+      default:
+        return data;
+    }
+  }
+
+  function smartNormalize(data, metricType) {
+    if (data.length < 2) return [0.5]; // Middle value for insufficient data
+    
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min;
+    
+    if (range === 0) {
+      // All values are the same - show flat line in middle
+      return data.map(() => 0.5);
+    }
+    
+    // Calculate recent trend for adaptive normalization
+    const recentTrend = calculateTrend(data.slice(-Math.min(5, data.length)));
+    
+    // Apply trend-aware normalization
+    return data.map((value, index) => {
+      let normalized = (value - min) / range;
+      
+      // For trending data, emphasize the trend direction
+      if (Math.abs(recentTrend) > 0.1 && index >= data.length - 3) {
+        const trendBoost = 0.2 * Math.sign(recentTrend);
+        normalized = Math.max(0, Math.min(1, normalized + trendBoost));
+      }
+      
+      return normalized;
+    });
+  }
+
+  function calculateTrend(data) {
+    if (data.length < 2) return 0;
+    
+    // Simple linear regression slope
+    const n = data.length;
+    const sumX = (n * (n - 1)) / 2; // Sum of indices 0,1,2...n-1
+    const sumY = data.reduce((a, b) => a + b, 0);
+    const sumXY = data.reduce((sum, y, x) => sum + x * y, 0);
+    const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6; // Sum of squares of indices
+    
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    return slope;
+  }
+
+  function convertToSparklineChars(normalized, metricType) {
+    const chars = normalized.map(value => {
+      const index = Math.floor(value * (SPARKLINE_CHARS.length - 1));
+      return SPARKLINE_CHARS[Math.max(0, Math.min(SPARKLINE_CHARS.length - 1, index))];
+    });
+    
+    // Apply metric-specific visual enhancements
+    return enhanceSparklineForMetric(chars, metricType);
+  }
+
+  function enhanceSparklineForMetric(chars, metricType) {
+    switch (metricType) {
+      case 'confidence':
+        // For confidence, emphasize high values with extra contrast
+        return chars.map(char => {
+          if (['▇', '█'].includes(char)) return '█'; // Boost high confidence
+          if (['▁', '▂'].includes(char)) return '▁'; // Emphasize low confidence
+          return char;
+        }).join('');
+        
+      case 'entropy':
+        // For entropy, emphasize spikes and valleys
+        return chars.map((char, index) => {
+          if (index > 0 && index < chars.length - 1) {
+            const prev = SPARKLINE_CHARS.indexOf(chars[index - 1]);
+            const curr = SPARKLINE_CHARS.indexOf(char);
+            const next = SPARKLINE_CHARS.indexOf(chars[index + 1]);
+            
+            // Emphasize peaks and valleys
+            if (curr > prev && curr > next) return '█'; // Peak
+            if (curr < prev && curr < next) return '▁'; // Valley
+          }
+          return char;
+        }).join('');
+        
+      case 'variance':
+        // For variance, show volatility with alternating patterns
+        return chars.map((char, index) => {
+          const charIndex = SPARKLINE_CHARS.indexOf(char);
+          if (charIndex >= 6) return '█'; // High variance = max height
+          if (charIndex <= 1) return '▁'; // Low variance = min height
+          return char;
+        }).join('');
+        
+      default:
+        return chars.join('');
+    }
+  }
+
+  // Generate sparklines from logprob values (for sequence-level analysis)
+  function updateSparklines(logprobValues) {
+    if (!logprobValues || logprobValues.length === 0) return;
+    
+    // Convert logprobs to confidence values
+    const confidenceValues = logprobValues.map(lp => Math.exp(lp));
+    
+    // Generate rolling window sparklines
+    const windowSize = 8;
+    const sparklines = [];
+    
+    for (let i = 0; i <= logprobValues.length - windowSize; i += 2) {
+      const window = confidenceValues.slice(i, i + windowSize);
+      sparklines.push(generateSmartSparkline(window, 'confidence'));
+    }
+    
+    // Update any sequence-level sparkline displays
+    const sequenceSparklines = document.querySelectorAll('.sequence-sparkline');
+    sequenceSparklines.forEach((element, index) => {
+      if (index < sparklines.length) {
+        element.textContent = sparklines[index];
+      }
+    });
   }
 
   function updateSequenceLevelMetrics(tokens, logprobs) {
@@ -780,12 +1000,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Generate dynamic sparklines (simplified for now)
     updateSparklines(logprobValues);
   }
-
-  function updateSparklines(values) {
-    // This is a placeholder - in real implementation, you'd update based on historical data
-    // For now, we'll just use the existing static sparklines
-  }
-
 
   const getSystemPromptForScenario = (scenario) => {
     const prompts = {
