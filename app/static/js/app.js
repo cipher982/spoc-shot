@@ -4,11 +4,23 @@ import { LiveMetricsAnalyzer } from './analysis.js';
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🚀 DOMContentLoaded fired - initializing SPOC-Shot');
   
+  // Global state for generation control
+  let currentAbortController = null;
+  let isGenerating = false;
+  
+  // DOM optimization for token streaming
+  let tokenBatch = [];
+  let batchTimeout = null;
+  const BATCH_SIZE = 5; // Process tokens in batches of 5
+  const BATCH_DELAY = 16; // ~60fps batching
+  
   try {
     const runButton = document.getElementById('run-button');
+    const stopButton = document.getElementById('stop-button');
     
     console.log('🔍 Element check:', {
-      runButton: !!runButton
+      runButton: !!runButton,
+      stopButton: !!stopButton
     });
   const scenarioSelect = document.getElementById('scenario-select');
   const promptInput = document.getElementById('prompt-input');
@@ -188,8 +200,18 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       console.error('❌ Error in execute button handler:', error);
       // Reset button state on error
-      runButton.disabled = false;
-      runButton.textContent = '🚀 Execute';
+      resetUIAfterGeneration();
+    }
+  });
+
+  stopButton.addEventListener('click', (e) => {
+    e.preventDefault();
+    
+    try {
+      console.log('⏹ Stop button clicked - Cancelling generation');
+      stopGeneration();
+    } catch (error) {
+      console.error('❌ Error in stop button handler:', error);
     }
   });
 
@@ -208,6 +230,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tool simulation removed - no longer needed for creative scenarios
 
   const startUncertaintyAnalysis = async () => {
+    if (isGenerating) {
+      console.log('Generation already in progress');
+      return;
+    }
+
     const prompt = promptInput.value;
     const scenario = scenarioSelect.value;
     const temperature = parseFloat(document.getElementById('temp-slider')?.value || '0.7');
@@ -216,19 +243,55 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset uncertainty UI
     resetUncertaintyUI();
     
-    // Update main button state
+    // Clear any pending token batches
+    tokenBatch = [];
+    if (batchTimeout) {
+      clearTimeout(batchTimeout);
+      batchTimeout = null;
+    }
+    
+    // Set generation state and create abort controller
+    isGenerating = true;
+    currentAbortController = new AbortController();
+    
+    // Update UI state
     runButton.disabled = true;
     runButton.textContent = 'Analyzing...';
+    stopButton.classList.remove('hidden');
     
     try {
       // Always run single response analysis (simplified)
-      await runSingleResponseAnalysis(prompt, scenario, temperature, topP);
+      await runSingleResponseAnalysis(prompt, scenario, temperature, topP, currentAbortController.signal);
     } catch (error) {
-      console.error('Uncertainty analysis error:', error);
+      if (error.name === 'AbortError') {
+        console.log('Generation cancelled by user');
+        document.getElementById('uncertainty-status').textContent = 'Cancelled';
+      } else {
+        console.error('Uncertainty analysis error:', error);
+      }
     } finally {
-      runButton.disabled = false;
-      runButton.textContent = '🚀 Execute';
+      resetUIAfterGeneration();
     }
+  };
+
+  const stopGeneration = () => {
+    if (currentAbortController && isGenerating) {
+      currentAbortController.abort();
+      console.log('Generation cancellation requested');
+    }
+  };
+
+  const resetUIAfterGeneration = () => {
+    // Process any remaining batched tokens
+    if (tokenBatch.length > 0) {
+      processBatchedTokens();
+    }
+    
+    isGenerating = false;
+    currentAbortController = null;
+    runButton.disabled = false;
+    runButton.textContent = '🚀 Execute';
+    stopButton.classList.add('hidden');
   };
 
   const resetUncertaintyUI = () => {
@@ -332,12 +395,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  const runSingleResponseAnalysis = async (prompt, scenario, temperature, topP) => {
+  const runSingleResponseAnalysis = async (prompt, scenario, temperature, topP, signal) => {
     // Use existing WebLLM or simulate if not available
     if (modelLoaded && webllmEngine) {
-      await runWebLLMUncertaintyAnalysis(prompt, scenario, temperature, topP);
+      await runWebLLMUncertaintyAnalysis(prompt, scenario, temperature, topP, signal);
     } else {
-      await simulateUncertaintyAnalysis(prompt, scenario);
+      await simulateUncertaintyAnalysis(prompt, scenario, signal);
     }
   };
 
@@ -348,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
     await simulateMultiSampleAnalysis(prompt, scenario);
   };
 
-  async function runWebLLMUncertaintyAnalysis(prompt, scenario, temperature = 0.7, topP = 0.9) {
+  async function runWebLLMUncertaintyAnalysis(prompt, scenario, temperature = 0.7, topP = 0.9, signal = null) {
     const systemPrompt = getSystemPromptForScenario(scenario);
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -378,6 +441,11 @@ document.addEventListener('DOMContentLoaded', () => {
       let logprobs = [];
 
       for await (const chunk of chunks) {
+        // Check for cancellation
+        if (signal?.aborted) {
+          throw new DOMException('Generation cancelled', 'AbortError');
+        }
+        
         const choice = chunk.choices[0];
         const delta = choice?.delta;
         if (delta?.content) {
@@ -416,7 +484,47 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function appendTokenToHeatmap(token, logprobs) {
+    // Add token to batch instead of immediate DOM manipulation
+    tokenBatch.push({ token, logprobs });
+    
+    // Process batch when it reaches target size or set timeout for smaller batches
+    if (tokenBatch.length >= BATCH_SIZE) {
+      processBatchedTokens();
+    } else if (!batchTimeout) {
+      batchTimeout = setTimeout(processBatchedTokens, BATCH_DELAY);
+    }
+  }
+
+  function processBatchedTokens() {
+    if (tokenBatch.length === 0) return;
+    
     const heatmapElement = document.getElementById('heatmap-text');
+    const fragment = document.createDocumentFragment();
+    
+    // Process all tokens in the batch
+    for (const { token, logprobs } of tokenBatch) {
+      const span = createTokenElement(token, logprobs);
+      fragment.appendChild(span);
+    }
+    
+    // Single DOM update for the entire batch
+    heatmapElement.appendChild(fragment);
+    
+    // Smooth scroll to show new tokens (only once per batch)
+    const container = heatmapElement.closest('.heatmap-container');
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    // Clear batch and timeout
+    tokenBatch = [];
+    if (batchTimeout) {
+      clearTimeout(batchTimeout);
+      batchTimeout = null;
+    }
+  }
+
+  function createTokenElement(token, logprobs) {
     const span = document.createElement('span');
     
     // Check if token is punctuation
@@ -457,16 +565,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add tooltip with confidence info
     span.title = `${(confidence * 100).toFixed(1)}% confidence (logprob: ${logprob.toFixed(3)})`;
 
-    heatmapElement.appendChild(span);
-
-    // Smooth scroll to show new tokens
-    const container = heatmapElement.closest('.heatmap-container');
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
+    return span;
   }
 
-  const simulateUncertaintyAnalysis = async (prompt, scenario) => {
+  const simulateUncertaintyAnalysis = async (prompt, scenario, signal = null) => {
     // Simulate analysis for demo purposes
     await sleep(1000);
     
