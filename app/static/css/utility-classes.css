@@ -1,0 +1,547 @@
+/* Utility Classes - DRY Refactoring
+   Reusable CSS patterns to eliminate duplication */
+
+/* ========================================
+   WIN98 COMPONENT PATTERNS
+   ======================================== */
+
+/* Base Win98 beveling (most commonly used patterns) */
+.win98-raised {
+  border: var(--border-raised);
+  border-color: var(--border-raised-colors);
+  background-color: var(--win98-face);
+}
+
+.win98-sunken {
+  border: var(--border-sunken);
+  border-color: var(--border-sunken-colors);
+  background-color: var(--win98-window-bg);
+}
+
+.win98-flat {
+  border: var(--border-flat);
+  background-color: var(--win98-face);
+}
+
+/* Win98 panel with header (common dashboard pattern) */
+.win98-panel {
+  @extend .win98-raised;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.win98-panel-header {
+  background: linear-gradient(
+    to bottom, 
+    var(--win98-highlight) 0%, 
+    var(--win98-face) 50%, 
+    var(--win98-shadow) 100%
+  );
+  border-bottom: 1px solid var(--win98-shadow);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-xs);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  flex-shrink: 0;
+}
+
+.win98-panel-content {
+  flex: 1;
+  padding: var(--space-sm);
+  overflow: auto;
+}
+
+/* ========================================
+   BUTTON UTILITIES
+   ======================================== */
+
+/* Base button styling (extends Win98 raised) */
+.btn-base {
+  @extend .win98-raised;
+  padding: var(--space-xs) var(--space-md);
+  font-family: var(--font-family);
+  font-size: var(--font-sm);
+  font-weight: normal;
+  color: var(--win98-text);
+  background: var(--win98-face);
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+  white-space: nowrap;
+  transition: var(--transition-bg);
+}
+
+.btn-base:hover {
+  background: var(--win98-gray-light);
+}
+
+.btn-base:active {
+  border-color: var(--border-sunken-colors);
+}
+
+.btn-base:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
+/* Button variants */
+.btn-primary {
+  @extend .btn-base;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.btn-secondary {
+  @extend .btn-base;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+}
+
+.btn-compact {
+  @extend .btn-base;
+  padding: calc(var(--space-xs) / 2) var(--space-sm);
+  font-size: var(--font-xs);
+}
+
+/* ========================================
+   FORM CONTROL UTILITIES
+   ======================================== */
+
+/* Base input styling */
+.input-base {
+  @extend .win98-sunken;
+  padding: var(--padding-input);
+  font-family: var(--font-family);
+  font-size: var(--font-base);
+  color: var(--win98-text);
+  background: var(--input-bg);
+  outline: none;
+  width: 100%;
+}
+
+.input-base:focus {
+  background: var(--input-focus-bg);
+}
+
+.input-base:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
+/* Input variants */
+.input-text {
+  @extend .input-base;
+  height: var(--input-height);
+}
+
+.input-textarea {
+  @extend .input-base;
+  resize: vertical;
+  min-height: calc(var(--input-height) * 2);
+}
+
+.input-select {
+  @extend .input-base;
+  height: var(--input-height);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M6 8L0 0h12z' fill='%23000'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-sm) center;
+  background-size: 12px 8px;
+}
+
+/* ========================================
+   SLIDER UTILITIES
+   ======================================== */
+
+.slider-base {
+  width: 100%;
+  height: var(--slider-height);
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--win98-face);
+  border: var(--border-sunken);
+  border-color: var(--border-sunken-colors);
+  cursor: pointer;
+  outline: none;
+}
+
+.slider-base::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--slider-thumb-size);
+  height: calc(var(--slider-height) - 2px);
+  background: var(--win98-face);
+  border: var(--border-raised);
+  border-color: var(--border-raised-colors);
+  cursor: pointer;
+}
+
+.slider-base::-moz-range-thumb {
+  width: var(--slider-thumb-size);
+  height: calc(var(--slider-height) - 2px);
+  background: var(--win98-face);
+  border: var(--border-raised);
+  border-color: var(--border-raised-colors);
+  cursor: pointer;
+  border-radius: 0;
+}
+
+/* ========================================
+   PROGRESS BAR UTILITIES
+   ======================================== */
+
+.progress-container {
+  @extend .win98-sunken;
+  height: var(--progress-height);
+  background: var(--progress-bg);
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--progress-fill);
+  width: var(--progress-width, 0%);
+  transition: width var(--transition-progress);
+  position: relative;
+}
+
+.progress-bar.progress-error {
+  background: var(--progress-error);
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: var(--font-xs);
+  font-weight: bold;
+  color: var(--win98-text);
+  z-index: var(--z-base);
+}
+
+/* ========================================
+   LAYOUT UTILITIES
+   ======================================== */
+
+/* Flexbox utilities */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.flex-nowrap {
+  flex-wrap: nowrap;
+}
+
+.justify-start {
+  justify-content: flex-start;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.align-start {
+  align-items: flex-start;
+}
+
+.align-center {
+  align-items: center;
+}
+
+.align-end {
+  align-items: flex-end;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.flex-shrink-0 {
+  flex-shrink: 0;
+}
+
+/* Grid utilities */
+.grid {
+  display: grid;
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.col-span-2 {
+  grid-column: span 2;
+}
+
+.col-span-3 {
+  grid-column: span 3;
+}
+
+/* Gap utilities */
+.gap-xs {
+  gap: var(--space-xs);
+}
+
+.gap-sm {
+  gap: var(--space-sm);
+}
+
+.gap-md {
+  gap: var(--space-md);
+}
+
+.gap-lg {
+  gap: var(--space-lg);
+}
+
+/* ========================================
+   SPACING UTILITIES
+   ======================================== */
+
+/* Margin utilities */
+.m-0 { margin: 0; }
+.m-xs { margin: var(--space-xs); }
+.m-sm { margin: var(--space-sm); }
+.m-md { margin: var(--space-md); }
+.m-lg { margin: var(--space-lg); }
+
+.mt-0 { margin-top: 0; }
+.mt-xs { margin-top: var(--space-xs); }
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+.mt-lg { margin-top: var(--space-lg); }
+
+.mb-0 { margin-bottom: 0; }
+.mb-xs { margin-bottom: var(--space-xs); }
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+
+/* Padding utilities */
+.p-0 { padding: 0; }
+.p-xs { padding: var(--space-xs); }
+.p-sm { padding: var(--space-sm); }
+.p-md { padding: var(--space-md); }
+.p-lg { padding: var(--space-lg); }
+
+.px-xs { padding-left: var(--space-xs); padding-right: var(--space-xs); }
+.px-sm { padding-left: var(--space-sm); padding-right: var(--space-sm); }
+.px-md { padding-left: var(--space-md); padding-right: var(--space-md); }
+
+.py-xs { padding-top: var(--space-xs); padding-bottom: var(--space-xs); }
+.py-sm { padding-top: var(--space-sm); padding-bottom: var(--space-sm); }
+.py-md { padding-top: var(--space-md); padding-bottom: var(--space-md); }
+
+/* ========================================
+   TYPOGRAPHY UTILITIES
+   ======================================== */
+
+.text-xs { font-size: var(--font-xs); }
+.text-sm { font-size: var(--font-sm); }
+.text-base { font-size: var(--font-base); }
+.text-md { font-size: var(--font-md); }
+.text-lg { font-size: var(--font-lg); }
+.text-xl { font-size: var(--font-xl); }
+
+.font-normal { font-weight: normal; }
+.font-bold { font-weight: bold; }
+
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+.uppercase { text-transform: uppercase; }
+.lowercase { text-transform: lowercase; }
+.capitalize { text-transform: capitalize; }
+
+.leading-tight { line-height: var(--line-height-tight); }
+.leading-normal { line-height: var(--line-height-normal); }
+.leading-relaxed { line-height: var(--line-height-relaxed); }
+
+/* ========================================
+   VISIBILITY UTILITIES
+   ======================================== */
+
+.hidden {
+  display: none !important;
+}
+
+.visible {
+  display: block;
+}
+
+.invisible {
+  visibility: hidden;
+}
+
+.opacity-0 { opacity: 0; }
+.opacity-50 { opacity: 0.5; }
+.opacity-75 { opacity: 0.75; }
+.opacity-100 { opacity: 1; }
+
+/* ========================================
+   COLOR UTILITIES
+   ======================================== */
+
+/* Text colors */
+.text-primary { color: var(--win98-text); }
+.text-secondary { color: var(--win98-gray-dark); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+.text-info { color: var(--color-info); }
+
+/* Background colors */
+.bg-primary { background-color: var(--win98-face); }
+.bg-secondary { background-color: var(--win98-window-bg); }
+.bg-success { background-color: var(--color-success); }
+.bg-warning { background-color: var(--color-warning); }
+.bg-error { background-color: var(--color-error); }
+.bg-info { background-color: var(--color-info); }
+
+/* ========================================
+   STATE UTILITIES
+   ======================================== */
+
+.loading {
+  opacity: var(--opacity-loading);
+  pointer-events: none;
+}
+
+.disabled {
+  opacity: var(--opacity-disabled);
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.active {
+  background-color: var(--win98-accent);
+  color: white;
+}
+
+/* ========================================
+   CONFIDENCE TOKEN UTILITIES
+   ======================================== */
+
+.token {
+  display: inline;
+  padding: 1px 2px;
+  margin: 0 1px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-mono);
+  font-size: var(--font-sm);
+  transition: var(--transition-bg);
+}
+
+.token-confidence-very-high {
+  background-color: var(--confidence-very-high);
+  color: white;
+}
+
+.token-confidence-high {
+  background-color: var(--confidence-high);
+  color: white;
+}
+
+.token-confidence-good {
+  background-color: var(--confidence-good);
+  color: white;
+}
+
+.token-confidence-medium {
+  background-color: var(--confidence-medium);
+  color: white;
+}
+
+.token-confidence-low {
+  background-color: var(--confidence-low);
+  color: white;
+}
+
+.token-confidence-very-low {
+  background-color: var(--confidence-very-low);
+  color: white;
+}
+
+.token-punctuation {
+  background-color: var(--confidence-punctuation);
+  color: white;
+}
+
+/* ========================================
+   METRICS DISPLAY UTILITIES
+   ======================================== */
+
+.metrics-loading {
+  color: var(--metrics-loading-color);
+  font-style: italic;
+}
+
+.metrics-value {
+  color: var(--metrics-value-color);
+  font-weight: bold;
+  font-family: var(--font-family-mono);
+}
+
+.metrics-label {
+  color: var(--metrics-label-color);
+  font-size: var(--font-xs);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.demo-opacity {
+  opacity: var(--opacity-placeholder);
+}
+
+/* ========================================
+   RESPONSIVE UTILITIES
+   ======================================== */
+
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none;
+  }
+  
+  .mobile-flex-col {
+    flex-direction: column;
+  }
+  
+  .mobile-full-width {
+    width: 100%;
+  }
+}
+
+@media (min-width: 769px) {
+  .desktop-hidden {
+    display: none;
+  }
+}

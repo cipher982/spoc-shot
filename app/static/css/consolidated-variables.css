@@ -1,0 +1,231 @@
+/* Consolidated CSS Variables - DRY Refactoring
+   Centralizes all repeated CSS values and creates reusable design tokens */
+
+:root {
+  /* ========================================
+     SCALING AND TYPOGRAPHY SYSTEM
+     ======================================== */
+  
+  /* Master scaling controls */
+  --base-font-size: 11px;
+  --scale-ratio: 1.125;
+  --line-height-base: 1.4;
+  
+  /* Typography scale (rem-based for consistent scaling) */
+  --font-xs: 0.77rem;    /* ~10px */
+  --font-sm: 0.88rem;    /* ~11.5px */
+  --font-base: 1rem;     /* 13px */
+  --font-md: 1.125rem;   /* ~14.6px */
+  --font-lg: 1.27rem;    /* ~16.5px */
+  --font-xl: 1.42rem;    /* ~18.5px */
+  --font-xxl: 1.6rem;    /* ~20.8px */
+  
+  /* Font families */
+  --font-family: "MS Sans Serif", "Tahoma", system-ui, sans-serif;
+  --font-family-mono: "Courier New", monospace;
+  
+  /* ========================================
+     SPACING SYSTEM
+     ======================================== */
+  
+  /* Base spacing scale */
+  --space-xs: 0.25rem;   /* 4px */
+  --space-sm: 0.5rem;    /* 8px */
+  --space-md: 0.75rem;   /* 12px */
+  --space-lg: 1rem;      /* 16px */
+  --space-xl: 1.5rem;    /* 24px */
+  --space-xxl: 2rem;     /* 32px */
+  
+  /* Component-specific spacing */
+  --padding-input: var(--space-sm);
+  --padding-button: var(--space-md);
+  --margin-component: var(--space-lg);
+  --gap-grid: var(--space-sm);
+  
+  /* ========================================
+     COMPONENT DIMENSIONS
+     ======================================== */
+  
+  /* Input and form controls */
+  --input-height: calc(var(--font-sm) * var(--line-height-base) + var(--space-md));
+  --button-height: calc(1rem * var(--line-height-base) + var(--space-md));
+  --slider-height: 16px;
+  --slider-thumb-size: 12px;
+  
+  /* Progress and loading indicators */
+  --progress-height: calc(1rem + var(--space-xs));
+  --confidence-bar-length: 30; /* Used in JS calculations */
+  
+  /* Layout containers */
+  --dashboard-header-height: 30px;
+  --heatmap-height: 300px;
+  --log-height: calc(1rem * var(--line-height-base) * 16);
+  
+  /* ========================================
+     WIN98 COLOR PALETTE
+     ======================================== */
+  
+  /* Base Win98 colors */
+  --win98-face: #C3C3C3;
+  --win98-shadow: #818181;
+  --win98-highlight: #FDFFFF;
+  --win98-accent: #000080;
+  --win98-window-bg: #C0C0C0;
+  --win98-text: #000000;
+  --win98-gray-dark: #808080;
+  --win98-gray-light: #E0E0E0;
+  
+  /* Desktop background */
+  --desktop-bg: #008080;
+  
+  /* Status and feedback colors */
+  --color-success: #008000;
+  --color-warning: #FFFF00;
+  --color-error: #FF0000;
+  --color-info: #0080FF;
+  
+  /* Task Manager inspired colors */
+  --taskman-bg: #000000;
+  --taskman-green: #00FF00;
+  --taskman-red: #FF0000;
+  
+  /* ========================================
+     CONFIDENCE VISUALIZATION COLORS
+     ======================================== */
+  
+  /* Token confidence color scheme (HSL for smooth gradients) */
+  --confidence-very-high: hsl(120, 70%, 40%);  /* Green */
+  --confidence-high: hsl(90, 70%, 40%);        /* Yellow-green */
+  --confidence-good: hsl(60, 70%, 40%);        /* Yellow */
+  --confidence-medium: hsl(30, 70%, 40%);      /* Orange */
+  --confidence-low: hsl(15, 70%, 40%);         /* Red-orange */
+  --confidence-very-low: hsl(0, 70%, 40%);     /* Red */
+  --confidence-punctuation: hsl(0, 0%, 60%);   /* Gray */
+  
+  /* Confidence background colors (lighter versions) */
+  --confidence-very-high-bg: hsl(120, 50%, 90%);
+  --confidence-high-bg: hsl(90, 50%, 90%);
+  --confidence-good-bg: hsl(60, 50%, 90%);
+  --confidence-medium-bg: hsl(30, 50%, 90%);
+  --confidence-low-bg: hsl(15, 50%, 90%);
+  --confidence-very-low-bg: hsl(0, 50%, 90%);
+  
+  /* ========================================
+     BORDER AND SHADOW PATTERNS
+     ======================================== */
+  
+  /* Win98 beveling patterns */
+  --border-raised: 2px solid;
+  --border-raised-colors: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
+  
+  --border-sunken: 2px solid;
+  --border-sunken-colors: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
+  
+  --border-flat: 1px solid var(--win98-shadow);
+  
+  /* Modern subtle shadows (for enhanced components) */
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-medium: 0 2px 6px rgba(0, 0, 0, 0.15);
+  --shadow-strong: 0 4px 12px rgba(0, 0, 0, 0.2);
+  
+  /* ========================================
+     ANIMATION AND TRANSITION VALUES
+     ======================================== */
+  
+  /* Timing functions */
+  --ease-standard: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0.0, 1, 1);
+  
+  /* Duration values */
+  --duration-fast: 0.15s;
+  --duration-medium: 0.3s;
+  --duration-slow: 0.5s;
+  
+  /* Common transitions */
+  --transition-color: color var(--duration-fast) var(--ease-standard);
+  --transition-bg: background-color var(--duration-fast) var(--ease-standard);
+  --transition-border: border-color var(--duration-fast) var(--ease-standard);
+  --transition-transform: transform var(--duration-medium) var(--ease-standard);
+  --transition-opacity: opacity var(--duration-medium) var(--ease-standard);
+  
+  /* Progress bar transitions */
+  --transition-progress: var(--duration-medium) var(--ease-decelerate);
+  
+  /* ========================================
+     Z-INDEX LAYERS
+     ======================================== */
+  
+  --z-base: 1;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-modal: 100;
+  --z-popover: 200;
+  --z-tooltip: 300;
+  --z-overlay: 400;
+  --z-notification: 500;
+  
+  /* ========================================
+     BREAKPOINTS (for responsive design)
+     ======================================== */
+  
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1200px;
+  
+  /* ========================================
+     COMPONENT-SPECIFIC VARIABLES
+     ======================================== */
+  
+  /* Button variants */
+  --button-primary-bg: var(--win98-accent);
+  --button-primary-text: white;
+  --button-secondary-bg: var(--win98-face);
+  --button-secondary-text: var(--win98-text);
+  
+  /* Form controls */
+  --input-bg: white;
+  --input-border: var(--border-sunken);
+  --input-border-colors: var(--border-sunken-colors);
+  --input-focus-bg: #FFFACD; /* Light yellow */
+  
+  /* Progress indicators */
+  --progress-bg: var(--win98-face);
+  --progress-fill: var(--win98-accent);
+  --progress-error: var(--color-error);
+  
+  /* Token heatmap container */
+  --heatmap-bg: white;
+  --heatmap-border: var(--border-sunken);
+  --heatmap-scrollbar-width: 8px;
+  
+  /* Metrics panel */
+  --metrics-label-color: var(--win98-text);
+  --metrics-value-color: var(--win98-accent);
+  --metrics-loading-color: var(--win98-gray-dark);
+  
+  /* ========================================
+     UTILITY VALUES
+     ======================================== */
+  
+  /* Border radius (minimal for Win98 theme) */
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  
+  /* Opacity levels */
+  --opacity-disabled: 0.6;
+  --opacity-loading: 0.7;
+  --opacity-placeholder: 0.5;
+  
+  /* Line heights for specific use cases */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.4;
+  --line-height-relaxed: 1.6;
+  
+  /* Letter spacing */
+  --letter-spacing-tight: -0.025em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.025em;
+}

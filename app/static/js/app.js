@@ -1,6 +1,25 @@
 // SPOC-Shot Demo JavaScript
 import { LiveMetricsAnalyzer } from './analysis.js';
 
+// Sparkline constants and utilities
+const SPARKLINE_CHARS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+const SPARKLINE_PLACEHOLDER = '░░░░░░'; // 6 characters for consistent sparkline placeholders
+const CONFIDENCE_BAR_LENGTH = 30; // 30 characters for main confidence bar
+
+// Initialize all sparkline placeholders and confidence bar with consistent length
+function initializeSparklinePlaceholders() {
+  const sparks = document.querySelectorAll('.metric-row .m-spark');
+  sparks.forEach(spark => {
+    spark.textContent = SPARKLINE_PLACEHOLDER;
+  });
+  
+  // Initialize confidence bar
+  const confidenceBar = document.getElementById('confidence-bar');
+  if (confidenceBar) {
+    confidenceBar.textContent = '░'.repeat(CONFIDENCE_BAR_LENGTH);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🚀 DOMContentLoaded fired - initializing SPOC-Shot');
   
@@ -22,6 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
       runButton: !!runButton,
       stopButton: !!stopButton
     });
+
+    // Initialize sparkline placeholders with consistent length
+    initializeSparklinePlaceholders();
   const scenarioSelect = document.getElementById('scenario-select');
   const promptInput = document.getElementById('prompt-input');
 
@@ -315,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
     heatmapText.innerHTML = 'Analyzing token-level confidence...';
     
     // Reset ASCII bar to empty
-    confidenceBar.textContent = '[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]';
+    confidenceBar.textContent = '[' + '░'.repeat(CONFIDENCE_BAR_LENGTH) + ']';
     
     if (confidenceValue) confidenceValue.textContent = '--';
     if (entropyValue) entropyValue.textContent = '--';
@@ -351,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
     heatmapText.innerHTML = `<span style="color: #999; font-style: italic;">Waiting to analyze...</span>`;
     
     // Update ASCII bar - reset to empty state
-    confidenceBar.textContent = '[░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░]';
+    confidenceBar.textContent = '[' + '░'.repeat(CONFIDENCE_BAR_LENGTH) + ']';
     confidenceBar.classList.add('demo-opacity');
     
     if (confidenceValue) {
@@ -700,8 +722,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update ASCII confidence bar
     const barElement = document.getElementById('confidence-bar');
     if (barElement) {
-      const filledBars = Math.round(metrics.confidence * 30); // 30 character bar
-      const emptyBars = 30 - filledBars;
+      const filledBars = Math.round(metrics.confidence * CONFIDENCE_BAR_LENGTH);
+      const emptyBars = CONFIDENCE_BAR_LENGTH - filledBars;
       barElement.textContent = '█'.repeat(filledBars) + '░'.repeat(emptyBars);
     }
     
@@ -722,7 +744,6 @@ document.addEventListener('DOMContentLoaded', () => {
     coherence: []
   };
 
-  const SPARKLINE_CHARS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
   const BUFFER_SIZE = 12; // Show last 12 data points
 
   function updateDynamicSparklines(metrics) {
@@ -766,8 +787,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function generateSmartSparkline(values, metricType) {
-    if (values.length === 0) return '▄▄▄▄▄▄'; // 6 chars placeholder
-    if (values.length === 1) return '▄▄▄▄▄▄'; // Same 6 chars for single value
+    if (values.length === 0) return SPARKLINE_PLACEHOLDER;
+    if (values.length === 1) return SPARKLINE_PLACEHOLDER;
 
     // Create a copy to avoid mutations
     const data = [...values];
@@ -973,8 +994,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update ASCII confidence bar
     const barElement = document.getElementById('confidence-bar');
     if (barElement) {
-      const filledBars = Math.round(overallConfidence * 32); // 32 character bar
-      const emptyBars = 32 - filledBars;
+      const filledBars = Math.round(overallConfidence * CONFIDENCE_BAR_LENGTH);
+      const emptyBars = CONFIDENCE_BAR_LENGTH - filledBars;
       barElement.textContent = '[' + '█'.repeat(filledBars) + '░'.repeat(emptyBars) + ']';
     }
 
