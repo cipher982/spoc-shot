@@ -128,60 +128,9 @@
       </div>
     </div>
 
-    <!-- Agent Logic - Collapsible Section -->
-    <details class="collapsible-section">
-      <summary class="collapsible-summary">
-        <span class="expand-icon">🤖</span>
-        Agent Logic & Pseudo-code
-        <span class="expand-hint">(click to expand)</span>
-      </summary>
-      <div class="collapsible-content">
-        <div id="code-view" class="code-view">
-          <!-- Pseudo-code will be injected here -->
-        </div>
-      </div>
-    </details>
 
   </div>
 
-  <!-- Pseudo-code templates -->
-  <template id="multi-pass-code">
-    <pre><code class="language-python">
-# Multi-Pass (ReAct)
-for attempt in max_retries:
-  # 1. First LLM Call
-  tool_call = llm.think(prompt)
-
-  # 2. Execute Tool
-  result = execute(tool_call)
-
-  if result.is_success():
-    # 3. Second LLM Call
-    answer = llm.summarize(result)
-    return answer
-  else:
-    # 4. Loop to Retry
-    prompt = f"Fix this: {result.error}"
-    </code></pre>
-  </template>
-
-  <template id="single-pass-code">
-    <pre><code class="language-python">
-# Single-Pass (SPOC)
-while retries < max_retries:
-  # 1. Single, Stateful LLM Call
-  response = llm.refine(prompt)
-
-  if response.has_tool_call():
-    # 2. Execute Tool
-    result = execute(response.tool_call)
-    # 3. Feed result back into the SAME call
-    prompt = f"Result: {result}"
-  else:
-    # 4. Get final answer
-    return response.answer
-    </code></pre>
-  </template>
 
   <!-- JavaScript Modules -->
   <script type="module" src="/static/js/app.js"></script>

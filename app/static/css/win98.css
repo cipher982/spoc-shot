@@ -472,50 +472,6 @@ html, body {
 
 /* Uncertainty styles moved to components/uncertainty.css */
 
-/* ===== COLLAPSIBLE SECTION ===== */
-.collapsible-section {
-  /* Collapsible section is a dialog - raised */
-  background-color: var(--win98-face);
-  border: 2px solid;
-  border-color: var(--win98-highlight) var(--win98-shadow) var(--win98-shadow) var(--win98-highlight);
-  margin-top: 8px;
-}
-
-.collapsible-summary {
-  padding: var(--space-sm);
-  cursor: pointer;
-  font-size: var(--font-base);
-  font-weight: bold;
-  color: var(--win98-text);
-  background-color: var(--win98-gray-light);
-  border-bottom: 1px solid var(--win98-shadow);
-  display: flex;
-  align-items: center;
-}
-
-.collapsible-summary:hover {
-  background-color: var(--win98-highlight);
-}
-
-.collapsible-content {
-  /* Content inside collapsible is sunken */
-  padding: 8px;
-  border: 2px solid;
-  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-  background-color: var(--win98-window-bg);
-  border-top: none;
-}
-
-.code-view {
-  background-color: var(--taskman-bg);
-  color: var(--taskman-green);
-  border: 2px solid;
-  border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-  padding: var(--space-sm);
-  font-family: "Courier New", monospace;
-  font-size: var(--font-xs);
-  overflow-x: auto;
-}
 
 /* ===== RESPONSIVE BEHAVIOR ===== */
 @media (max-width: 768px) {

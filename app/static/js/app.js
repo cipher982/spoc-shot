@@ -12,9 +12,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   const scenarioSelect = document.getElementById('scenario-select');
   const promptInput = document.getElementById('prompt-input');
-  const codeView = document.getElementById('code-view');
-  const multiPassTemplate = document.getElementById('multi-pass-code');
-  const singlePassTemplate = document.getElementById('single-pass-code');
 
   // Slider elements
   const tempSlider = document.getElementById('temp-slider');
@@ -59,10 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
     math_tutor: "Solve the equation: 2x + 5 = 15"
   };
 
-  const updateCodeView = () => {
-    // Show multi-pass by default
-    codeView.innerHTML = multiPassTemplate.innerHTML;
-  };
 
 
   // --- WebLLM Initialization ---
@@ -1319,7 +1312,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
   };
 
   // --- Initial Setup ---
-  updateCodeView();
   setUncertaintyIdle();
   
   // Check server configuration and initialize accordingly
