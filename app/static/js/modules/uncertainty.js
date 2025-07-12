@@ -48,7 +48,6 @@ export class UncertaintyAnalyzer {
       await this.runSingleResponseAnalysis(prompt, scenario);
     } catch (error) {
       console.error('Uncertainty analysis error:', error);
-      this.updateLog('error', `Analysis failed: ${error.message}`);
     }
   }
 
@@ -81,11 +80,6 @@ export class UncertaintyAnalyzer {
       confidenceBar.style.width = '0%';
     }
     
-    // Reset log
-    const uncertaintyLog = document.getElementById('uncertainty-log');
-    if (uncertaintyLog) {
-      uncertaintyLog.innerHTML = '<div class="log-ready">Starting uncertainty analysis...</div>';
-    }
     
     // Hide variant section
     const variantSection = document.getElementById('variant-section');
@@ -101,27 +95,12 @@ export class UncertaintyAnalyzer {
     }
   }
 
-  updateLog(type, message) {
-    const log = document.getElementById('uncertainty-log');
-    const entry = document.createElement('div');
-    entry.className = 'log-entry';
-    
-    const timestamp = new Date().toLocaleTimeString();
-    const icons = { info: '🔍', response: '💬', error: '❌' };
-    const icon = icons[type] || 'ℹ️';
-    
-    entry.innerHTML = `[${timestamp}] ${icon} ${message}`;
-    log.appendChild(entry);
-    log.scrollTop = log.scrollHeight;
-  }
 
   async runSingleResponseAnalysis(prompt, scenario) {
-    this.updateLog('info', `Analyzing prompt: "${prompt.substring(0, 50)}${prompt.length > 50 ? '...' : ''}"`);
     
     try {
       // Use real WebLLM inference instead of fake responses
       const response = await this.runRealWebLLMAnalysis(prompt);
-      this.updateLog('response', response.text);
       
       // Use real logprobs and confidence data from model response
       this.processRealTokenHeatmap(response.text, response.logprobs);
@@ -133,7 +112,6 @@ export class UncertaintyAnalyzer {
       this.updateStatus('Complete');
     } catch (error) {
       console.error('❌ WebLLM analysis failed:', error);
-      this.updateLog('error', `WebLLM analysis failed: ${error.message}`);
       this.updateStatus('Error');
     }
   }
@@ -145,7 +123,6 @@ export class UncertaintyAnalyzer {
       throw new Error('WebLLM engine not initialized. This should not happen if the app loaded correctly.');
     }
 
-    this.updateLog('info', 'Running WebLLM inference with live metrics...');
 
     // Reset live metrics for new analysis
     this.liveMetrics.reset();
@@ -213,7 +190,6 @@ export class UncertaintyAnalyzer {
   }
 
   async runMultiSampleAnalysis(prompt, scenario) {
-    this.updateLog('info', 'Running multi-sample analysis (N=5)...');
     document.getElementById('variant-section').classList.remove('hidden');
     
     await this.sleep(1500);
@@ -231,7 +207,6 @@ export class UncertaintyAnalyzer {
     ).join('');
     
     this.setupVariantToggle();
-    this.updateLog('info', 'Multi-sample analysis complete');
   }
 
   setupVariantToggle() {
@@ -422,7 +397,6 @@ export class UncertaintyAnalyzer {
     const prompt = document.getElementById('prompt-input').value;
     const scenario = document.getElementById('scenario-select').value;
 
-    this.updateLog('info', `Running multi-sample analysis (N=${sampleCount})...`);
     
     // Disable the button during analysis
     const button = document.getElementById('run-multi-sample');
@@ -434,7 +408,6 @@ export class UncertaintyAnalyzer {
       
       // Run multiple samples
       for (let i = 0; i < sampleCount; i++) {
-        this.updateLog('info', `Generating sample ${i + 1}/${sampleCount}...`);
         const response = await this.runRealWebLLMAnalysis(prompt, scenario);
         responses.push(response);
         
@@ -451,10 +424,8 @@ export class UncertaintyAnalyzer {
       const variants = this.clusterResponses(responses);
       this.displayResponseVariants(variants);
 
-      this.updateLog('info', `Multi-sample analysis complete! Semantic entropy: ${semanticEntropy.toFixed(3)}`);
       
     } catch (error) {
-      this.updateLog('error', `Multi-sample analysis failed: ${error.message}`);
     } finally {
       button.disabled = false;
       button.textContent = 'Run Multi-Sample Analysis';
@@ -532,8 +503,6 @@ export class UncertaintyAnalyzer {
   }
 
   updateMultiSampleProgress(percent) {
-    // Update progress in the log
-    this.updateLog('info', `Progress: ${percent.toFixed(0)}% complete`);
   }
 
   // ========================================
@@ -544,7 +513,6 @@ export class UncertaintyAnalyzer {
     const basePrompt = document.getElementById('prompt-input').value;
     const baseScenario = document.getElementById('scenario-select').value;
     
-    this.updateLog('info', 'Running parameter sensitivity analysis...');
     
     const temperatures = [0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5];
     const topPs = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0];

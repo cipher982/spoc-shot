@@ -12,7 +12,6 @@ export const dom = {
     get modelProgressText() { return document.getElementById('model-progress-text'); },
     get modelProgressBar() { return document.getElementById('model-progress-bar'); },
     get uncertaintyStatus() { return document.getElementById('uncertainty-status'); },
-    get uncertaintyLog() { return document.getElementById('uncertainty-log'); },
     get heatmapText() { return document.getElementById('heatmap-text'); },
     get promptInput() { return document.getElementById('prompt-input'); },
     get scenarioSelect() { return document.getElementById('scenario-select'); },

@@ -172,7 +172,6 @@ export class UncertaintyAnalyzer {
   }
 
   async runAnalysis(prompt, scenario, options = {}) {
-    uiManager.updateLog('info', 'Starting uncertainty analysis...');
     uiManager.updateStatus('Running');
     uiManager.showRunButton(false);
     uiManager.clearHeatmap();
@@ -207,7 +206,6 @@ export class UncertaintyAnalyzer {
       
       // Update UI with final results
       uiManager.updateMetrics(finalMetrics);
-      uiManager.updateLog('success', `Analysis complete! Generated ${response.tokens.length} tokens`);
       uiManager.updateStatus('Complete');
       
       // Store for delta calculations
@@ -217,7 +215,6 @@ export class UncertaintyAnalyzer {
 
     } catch (error) {
       logger.error('❌ Uncertainty analysis failed:', error);
-      uiManager.updateLog('error', `Analysis failed: ${error.message}`);
       uiManager.updateStatus('Error');
       throw error;
     } finally {

@@ -774,7 +774,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       await runSingleResponseAnalysis(prompt, scenario, temperature, topP);
     } catch (error) {
       console.error('Uncertainty analysis error:', error);
-      updateUncertaintyLog('error', `Analysis failed: ${error.message}`);
     } finally {
       runButton.disabled = false;
       runButton.textContent = '🚀 Execute';
@@ -791,7 +790,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     const logprobValue = document.getElementById('logprob-value');
     const perplexityValue = document.getElementById('perplexity-value');
     const selfScoreValue = document.getElementById('self-score-value');
-    const uncertaintyLog = document.getElementById('uncertainty-log');
     const variantSection = document.getElementById('variant-section');
     
     if (!uncertaintyStatus || !heatmapText || !confidenceBar) {
@@ -810,7 +808,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     if (logprobValue) logprobValue.textContent = '--';
     if (perplexityValue) perplexityValue.textContent = '--';
     if (selfScoreValue) selfScoreValue.textContent = '--';
-    if (uncertaintyLog) uncertaintyLog.innerHTML = '<div class="log-ready">Starting uncertainty analysis...</div>';
     if (variantSection) variantSection.classList.add('hidden');
   };
 
@@ -828,7 +825,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     const topPValue = document.getElementById('top-p-value');
     const calibrationValue = document.getElementById('calibration-value');
     const coherenceValue = document.getElementById('coherence-value');
-    const uncertaintyLog = document.getElementById('uncertainty-log');
     const variantSection = document.getElementById('variant-section');
     
     if (!uncertaintyStatus || !heatmapText || !confidenceBar) {
@@ -880,22 +876,12 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       coherenceValue.textContent = '--';
       coherenceValue.classList.add('metrics-loading');
     }
-    if (uncertaintyLog) {
-      uncertaintyLog.innerHTML = `
-        <div class="log-ready">System is idle. Click <b>Execute</b> to start uncertainty analysis.</div>
-        <div class="log-entry" style="opacity: 0.3">[Demo] 🕒 Waiting for your prompt and scenario selection...</div>
-        <div class="log-entry log-response" style="opacity: 0.3">[Demo] 📊 The system will display token-level confidence and metrics here.</div>
-        <div class="log-entry" style="opacity: 0.3">[Demo] ✅ When ready, results and analysis will appear below.</div>
-      `;
-    }
     if (variantSection) {
       variantSection.classList.add('hidden');
     }
   };
 
   const runSingleResponseAnalysis = async (prompt, scenario, temperature, topP) => {
-    updateUncertaintyLog('info', 'Running single response analysis...');
-    
     // Use existing WebLLM or simulate if not available
     if (modelLoaded && webllmEngine) {
       await runWebLLMUncertaintyAnalysis(prompt, scenario, temperature, topP);
@@ -905,7 +891,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
   };
 
   const runMultiSampleAnalysis = async (prompt, scenario) => {
-    updateUncertaintyLog('info', 'Running multi-sample analysis (N=5)...');
     document.getElementById('variant-section').classList.remove('hidden');
     
     // Simulate multiple responses and semantic entropy calculation
@@ -918,8 +903,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       { role: 'system', content: systemPrompt },
       { role: 'user', content: prompt }
     ];
-
-    updateUncertaintyLog('info', 'Generating response with logprobs...');
 
     // Initialize live metrics analyzer
     const liveMetrics = new LiveMetricsAnalyzer();
@@ -969,8 +952,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
         }
       }
 
-      updateUncertaintyLog('response', fullResponse);
-
       // Final metrics update
       const finalMetrics = liveMetrics.getCurrentMetrics();
       updateLiveMetrics(finalMetrics);
@@ -978,7 +959,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
       document.getElementById('uncertainty-status').textContent = 'Complete';
     } catch (error) {
       console.error('WebLLM uncertainty analysis failed:', error);
-      updateUncertaintyLog('error', `WebLLM analysis failed: ${error.message}`);
       
       // Fallback to simulation
       await simulateUncertaintyAnalysis(prompt, scenario);
@@ -1038,7 +1018,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
   const simulateUncertaintyAnalysis = async (prompt, scenario) => {
     // Simulate analysis for demo purposes
-    updateUncertaintyLog('info', 'Generating response...');
     await sleep(1000);
     
     const responses = {
@@ -1049,7 +1028,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     };
     
     const response = responses[scenario] || responses.sql;
-    updateUncertaintyLog('response', response);
     
     // Simulate token heatmap
     await sleep(500);
@@ -1066,7 +1044,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     // Simulate 5 different responses
     const variants = generateVariants(scenario);
     
-    updateUncertaintyLog('info', 'Generating 5 response variants...');
     await sleep(1500);
     
     // Calculate semantic entropy
@@ -1094,8 +1071,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
         button.textContent = 'Show Variants';
       }
     });
-    
-    updateUncertaintyLog('info', 'Multi-sample analysis complete');
   };
 
   const processTokenLogprobs = (logprobs) => {
@@ -1258,19 +1233,6 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     // For now, we'll just use the existing static sparklines
   }
 
-  const updateUncertaintyLog = (type, message) => {
-    const log = document.getElementById('uncertainty-log');
-    const entry = document.createElement('div');
-    entry.className = 'log-entry';
-    
-    const timestamp = new Date().toLocaleTimeString();
-    const icons = { info: '🔍', response: '💬', error: '❌' };
-    const icon = icons[type] || 'ℹ️';
-    
-    entry.innerHTML = `[${timestamp}] ${icon} ${message}`;
-    log.appendChild(entry);
-    log.scrollTop = log.scrollHeight;
-  };
 
   const getSystemPromptForScenario = (scenario) => {
     const prompts = {

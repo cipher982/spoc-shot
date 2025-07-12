@@ -26,35 +26,6 @@ export class UIManager {
     }
   }
 
-  // Unified logging system
-  updateLog(type, message) {
-    const log = dom.elements.uncertaintyLog;
-    if (!log) return;
-
-    const entry = document.createElement('div');
-    entry.className = `log-entry ${type === 'error' ? 'log-error' : type === 'response' ? 'log-response' : ''}`;
-    
-    const timestamp = new Date().toLocaleTimeString();
-    const icons = { 
-      info: '🔍', 
-      response: '💬', 
-      error: '❌',
-      success: '✅',
-      warning: '⚠️'
-    };
-    const icon = icons[type] || 'ℹ️';
-    
-    entry.innerHTML = `[${timestamp}] ${icon} ${message}`;
-    log.appendChild(entry);
-    log.scrollTop = log.scrollHeight;
-
-    // Also log to console for debugging
-    if (type === 'error') {
-      logger.error(message);
-    } else {
-      logger.log(`[${type.toUpperCase()}] ${message}`);
-    }
-  }
 
   updateStatus(message) {
     const status = dom.elements.uncertaintyStatus;
@@ -142,12 +113,6 @@ export class UIManager {
     }
   }
 
-  clearLog() {
-    const log = dom.elements.uncertaintyLog;
-    if (log) {
-      log.innerHTML = '<div class="log-ready">Ready to analyze uncertainty - click Execute above</div>';
-    }
-  }
 
   setIdleState() {
     this.updateStatus('Idle');
@@ -160,7 +125,6 @@ export class UIManager {
     // Reset all metrics to '--'
     this.updateMetrics({});
     this.updateConfidenceBar(0);
-    this.clearLog();
   }
 
   showRunButton(enabled = true) {
