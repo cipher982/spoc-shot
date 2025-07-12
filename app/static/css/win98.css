@@ -256,12 +256,12 @@ html, body {
 .control-textarea {
   width: 100%;
   font-family: inherit;
-  font-size: var(--font-sm); /* Smaller text for form controls */
+  font-size: var(--font-base); /* Increased from --font-sm to --font-base */
   border: 2px solid;
   border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
   background-color: white;
   color: var(--win98-text);
-  padding: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
   border-radius: 0;
   -webkit-border-radius: 0;
   -moz-border-radius: 0;

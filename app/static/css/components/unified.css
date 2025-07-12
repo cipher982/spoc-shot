@@ -68,7 +68,7 @@
 .select-wrapper {
   position: relative;
   flex-shrink: 0;
-  width: 140px;
+  width: 180px;
 }
 
 .compact-select {
@@ -76,9 +76,9 @@
   background: white;
   border: 2px solid;
   border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-  padding: 4px 20px 4px 6px;
+  padding: 6px 24px 6px 8px;
   font-family: var(--font-family);
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
   color: var(--win98-text);
   appearance: none;
   cursor: pointer;
@@ -105,12 +105,12 @@
   background: white;
   border: 2px solid;
   border-color: var(--win98-shadow) var(--win98-highlight) var(--win98-highlight) var(--win98-shadow);
-  padding: 4px 6px;
+  padding: 8px 10px;
   font-family: var(--font-family);
-  font-size: var(--font-base); /* Increased from --font-sm to --font-base */
+  font-size: var(--font-base);
   color: var(--win98-text);
   resize: none;
-  min-height: 40px;
+  min-height: 50px;
 }
 
 .compact-textarea:focus {
