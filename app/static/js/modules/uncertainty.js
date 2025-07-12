@@ -1,6 +1,9 @@
 // Uncertainty Analysis Module
+import { LiveMetricsAnalyzer } from '../analysis.js';
+
 export class UncertaintyAnalyzer {
   constructor() {
+    this.liveMetrics = new LiveMetricsAnalyzer();
     this.init();
   }
 
@@ -142,36 +145,66 @@ export class UncertaintyAnalyzer {
       throw new Error('WebLLM engine not initialized. This should not happen if the app loaded correctly.');
     }
 
-    this.updateLog('info', 'Running WebLLM inference...');
+    this.updateLog('info', 'Running WebLLM inference with live metrics...');
+
+    // Reset live metrics for new analysis
+    this.liveMetrics.reset();
 
     try {
-      // Generate response using WebLLM with logprobs enabled
+      // Clear existing heatmap
+      const heatmapElement = document.getElementById('heatmap-text');
+      if (heatmapElement) {
+        heatmapElement.innerHTML = '';
+      }
+
+      // Generate response using WebLLM with streaming and logprobs enabled
       const messages = [{ role: 'user', content: prompt }];
-      const response = await webllmEngine.chat.completions.create({
+      const chunks = await webllmEngine.chat.completions.create({
         messages: messages,
         max_tokens: 200,
         temperature: 0.7,
+        stream: true,
         logprobs: true,
         top_logprobs: 1
       });
 
-      const choice = response.choices[0];
-      
-      // Calculate real metrics from logprobs if available
-      let metrics = {
-        entropy_avg: 1.2 + Math.random() * 0.8, // Fallback estimate
-        min_logprob: -2.5 - Math.random() * 1.0,  // Fallback estimate
-        ppl: 3.5 + Math.random() * 2.0           // Fallback estimate
-      };
-      
-      if (choice.logprobs && choice.logprobs.content) {
-        metrics = this.calculateRealMetrics(choice.logprobs.content);
+      let fullResponse = '';
+      let allLogprobs = [];
+
+      for await (const chunk of chunks) {
+        const choice = chunk.choices[0];
+        const delta = choice?.delta;
+        
+        if (delta?.content) {
+          fullResponse += delta.content;
+          
+          // Get logprobs from choice (not delta)
+          const chunkLogprobs = choice?.logprobs;
+          if (chunkLogprobs) {
+            allLogprobs.push(chunkLogprobs);
+          }
+          
+          // Update live metrics and UI
+          const currentMetrics = this.liveMetrics.addToken(delta.content, chunkLogprobs);
+          
+          // Update heatmap token by token
+          this.appendTokenToLiveHeatmap(delta.content, chunkLogprobs);
+          
+          // Update metrics UI every N tokens to reduce flicker
+          if (this.liveMetrics.shouldUpdateUI()) {
+            this.updateLiveMetricsUI(currentMetrics);
+          }
+        }
       }
+
+      // Final metrics calculation
+      const finalMetrics = this.liveMetrics.getCurrentMetrics();
+      this.updateLiveMetricsUI(finalMetrics);
       
       return {
-        text: choice.message.content,
-        logprobs: choice.logprobs, // Get real logprobs from WebLLM
-        metrics: metrics
+        text: fullResponse,
+        logprobs: { content: allLogprobs },
+        metrics: this.convertToLegacyMetrics(finalMetrics)
       };
     } catch (error) {
       console.error('❌ WebLLM inference failed:', error);
@@ -213,6 +246,78 @@ export class UncertaintyAnalyzer {
         button.textContent = 'Show Variants';
       }
     });
+  }
+
+  appendTokenToLiveHeatmap(token, logprobs) {
+    const heatmapElement = document.getElementById('heatmap-text');
+    if (!heatmapElement) return;
+
+    const span = document.createElement('span');
+    span.textContent = token;
+
+    let confidence = 0.5; // Default confidence
+    if (logprobs && logprobs.content && logprobs.content.length > 0) {
+      const logprob = logprobs.content[0].logprob;
+      confidence = Math.exp(Math.max(logprob, -10));
+      span.title = `Confidence: ${(confidence * 100).toFixed(1)}% (logprob: ${logprob.toFixed(3)})`;
+    }
+
+    // Apply confidence-based styling
+    const getConfidenceClass = (conf) => {
+      if (conf >= 0.9) return 'token-confidence-very-high';
+      if (conf >= 0.7) return 'token-confidence-high';
+      if (conf >= 0.5) return 'token-confidence-good';
+      if (conf >= 0.3) return 'token-confidence-medium';
+      if (conf >= 0.1) return 'token-confidence-low';
+      return 'token-confidence-very-low';
+    };
+
+    span.className = `token ${getConfidenceClass(confidence)}`;
+    heatmapElement.appendChild(span);
+
+    // Auto-scroll to show new tokens
+    heatmapElement.scrollTop = heatmapElement.scrollHeight;
+  }
+
+  updateLiveMetricsUI(metrics) {
+    // Update all metric displays with live values
+    const elements = {
+      'confidence-value': `${(metrics.confidence * 100).toFixed(1)}%`,
+      'entropy-value': metrics.entropy.toFixed(2),
+      'logprob-value': metrics.logprob.toFixed(2),
+      'perplexity-value': metrics.perplexity.toFixed(2),
+      'self-score-value': metrics.selfScore.toFixed(2),
+      'variance-value': metrics.variance.toFixed(3),
+      'top-p-value': metrics.topP.toFixed(2),
+      'calibration-value': metrics.calibration.toFixed(2),
+      'coherence-value': metrics.coherence.toFixed(2)
+    };
+
+    Object.entries(elements).forEach(([id, value]) => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = value;
+        element.classList.remove('metrics-loading');
+      }
+    });
+
+    // Update confidence bar
+    const confidenceBar = document.getElementById('confidence-bar');
+    if (confidenceBar) {
+      const filledBars = Math.round(metrics.confidence * 30);
+      const emptyBars = 30 - filledBars;
+      confidenceBar.textContent = '█'.repeat(filledBars) + '░'.repeat(emptyBars);
+    }
+  }
+
+  convertToLegacyMetrics(newMetrics) {
+    // Convert new metrics format to legacy format for compatibility
+    return {
+      entropy_avg: newMetrics.entropy,
+      min_logprob: newMetrics.logprob,
+      ppl: newMetrics.perplexity,
+      self_score: newMetrics.selfScore
+    };
   }
 
   processRealTokenHeatmap(text, logprobs) {

@@ -81,6 +81,8 @@ export class UIManager {
       const element = dom.get(id);
       if (element) {
         element.textContent = value;
+        // Remove loading class if present for live updates
+        element.classList.remove('metrics-loading');
       }
     });
 
@@ -97,7 +99,10 @@ export class UIManager {
     const emptyBlocks = 30 - filledBlocks;
     
     const bar = '█'.repeat(filledBlocks) + '░'.repeat(emptyBlocks);
-    confidenceBar.textContent = `[${bar}]`;
+    confidenceBar.textContent = bar; // Remove brackets for consistency with live updates
+    
+    // Remove demo opacity class for live updates
+    confidenceBar.classList.remove('demo-opacity');
   }
 
   appendTokenToHeatmap(token, logprobs) {

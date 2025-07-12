@@ -1,4 +1,6 @@
 // SPOC-Shot Demo JavaScript
+import { LiveMetricsAnalyzer } from './analysis.js';
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🚀 DOMContentLoaded fired - initializing SPOC-Shot');
   
@@ -122,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const uncertaintyStatus = document.getElementById('uncertainty-status');
       if (uncertaintyStatus) {
         uncertaintyStatus.textContent = 'WebLLM Ready';
-        uncertaintyStatus.style.color = '#008000';
+        uncertaintyStatus.style.color = '';
       }
       
       console.log("✅ WebLLM engine created successfully:", webllmEngine);
@@ -835,6 +837,7 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     }
     
     uncertaintyStatus.textContent = 'Idle';
+    uncertaintyStatus.style.color = '#999';
     heatmapText.innerHTML = `<span style="color: #999; font-style: italic;">Waiting to analyze...</span>`;
     
     // Update ASCII bar - reset to empty state
@@ -879,10 +882,10 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     }
     if (uncertaintyLog) {
       uncertaintyLog.innerHTML = `
-        <div class="log-ready">Idle - ready to execute...</div>
-        <div class="log-entry" style="opacity: 0.3">[Demo] 🔍 Analyzing model confidence...</div>
-        <div class="log-entry log-response" style="opacity: 0.3">[Demo] 💬 Token perplexity calculated</div>
-        <div class="log-entry" style="opacity: 0.3">[Demo] ✅ Analysis complete!</div>
+        <div class="log-ready">System is idle. Click <b>Execute</b> to start uncertainty analysis.</div>
+        <div class="log-entry" style="opacity: 0.3">[Demo] 🕒 Waiting for your prompt and scenario selection...</div>
+        <div class="log-entry log-response" style="opacity: 0.3">[Demo] 📊 The system will display token-level confidence and metrics here.</div>
+        <div class="log-entry" style="opacity: 0.3">[Demo] ✅ When ready, results and analysis will appear below.</div>
       `;
     }
     if (variantSection) {
@@ -918,6 +921,10 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
 
     updateUncertaintyLog('info', 'Generating response with logprobs...');
 
+    // Initialize live metrics analyzer
+    const liveMetrics = new LiveMetricsAnalyzer();
+    liveMetrics.reset();
+
     try {
       // Clear existing heatmap
       const heatmapElement = document.getElementById('heatmap-text');
@@ -949,14 +956,24 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
           if (chunkLogprobs) {
             logprobs.push(chunkLogprobs);
           }
+          
           appendTokenToHeatmap(delta.content, chunkLogprobs);
+          
+          // Calculate and update live metrics
+          const currentMetrics = liveMetrics.addToken(delta.content, chunkLogprobs);
+          
+          // Update UI every N tokens to reduce flicker
+          if (liveMetrics.shouldUpdateUI()) {
+            updateLiveMetrics(currentMetrics);
+          }
         }
       }
 
       updateUncertaintyLog('response', fullResponse);
 
-      // After streaming, compute and update sequence metrics
-      updateSequenceLevelMetrics(tokens, logprobs);
+      // Final metrics update
+      const finalMetrics = liveMetrics.getCurrentMetrics();
+      updateLiveMetrics(finalMetrics);
 
       document.getElementById('uncertainty-status').textContent = 'Complete';
     } catch (error) {
@@ -1130,6 +1147,36 @@ TOOL_CALL: {"name": "sql_query", "args": {"column": "conversions"}}`;
     
     document.getElementById('heatmap-text').innerHTML = heatmapHTML;
   };
+
+  function updateLiveMetrics(metrics) {
+    // Update all metric displays with live values
+    document.getElementById('confidence-value').textContent = `${(metrics.confidence * 100).toFixed(1)}`;
+    document.getElementById('entropy-value').textContent = metrics.entropy.toFixed(2);
+    document.getElementById('logprob-value').textContent = metrics.logprob.toFixed(2);
+    document.getElementById('perplexity-value').textContent = metrics.perplexity.toFixed(2);
+    document.getElementById('self-score-value').textContent = metrics.selfScore.toFixed(2);
+    document.getElementById('variance-value').textContent = metrics.variance.toFixed(3);
+    document.getElementById('top-p-value').textContent = metrics.topP.toFixed(2);
+    
+    // Update calibration and coherence if they exist
+    const calibrationElement = document.getElementById('calibration-value');
+    if (calibrationElement) {
+      calibrationElement.textContent = metrics.calibration.toFixed(2);
+    }
+    
+    const coherenceElement = document.getElementById('coherence-value');
+    if (coherenceElement) {
+      coherenceElement.textContent = metrics.coherence.toFixed(2);
+    }
+
+    // Update ASCII confidence bar
+    const barElement = document.getElementById('confidence-bar');
+    if (barElement) {
+      const filledBars = Math.round(metrics.confidence * 30); // 30 character bar
+      const emptyBars = 30 - filledBars;
+      barElement.textContent = '█'.repeat(filledBars) + '░'.repeat(emptyBars);
+    }
+  }
 
   function updateSequenceLevelMetrics(tokens, logprobs) {
     // Calculate metrics
