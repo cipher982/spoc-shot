@@ -66,10 +66,9 @@ instrument_fastapi(app)
 business_metrics = get_metrics()
 tracer = get_tracer()
 
-# Mount static files using standard directory structure
-# When using root_path, static files need to be mounted at root_path + "/static"
-static_path = f"{root_path}/static" if root_path else "/static"
-app.mount(static_path, StaticFiles(directory="app/static"), name="static")
+# Mount static files at /static (Caddy will handle the root_path stripping)
+# StaticFiles doesn't respect root_path, so we mount at absolute path
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.on_event("startup")
 async def startup_event():
