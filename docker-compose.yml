@@ -1,11 +1,12 @@
 services:
   spoc-shot:
     build: .
-    ports:
-      - "${PORT}:${PORT}"
+    expose:
+      - "8000"
     environment:
-      - HOST=${HOST}
-      - PORT=${PORT}
+      - HOST=0.0.0.0
+      - PORT=8000
+      - APPLICATION_ROOT=/spoc-shot
       - WEBLLM_MODE=${WEBLLM_MODE}
       - VLLM_BASE_URL=${VLLM_BASE_URL}
       - MODEL_NAME=${MODEL_NAME}
@@ -13,13 +14,20 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     env_file:
       - .env
+    networks:
+      - coolify
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8004}/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/spoc-shot/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+networks:
+  coolify:
+    name: coolify
+    external: true
 
 # ---------------------------------------------------------------------------
 # Development override

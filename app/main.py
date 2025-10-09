@@ -52,7 +52,9 @@ dictConfig(LogConfig)
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+# Get root_path from environment for subdirectory support
+root_path = os.getenv("APPLICATION_ROOT", "")
+app = FastAPI(root_path=root_path)
 
 # Add observability middleware
 app.add_middleware(ObservabilityMiddleware)
