@@ -67,7 +67,9 @@ business_metrics = get_metrics()
 tracer = get_tracer()
 
 # Mount static files using standard directory structure
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+# When using root_path, static files need to be mounted at root_path + "/static"
+static_path = f"{root_path}/static" if root_path else "/static"
+app.mount(static_path, StaticFiles(directory="app/static"), name="static")
 
 @app.on_event("startup")
 async def startup_event():
