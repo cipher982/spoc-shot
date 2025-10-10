@@ -1,5 +1,5 @@
 services:
-  spoc-shot:
+  agent-zoom:
     build: .
     expose:
       - "8000"
