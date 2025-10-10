@@ -56,6 +56,11 @@ logger = logging.getLogger(__name__)
 root_path = os.getenv("APPLICATION_ROOT", "")
 app = FastAPI(root_path=root_path)
 
+# Mount static files FIRST, before middleware/instrumentation
+# StaticFiles doesn't respect root_path, so we mount at absolute path
+# Caddy will strip the /spoc-shot prefix before requests reach FastAPI
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 # Add observability middleware
 app.add_middleware(ObservabilityMiddleware)
 
@@ -65,10 +70,6 @@ instrument_fastapi(app)
 # Get business metrics and tracer
 business_metrics = get_metrics()
 tracer = get_tracer()
-
-# Mount static files at /static (Caddy will handle the root_path stripping)
-# StaticFiles doesn't respect root_path, so we mount at absolute path
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 @app.on_event("startup")
 async def startup_event():
