@@ -6,7 +6,7 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=8000
-      - APPLICATION_ROOT=/spoc-shot
+      - APPLICATION_ROOT=/agent-zoom
       - WEBLLM_MODE=${WEBLLM_MODE}
       - VLLM_BASE_URL=${VLLM_BASE_URL}
       - MODEL_NAME=${MODEL_NAME}
@@ -18,7 +18,7 @@ services:
       - coolify
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/spoc-shot/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/agent-zoom/health"]
       interval: 30s
       timeout: 10s
       retries: 3
