@@ -28,5 +28,9 @@ ENV PYTHONPATH=/app
 # Expose port (will be overridden by ENV)
 EXPOSE ${PORT}
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD curl -f http://127.0.0.1:8000/ || exit 1
+
 # Run the application with environment variables
 CMD ["sh", "-c", "uv run uvicorn app.main:app --host $HOST --port $PORT"]
