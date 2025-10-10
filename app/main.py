@@ -113,7 +113,7 @@ async def get_config():
 
 from fastapi.responses import HTMLResponse
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def read_index():
     """
     Serves the main HTML page for the demo.
