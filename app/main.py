@@ -52,9 +52,8 @@ dictConfig(LogConfig)
 
 logger = logging.getLogger(__name__)
 
-# Get root_path from environment for subdirectory support
-root_path = os.getenv("APPLICATION_ROOT", "")
-app = FastAPI(root_path=root_path)
+# Don't use root_path - let Caddy handle subdirectory routing with uri strip_prefix
+app = FastAPI()
 
 # Mount static files FIRST, before middleware/instrumentation
 # StaticFiles doesn't respect root_path, so we mount at absolute path
