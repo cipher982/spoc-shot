@@ -18,8 +18,6 @@ load_dotenv()
 setup_otel()
 
 # --- Logging Setup ---
-# This is the proper way to configure logging for the whole application
-# It ensures that loggers in other modules like 'app.agent' are also covered.
 from logging.config import dictConfig
 import logging
 
@@ -56,8 +54,6 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 # Mount static files FIRST, before middleware/instrumentation
-# StaticFiles doesn't respect root_path, so we mount at absolute path
-# Caddy will strip the /spoc-shot prefix before requests reach FastAPI
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # Add observability middleware
@@ -119,10 +115,10 @@ async def read_index():
     Serves the main HTML page for the demo.
     """
     try:
-        with open("app/templates/index.html") as f:
+        with open("app/templates/logit-viz.html") as f:
             return HTMLResponse(content=f.read(), status_code=200)
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="index.html not found.")
+        raise HTTPException(status_code=404, detail="logit-viz.html not found.")
 
 @app.get("/debug", response_class=HTMLResponse)
 async def css_debug():

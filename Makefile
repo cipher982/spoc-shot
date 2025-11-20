@@ -44,7 +44,7 @@ install:
 dev:
 	@echo "💻 Starting local development server..."
 	@[ ! -f .env ] && cp .env.example .env || true
-	@uv run uvicorn app.main:app --host 127.0.0.1 --port 8004 --reload
+	@uv run python -m uvicorn app.main:app --host 127.0.0.1 --port 8004 --reload
 
 # Run tests
 test:

@@ -14,10 +14,10 @@
   <!-- External Libraries -->
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 
-  <!-- Stylesheets (absolute paths for subdirectory deployment) -->
-  <link rel="stylesheet" href="/agent-zoom/static/css/win98.css">
-  <link rel="stylesheet" href="/agent-zoom/static/css/components/uncertainty.css">
-  <link rel="stylesheet" href="/agent-zoom/static/css/components/unified.css">
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="/static/css/win98.css">
+  <link rel="stylesheet" href="/static/css/components/uncertainty.css">
+  <link rel="stylesheet" href="/static/css/components/unified.css">
   <script defer src="https://analytics.drose.io/script.js" data-website-id="33e9b5a0-5fbf-474c-9d60-9bee34d577bd"></script>
 </head>
 <body>
@@ -45,7 +45,7 @@
           </div>
         </div>
         <p class="loading-description">
-          Loading Qwen3-0.6B (~300MB)<br>
+          Loading Hermes-3-Llama-3.1-8B (~2GB)<br>
           <span class="loading-note">This happens once and caches locally</span>
         </p>
       </div>
@@ -133,12 +133,58 @@
       </div>
     </div>
 
+    <!-- Tool Calling Demo Section -->
+    <div class="dashboard-container tool-calling-demo">
+      <div class="dashboard-header">
+        <h3 class="dashboard-title">🔧 Tool Calling Demo</h3>
+        <span id="tool-demo-status" class="dashboard-status">Ready</span>
+      </div>
+      
+      <div class="tool-demo-content">
+        <!-- Input Area -->
+        <div class="tool-demo-input">
+          <textarea id="tool-demo-prompt" class="tool-demo-textarea" rows="3" placeholder="Try: 'What's the conversion rate?' or 'Search for climate change data' or 'Solve 2x + 5 = 15'">What's the conversion rate?</textarea>
+          <div class="tool-demo-buttons">
+            <button id="tool-demo-run" class="compact-execute-button">🚀 Run with Tools</button>
+            <button id="tool-demo-stop" class="compact-stop-button hidden">⏹ Stop</button>
+            <button id="tool-demo-clear" class="compact-stop-button">🗑️ Clear</button>
+          </div>
+          <div class="tool-demo-examples">
+            <span class="examples-label">Try these:</span>
+            <button class="example-prompt" data-prompt="What's the conversion rate?">📊 Conversion Rate</button>
+            <button class="example-prompt" data-prompt="How many users do we have?">👥 User Count</button>
+            <button class="example-prompt" data-prompt="Search for climate change research">🔍 Search</button>
+            <button class="example-prompt" data-prompt="Solve 2x + 5 = 15">🧮 Solve Equation</button>
+          </div>
+        </div>
+
+        <!-- Conversation Display -->
+        <div class="tool-demo-conversation">
+          <div class="section-header">CONVERSATION</div>
+          <div id="tool-demo-log" class="tool-demo-log">
+            <div class="tool-demo-message user-message">
+              <span class="message-label">USER:</span>
+              <span class="message-content">Enter a prompt above and click "Run with Tools" to see tool calling in action.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tool Calls Display -->
+        <div class="tool-demo-tools">
+          <div class="section-header">TOOL CALLS</div>
+          <div id="tool-demo-tool-calls" class="tool-demo-tool-list">
+            <div class="tool-demo-placeholder">No tool calls yet. Tools will appear here when the LLM decides to use them.</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </div>
 
 
-  <!-- JavaScript Modules (absolute path for subdirectory deployment) -->
-  <script type="module" src="/agent-zoom/static/js/app.js"></script>
+  <!-- JavaScript Modules -->
+  <script type="module" src="/static/js/app.js"></script>
+  <script type="module" src="/static/js/tool-calling-demo.js"></script>
 
 </body>
 </html>

@@ -92,16 +92,37 @@ export function processToken(token, logprobs) {
 
 /**
  * Create a DOM element for a token with confidence styling
+ * @param {string} token - The token text
+ * @param {object} logprobs - The logprobs object
+ * @param {number|boolean} indexOrOption - Index in sequence (for interactivity) or boolean for legacy tooltip
  */
-export function createTokenElement(token, logprobs, includeTooltip = true) {
+export function createTokenElement(token, logprobs, indexOrOption = null) {
   const processed = processToken(token, logprobs);
   
   const span = document.createElement('span');
   span.textContent = processed.token;
   span.className = `token ${processed.cssClass}`;
   
-  if (includeTooltip) {
-    span.title = `${processed.confidencePercent.toFixed(1)}% confidence (logprob: ${processed.logprob.toFixed(3)})`;
+  // Handle index for branching interactivity
+  if (typeof indexOrOption === 'number') {
+    span.dataset.index = indexOrOption;
+  }
+  
+  // Extract and store candidates if available
+  if (logprobs && logprobs.content && logprobs.content[0] && logprobs.content[0].top_logprobs) {
+    const candidates = logprobs.content[0].top_logprobs.map(c => ({
+      token: c.token,
+      logprob: c.logprob,
+      confidence: Math.exp(Math.max(c.logprob, MIN_LOGPROB_CLAMP)) * 100
+    }));
+    span.dataset.candidates = JSON.stringify(candidates);
+    span.classList.add('cursor-pointer'); // Indicate interactivity
+  }
+  
+  // Basic tooltip (title) - preserved for simple hovering
+  // If indexOrOption is explicitly false, suppress it (legacy behavior support)
+  if (indexOrOption !== false) {
+    span.title = `${processed.confidencePercent.toFixed(1)}% confidence`;
   }
   
   return span;
@@ -115,7 +136,7 @@ export function createTokenElements(tokens, logprobsArray) {
   
   tokens.forEach((token, index) => {
     const logprobs = logprobsArray && logprobsArray[index] ? logprobsArray[index] : null;
-    const element = createTokenElement(token, logprobs);
+    const element = createTokenElement(token, logprobs, index); // Pass index!
     fragment.appendChild(element);
   });
   

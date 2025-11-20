@@ -26,7 +26,7 @@ export class WebLLMManager {
       if (!window.webllm) {
         throw new Error("WebLLM library not loaded");
       }
-      logger.log("✅ WebLLM 0.2.79 loaded");
+      logger.log("✅ WebLLM latest loaded");
 
       // 2️⃣ Check WebGPU support
       if (!navigator.gpu) {
@@ -35,7 +35,7 @@ export class WebLLMManager {
       logger.log("✅ WebGPU ready");
 
       // 3️⃣ Check model availability
-      const selectedModel = "Qwen3-0.6B-q4f16_1-MLC";
+      const selectedModel = "Hermes-3-Llama-3.1-8B-q4f16_1-MLC";
       const availableModels = webllm.prebuiltAppConfig.model_list.map(m => m.model_id);
       
       if (!availableModels.includes(selectedModel)) {

@@ -21,8 +21,6 @@ function initializeSparklinePlaceholders() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  console.log('🚀 DOMContentLoaded fired - initializing SPOC-Shot');
-  
   // Global state for generation control
   let currentAbortController = null;
   let isGenerating = false;
@@ -36,11 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     const runButton = document.getElementById('run-button');
     const stopButton = document.getElementById('stop-button');
-    
-    console.log('🔍 Element check:', {
-      runButton: !!runButton,
-      stopButton: !!stopButton
-    });
 
     // Initialize sparkline placeholders with consistent length
     initializeSparklinePlaceholders();
@@ -100,40 +93,30 @@ document.addEventListener('DOMContentLoaded', () => {
       modelLoadingPanel.classList.remove('hidden');
       runButton.disabled = true;
       
-      console.log("🔍 Starting WebLLM initialization...");
-      
       modelStatus.textContent = "Loading WebLLM library...";
       
       // 1️⃣ Dynamically import WebLLM (fixes race condition)
       const { CreateMLCEngine, prebuiltAppConfig } = await import(
-        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm'
+        'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@latest/+esm'
       );
-      console.log("✅ WebLLM 0.2.79 loaded");
 
       // 2️⃣ Check WebGPU
       modelStatus.textContent = "Checking WebGPU support...";
       if (!('gpu' in navigator)) {
         throw new Error('WebGPU unavailable on this browser');
       }
-      console.log("✅ WebGPU ready");
 
       // 3️⃣ Verify model in catalogue
       modelStatus.textContent = "Verifying model availability...";
-      const selectedModel = "Qwen3-0.6B-q4f16_1-MLC"; // No mlc-ai/ prefix
+      const selectedModel = "Hermes-3-Llama-3.1-8B-q4f16_1-MLC"; // No mlc-ai/ prefix
       const found = prebuiltAppConfig.model_list.some((m) => m.model_id === selectedModel);
       
       if (!found) {
-        const qwen3Models = prebuiltAppConfig.model_list
-          .filter(m => m.model_id.startsWith("Qwen3"))
-          .map(m => m.model_id);
-        console.log("Available Qwen3 models:", qwen3Models);
         throw new Error(`${selectedModel} missing from catalogue`);
       }
-      console.log(`✅ Model found in catalogue: ${selectedModel}`);
 
       // 4️⃣ Load the model
       modelStatus.textContent = "Loading model...";
-      console.log("🔄 Creating MLC Engine with model:", selectedModel);
       
       const initProgressCallback = (report) => {
         const progress = Math.round((report.progress || 0) * 100);
@@ -217,10 +200,9 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     
     try {
-      console.log('🚀 Execute button clicked - Starting uncertainty analysis');
       startUncertaintyAnalysis();
     } catch (error) {
-      console.error('❌ Error in execute button handler:', error);
+      console.error('Error in execute button handler:', error);
       // Reset button state on error
       resetUIAfterGeneration();
     }
@@ -230,30 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     
     try {
-      console.log('⏹ Stop button clicked - Cancelling generation');
       stopGeneration();
     } catch (error) {
-      console.error('❌ Error in stop button handler:', error);
+      console.error('Error in stop button handler:', error);
     }
   });
 
-  // Uncertainty analysis is now handled by the main execute button
-
-  // No additional setup needed for simplified layout
-
-  // Simple uncertainty analysis - no more complex agent logic needed
-
-  // No more tool execution needed for creative scenarios
-
-  // Multi-pass logic removed - no longer needed for simple creative scenarios
-
-  // Single-pass logic removed - no longer needed for simple creative scenarios
-
-  // Tool simulation removed - no longer needed for creative scenarios
-
   const startUncertaintyAnalysis = async () => {
     if (isGenerating) {
-      console.log('Generation already in progress');
       return;
     }
 
@@ -286,7 +252,6 @@ document.addEventListener('DOMContentLoaded', () => {
       await runSingleResponseAnalysis(prompt, scenario, temperature, topP, currentAbortController.signal);
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.log('Generation cancelled by user');
         document.getElementById('uncertainty-status').textContent = 'Cancelled';
       } else {
         console.error('Uncertainty analysis error:', error);
@@ -299,7 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const stopGeneration = () => {
     if (currentAbortController && isGenerating) {
       currentAbortController.abort();
-      console.log('Generation cancellation requested');
     }
   };
 
@@ -1060,9 +1024,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return variants[scenario] || variants.creative_writer;
   };
 
-
-  // Simplified message handling for new UI - no longer needed
-
   // --- App Initialization ---
   const initializeApp = async () => {
     try {
@@ -1070,15 +1031,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const configResponse = await fetch('/api/config');
       const config = await configResponse.json();
       
-      console.log('Server config:', config);
-      
       if (config.server_available) {
         // Server mode available - initialize WebLLM as enhancement
-        console.log('Server available, initializing WebLLM as enhancement...');
         initializeWebLLM();
       } else {
         // WebLLM required mode
-        console.log('Server not available, WebLLM required...');
         modelStatus.textContent = "Server not available. WebLLM required for inference.";
         initializeWebLLM();
       }

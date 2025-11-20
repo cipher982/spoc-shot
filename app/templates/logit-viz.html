@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Storyteller's Quill</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    /* Old Book Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Cinzel:wght@400;700&family=Homemade+Apple&display=swap');
+
+    /* 
+      Theme Variables 
+      --paper-bg: Warm, aged parchment
+      --ink-color: Dark charcoal/brown
+      --accent-gold: Dull gold
+    */
+    :root {
+      --paper-color: #fdfbf7;
+      --ink-color: #2c241b;
+      --ink-faded: #5c4d3c;
+      --leather-dark: #2a1810;
+      --leather-light: #4a2c1d;
+    }
+
+    body {
+      background-color: #1a120b;
+      background-image: 
+        radial-gradient(circle at 50% 0%, #2c1e14 0%, #1a120b 70%),
+        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233a2618' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.2); 
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #5c4d3c; 
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #8c735a; 
+    }
+
+    /* Token Styling - Ink & Magic */
+    .token {
+      padding: 0 1px;
+      margin: 0;
+      transition: all 0.3s ease;
+      cursor: help;
+      font-family: 'Crimson Text', serif;
+      font-size: 1.25rem;
+      line-height: 1.8;
+      display: inline;
+      position: relative;
+      border-bottom: 2px solid transparent;
+      color: var(--ink-color);
+    }
+    
+    .token:hover {
+      transform: translateY(-1px);
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      z-index: 10;
+      background-color: rgba(255, 245, 230, 0.5);
+    }
+
+    /* 
+       Confidence Visualization: Magical Underlines & Auras
+       Instead of blocky backgrounds, we use subtle text shadows and underlines
+       that look like magical residue or ink variance.
+    */
+
+    /* Very High: Pure, dark ink */
+    .token-confidence-very-high {
+      color: #1a1a1a;
+    }
+    
+    /* High: Slightly lighter ink */
+    .token-confidence-high {
+      color: #2d2d2d;
+    }
+    
+    /* Good: Sepia tint (uncertainty creeping in) */
+    .token-confidence-good {
+      color: #5d4037;
+      border-bottom: 1px dotted rgba(160, 100, 50, 0.3);
+    }
+    
+    /* Medium: Noticeably faded/brown */
+    .token-confidence-medium {
+      color: #8d6e63;
+      border-bottom: 1px dotted rgba(160, 100, 50, 0.6);
+      background-color: rgba(255, 230, 200, 0.2);
+    }
+    
+    /* Low: Reddish/Rust tint (the magic is unstable) */
+    .token-confidence-low {
+      color: #a14545;
+      border-bottom: 2px dotted rgba(200, 80, 80, 0.4);
+      background-color: rgba(255, 220, 220, 0.2);
+    }
+    
+    /* Very Low: Distinct red, unstable look */
+    .token-confidence-very-low {
+      color: #c62828;
+      text-shadow: 0 0 2px rgba(198, 40, 40, 0.2);
+      border-bottom: 2px wavy rgba(198, 40, 40, 0.5);
+    }
+    
+    .token-punctuation {
+      color: var(--ink-faded);
+    }
+
+    /* Paper Sheet Effect */
+    .paper-sheet {
+      background-color: #fdfbf7;
+      background-image: url("https://www.transparenttextures.com/patterns/cream-paper.png");
+      box-shadow: 
+        0 1px 1px rgba(0,0,0,0.15), 
+        0 10px 0 -5px #eee, 
+        0 10px 1px -4px rgba(0,0,0,0.15), 
+        0 20px 0 -10px #eee, 
+        0 20px 1px -9px rgba(0,0,0,0.15),
+        0 0 20px rgba(0,0,0,0.2);
+      border: 1px solid #e6e0d0;
+    }
+
+    /* Handwriting Header */
+    .handwriting {
+      font-family: 'Homemade Apple', cursive;
+    }
+    
+    /* Cinematic Header */
+    .cinzel {
+      font-family: 'Cinzel', serif;
+    }
+
+    /* Smooth scrolling for the heatmap container */
+    #heatmap-text {
+      scroll-behavior: smooth;
+    }
+    
+    /* Tooltip styled like a marginalia note */
+    #token-tooltip {
+      font-family: 'Crimson Text', serif;
+      background: #fffef8;
+      border: 1px solid #d4c5b0;
+      box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-[#2c241b]">
+  
+  <!-- Loading Overlay (Parchment Style) -->
+  <div id="loading-overlay" class="hidden fixed inset-0 bg-[#1a120b] bg-opacity-90 flex items-center justify-center z-50">
+    <div class="bg-[#fdfbf7] rounded-sm shadow-2xl p-8 max-w-md w-full mx-4 border-4 border-double border-[#4a2c1d] relative">
+      <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style="background-image: url('https://www.transparenttextures.com/patterns/aged-paper.png');"></div>
+      
+      <div class="flex flex-col items-center text-center mb-6 relative z-10">
+        <div class="mb-4 text-4xl">✒️</div>
+        <h2 class="text-2xl font-bold text-[#2a1810] cinzel tracking-wider">Preparing the Quill</h2>
+      </div>
+      
+      <div class="space-y-4 relative z-10">
+        <p id="loading-status" class="text-[#5c4d3c] font-serif italic">Summoning the spirits of storytelling...</p>
+        <div class="w-full bg-[#e6e0d0] h-2 rounded-full overflow-hidden border border-[#d4c5b0]">
+          <div id="loading-progress" class="bg-[#8c735a] h-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <p id="loading-progress-text" class="text-sm text-[#8c735a] font-mono text-right">0%</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="container mx-auto px-4 py-12 max-w-6xl">
+    
+    <!-- Header -->
+    <header class="text-center mb-12">
+      <h1 class="text-5xl md:text-6xl font-bold text-[#e6e0d0] mb-3 cinzel tracking-widest text-shadow-lg">
+        The Storyteller
+      </h1>
+      <p class="text-[#a89f91] text-lg font-serif italic">Weaving tales from the ether, one rune at a time</p>
+    </header>
+
+    <!-- Controls Panel (Leather Bound Book Style) -->
+    <div class="bg-[#2a1810] rounded-lg shadow-2xl p-1 mb-8 max-w-4xl mx-auto">
+      <div class="bg-[#3e2723] border border-[#5d4037] rounded p-6 relative overflow-hidden">
+        <!-- Decorative corners -->
+        <div class="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-[#8d6e63] rounded-tl opacity-20"></div>
+        <div class="absolute top-0 right-0 w-16 h-16 border-t-2 border-r-2 border-[#8d6e63] rounded-tr opacity-20"></div>
+        <div class="absolute bottom-0 left-0 w-16 h-16 border-b-2 border-l-2 border-[#8d6e63] rounded-bl opacity-20"></div>
+        <div class="absolute bottom-0 right-0 w-16 h-16 border-b-2 border-r-2 border-[#8d6e63] rounded-br opacity-20"></div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-end relative z-10">
+          
+          <!-- Prompt Input -->
+          <div class="md:col-span-6">
+            <label class="block text-sm font-bold text-[#d7ccc8] mb-2 cinzel tracking-wide">The Tale's Beginning</label>
+            <textarea 
+              id="prompt-input" 
+              rows="3" 
+              class="w-full px-4 py-3 bg-[#2a1810] border border-[#5d4037] rounded text-[#d7ccc8] placeholder-[#5d4037] focus:outline-none focus:border-[#8d6e63] focus:ring-1 focus:ring-[#8d6e63] resize-none font-serif text-lg shadow-inner"
+              placeholder="e.g., A lost knight finding a dragon's library...">A robot learning to paint in a post-apocalyptic garden</textarea>
+          </div>
+
+          <!-- Parameters -->
+          <div class="md:col-span-4 space-y-5">
+            <div>
+              <label class="block text-xs font-bold text-[#a1887f] mb-2 uppercase tracking-widest">
+                Chaos (Temp): <span id="temp-display" class="text-[#d7ccc8]">0.7</span>
+              </label>
+              <input 
+                type="range" 
+                id="temp-slider" 
+                min="0.1" 
+                max="2.0" 
+                step="0.1" 
+                value="0.7"
+                class="w-full h-1 bg-[#1a120b] rounded-lg appearance-none cursor-pointer accent-[#8d6e63]">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-[#a1887f] mb-2 uppercase tracking-widest">
+                Focus (Top-P): <span id="top-p-display" class="text-[#d7ccc8]">0.9</span>
+              </label>
+              <input 
+                type="range" 
+                id="top-p-slider" 
+                min="0.1" 
+                max="1.0" 
+                step="0.05" 
+                value="0.9"
+                class="w-full h-1 bg-[#1a120b] rounded-lg appearance-none cursor-pointer accent-[#8d6e63]">
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="md:col-span-2 flex flex-col gap-3">
+            <button 
+              id="run-button" 
+              class="px-6 py-3 bg-[#5d4037] hover:bg-[#6d4c41] text-[#efebe9] font-bold rounded border border-[#8d6e63] shadow-lg transform hover:-translate-y-0.5 transition-all cinzel tracking-wider">
+              Write
+            </button>
+            <button 
+              id="stop-button" 
+              class="px-6 py-3 bg-[#3e2723] hover:bg-[#4e342e] text-[#ffccbc] font-bold rounded border border-[#b71c1c] shadow-lg hidden cinzel tracking-wider">
+              Cease
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      
+      <!-- The Page (Main Area) -->
+      <div class="lg:col-span-8 relative">
+        <!-- Book Spine Effect -->
+        <div class="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-[#d7ccc8] to-transparent z-20 opacity-50 rounded-l-lg pointer-events-none"></div>
+        
+        <div class="paper-sheet rounded-lg min-h-[600px] max-h-[800px] relative overflow-hidden flex flex-col">
+          
+          <!-- Page Header -->
+          <div class="px-10 py-6 border-b border-[#e6e0d0] flex justify-between items-center">
+            <span class="text-[#8c735a] font-serif italic text-sm">Chapter I</span>
+            <span id="status" class="text-[#5c4d3c] font-serif text-sm border border-[#d4c5b0] px-3 py-0.5 rounded-full">
+              Awaiting Inspiration
+            </span>
+          </div>
+          
+          <!-- The Text -->
+          <div class="flex-grow overflow-y-auto p-10 md:p-12 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
+            <div id="heatmap-text" class="text-xl leading-loose text-[#2c241b] font-serif">
+              <p class="text-[#8c735a] italic text-center mt-20">
+                "The blank page is the most terrifying thing the writer faces..."
+                <br><br>
+                <span class="text-sm not-italic">Type a topic above and command the quill to write.</span>
+              </p>
+            </div>
+          </div>
+          
+          <!-- Page Footer -->
+          <div class="px-10 py-4 border-t border-[#e6e0d0] flex justify-center">
+            <span class="text-[#d4c5b0] text-xs font-serif">1</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics Panel (Sidebar Notes) -->
+      <div class="lg:col-span-4 space-y-6">
+        
+        <!-- Confidence Card -->
+        <div class="bg-[#fdfbf7] p-6 rounded shadow-lg border border-[#e6e0d0] relative rotate-1 transform hover:rotate-0 transition-transform duration-500">
+          <div class="absolute -top-3 -left-3 text-4xl text-[#d7ccc8] opacity-50">❝</div>
+          
+          <h3 class="text-lg font-bold text-[#5d4037] mb-4 cinzel border-b border-[#e6e0d0] pb-2">Certainty</h3>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between text-sm font-serif">
+              <span class="text-[#5c4d3c]">Conviction</span>
+              <span id="confidence-value" class="text-[#2c1e14] font-bold text-xl">--</span>
+            </div>
+            <div class="w-full bg-[#e6e0d0] h-2 rounded-full overflow-hidden">
+              <div id="confidence-bar" class="bg-[#8d6e63] h-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div id="confidence-bar-text" class="text-[10px] text-[#a1887f] font-mono text-right tracking-tighter opacity-50"></div>
+          </div>
+        </div>
+
+        <!-- Stats Card -->
+        <div class="bg-[#fdfbf7] p-6 rounded shadow-lg border border-[#e6e0d0] relative -rotate-1 transform hover:rotate-0 transition-transform duration-500">
+           <h3 class="text-lg font-bold text-[#5d4037] mb-4 cinzel border-b border-[#e6e0d0] pb-2">Arcana</h3>
+           <div class="space-y-2 font-serif text-[#4a2c1d]">
+            <div class="flex justify-between items-center py-1 border-b border-dashed border-[#e6e0d0]">
+              <span class="italic">Entropy</span>
+              <span id="entropy-value" class="font-semibold">--</span>
+            </div>
+            <div class="flex justify-between items-center py-1 border-b border-dashed border-[#e6e0d0]">
+              <span class="italic">Surprise (Pplx)</span>
+              <span id="perplexity-value" class="font-semibold">--</span>
+            </div>
+            <!-- Hidden/Technical Metrics -->
+            <div class="hidden">
+              <span id="logprob-value">--</span>
+              <span id="top-p-value">--</span>
+            </div>
+            <div class="flex justify-between items-center py-1 border-b border-dashed border-[#e6e0d0]">
+              <span class="italic">Variance</span>
+              <span id="variance-value" class="font-semibold">--</span>
+            </div>
+            <div class="flex justify-between items-center py-1">
+              <span class="italic">Coherence</span>
+              <span id="coherence-value" class="font-semibold">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="bg-[#2a1810] p-6 rounded shadow-xl border border-[#3e2723] text-[#d7ccc8]">
+          <h3 class="text-lg font-bold text-[#a1887f] mb-4 cinzel">Ink Quality</h3>
+          <div class="space-y-2 text-sm font-serif">
+            <div class="flex items-center gap-3">
+              <span class="w-3 h-3 rounded-full bg-[#1a1a1a] border border-[#5d4037]"></span>
+              <span class="text-[#d7ccc8]">Ironclad (High)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="w-3 h-3 rounded-full bg-[#8d6e63]"></span>
+              <span class="text-[#d7ccc8]">Faded (Medium)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="w-3 h-3 rounded-full bg-[#c62828]"></span>
+              <span class="text-[#d7ccc8]">Unstable (Low)</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- JavaScript -->
+  <script type="module" src="/static/js/logit-viz.js"></script>
+  
+  <!-- Tooltip (Hidden) -->
+  <div id="token-tooltip" class="hidden fixed z-50 bg-[#fffef8] border border-[#d4c5b0] p-3 rounded shadow-xl max-w-xs">
+    <div class="text-[#5d4037] font-bold text-xs uppercase tracking-wider border-b border-[#e6e0d0] mb-2 pb-1">
+      Alternatives
+    </div>
+    <div id="tooltip-candidates" class="space-y-1 font-serif text-sm text-[#2c1e14]"></div>
+  </div>
+
+</body>
+</html>
