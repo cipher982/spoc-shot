@@ -100,8 +100,14 @@ function setupEventListeners() {
     }
   });
   
-  // Hide tooltip on scroll
-  elements.heatmapText.addEventListener('scroll', hideTooltip);
+  // Hide tooltip on scroll (but not if we're in custom input mode)
+  elements.heatmapText.addEventListener('scroll', () => {
+    // Check if we're currently showing the custom input
+    const customInput = elements.tooltip.querySelector('input[type="text"]');
+    if (!customInput) {
+      hideTooltip();
+    }
+  });
 }
 
 // Handle token hover to show tooltip
@@ -196,6 +202,25 @@ function showTooltip(tokenEl) {
     elements.tooltipCandidates.appendChild(div);
   });
   
+  // Add "Custom..." option at the bottom
+  const customDiv = document.createElement('div');
+  customDiv.className = 'flex items-center justify-between p-2 hover:bg-[#e6e0d0] rounded cursor-pointer group transition-colors border-t-2 border-[#d4c5b0] mt-1 pt-2';
+  customDiv.innerHTML = `
+    <span class="font-serif text-[#5c4d3c] text-lg group-hover:text-[#1a120b]">✏️ Custom word...</span>
+    <span class="text-xs text-[#8c735a] ml-4 font-serif italic">type</span>
+  `;
+  
+  customDiv.onclick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    // Don't let any other handlers run
+    cancelTooltipHideTimer();
+    // Show custom input without any chance of interference
+    setTimeout(() => showCustomInput(index), 0);
+  };
+  
+  elements.tooltipCandidates.appendChild(customDiv);
+  
   // Position tooltip
   const rect = tokenEl.getBoundingClientRect();
   // Check for overflow on right edge
@@ -221,6 +246,109 @@ function hideTooltip() {
   activeTokenElement = null;
 }
 
+// Show custom input field in tooltip
+function showCustomInput(index) {
+  // Make absolutely sure we're not hiding the tooltip
+  cancelTooltipHideTimer();
+  
+  // Also ensure tooltip is visible
+  if (elements.tooltip.classList.contains('hidden')) {
+    elements.tooltip.classList.remove('hidden');
+  }
+  
+  // Store the current height to prevent shrinking
+  const currentHeight = elements.tooltip.offsetHeight;
+  
+  elements.tooltipCandidates.innerHTML = '';
+  
+  // Create input container
+  const container = document.createElement('div');
+  container.className = 'p-3';
+  
+  // Set minimum height to prevent tooltip from shrinking
+  container.style.minHeight = (currentHeight - 40) + 'px'; // Subtract some padding
+  
+  // Input label
+  const label = document.createElement('div');
+  label.className = 'text-xs text-[#5c4d3c] font-serif mb-2';
+  label.textContent = 'Type your alternative:';
+  container.appendChild(label);
+  
+  // Text input
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'w-full px-2 py-1 border border-[#d4c5b0] rounded text-[#2c1e14] font-serif text-base focus:outline-none focus:border-[#8c735a] bg-[#fffef8]';
+  input.placeholder = 'Enter word...';
+  container.appendChild(input);
+  
+  // Token preview
+  const preview = document.createElement('div');
+  preview.className = 'text-xs text-[#8c735a] font-mono mt-2 italic';
+  preview.textContent = 'Tokens: []';
+  container.appendChild(preview);
+  
+  // Buttons container
+  const buttonContainer = document.createElement('div');
+  buttonContainer.className = 'flex gap-2 mt-3';
+  
+  // Apply button
+  const applyBtn = document.createElement('button');
+  applyBtn.className = 'px-3 py-1 bg-[#8d6e63] hover:bg-[#6d4c41] text-white text-sm rounded font-serif transition-colors';
+  applyBtn.textContent = 'Apply';
+  applyBtn.onclick = () => {
+    const text = input.value.trim();
+    if (text) {
+      applyCustomToken(index, text);
+    }
+  };
+  buttonContainer.appendChild(applyBtn);
+  
+  // Cancel button
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'px-3 py-1 bg-[#d4c5b0] hover:bg-[#bcaaa4] text-[#5c4d3c] text-sm rounded font-serif transition-colors';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.onclick = () => {
+    hideTooltip();
+  };
+  buttonContainer.appendChild(cancelBtn);
+  
+  container.appendChild(buttonContainer);
+  elements.tooltipCandidates.appendChild(container);
+  
+  // Update preview as user types
+  input.oninput = async () => {
+    const text = input.value;
+    if (text) {
+      try {
+        // Tokenize the input to show preview
+        const tokens = await tokenizeText(text);
+        preview.textContent = `Tokens: ${JSON.stringify(tokens)} (${tokens.length})`;
+      } catch (err) {
+        preview.textContent = `Error: ${err.message}`;
+        console.error('[Tokenize Preview] Failed:', err);
+      }
+    } else {
+      preview.textContent = 'Tokens: []';
+    }
+  };
+  
+  // Handle Enter key
+  input.onkeydown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      applyBtn.click();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelBtn.click();
+    }
+  };
+  
+  // Focus input
+  setTimeout(() => input.focus(), 50);
+}
+
 // Helper for tooltip colors (Old Book Theme)
 function getConfidenceColorClass(conf) {
   if (conf >= 90) return 'text-[#1a1a1a] font-bold'; // Deep ink
@@ -228,6 +356,93 @@ function getConfidenceColorClass(conf) {
   if (conf >= 50) return 'text-[#8d6e63]'; // Faded brown
   if (conf >= 30) return 'text-[#a14545] italic'; // Rust
   return 'text-[#c62828] italic font-bold'; // Blood red
+}
+
+// Tokenize text using the engine
+async function tokenizeText(text) {
+  if (!webllmManager.engine) {
+    throw new Error('Engine not initialized');
+  }
+  
+  try {
+    // WebLLM stores the pipeline in a Map by model ID
+    const pipeline = webllmManager.engine.loadedModelIdToPipeline.values().next().value;
+    if (!pipeline || !pipeline.tokenizer) {
+      throw new Error('Pipeline or tokenizer not found');
+    }
+    
+    // Encode the text to token IDs
+    const encoded = await pipeline.tokenizer.encode(text, false, false);
+    
+    // Decode each token ID back to its string representation
+    const tokens = [];
+    for (let i = 0; i < encoded.length; i++) {
+      const decoded = await pipeline.tokenizer.decode(Int32Array.from([encoded[i]]), false, false);
+      tokens.push(decoded);
+    }
+    
+    return tokens;
+  } catch (err) {
+    console.error('[Tokenize] Error:', err);
+    throw err;
+  }
+}
+
+// Apply custom token(s)
+async function applyCustomToken(index, text) {
+  hideTooltip();
+  
+  // Tokenize the custom text
+  const tokens = await tokenizeText(text);
+  console.log(`[Custom] User typed: "${text}" → Tokens:`, tokens);
+  
+  if (tokens.length === 0) return;
+  
+  // Similar to retryGeneration but potentially with multiple tokens
+  if (isGenerating) {
+    console.log('[Custom] Stopping current generation before applying');
+    await stopGeneration();
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  generationId++;
+  
+  // Keep everything before the clicked position
+  const keptTokens = allTokens.slice(0, index);
+  const keptLogprobs = allLogprobs.slice(0, index);
+  
+  console.log('[Custom] Kept tokens:', keptTokens);
+  console.log('[Custom] Injecting tokens:', tokens);
+  
+  // For multi-token injection, we'll insert all tokens
+  // The first token gets the original logprobs structure (preserving candidates)
+  // Additional tokens get null logprobs
+  const originalLogprobObj = allLogprobs[index];
+  let firstTokenLogprobs = null;
+  
+  if (originalLogprobObj && originalLogprobObj.content && originalLogprobObj.content[0]) {
+    firstTokenLogprobs = JSON.parse(JSON.stringify(originalLogprobObj));
+    firstTokenLogprobs.content[0].token = tokens[0];
+    // We don't have the exact logprob for custom text, so we'll leave it as is
+    // This preserves the candidates list for further branching
+  }
+  
+  // Update state with all new tokens
+  allTokens = [...keptTokens, ...tokens];
+  allLogprobs = [...keptLogprobs, firstTokenLogprobs, ...new Array(tokens.length - 1).fill(null)];
+  
+  console.log('[Custom] New token history:', allTokens);
+  console.log('[Custom] Total tokens:', allTokens.length);
+  
+  // Re-render UI
+  elements.heatmapText.innerHTML = '';
+  allTokens.forEach((token, i) => {
+    appendTokenToHeatmap(token, allLogprobs[i], i);
+  });
+  
+  // Continue generation
+  const prompt = elements.promptInput.value.trim();
+  await runGenerationLoop(prompt, allTokens);
 }
 
 // Initialize WebLLM
@@ -319,11 +534,31 @@ async function retryGeneration(index, chosenToken) {
   
   console.log('[Retry] Kept tokens:', keptTokens);
   
+  // Preserve the logprobs from the original position so we keep candidates and interactivity
+  let newLogprobObj = null;
+  const originalLogprobObj = allLogprobs[index];
+  
+  if (originalLogprobObj && originalLogprobObj.content && originalLogprobObj.content[0]) {
+    // Deep clone to avoid mutating history
+    newLogprobObj = JSON.parse(JSON.stringify(originalLogprobObj));
+    
+    // Update the main token info to match our choice
+    newLogprobObj.content[0].token = chosenToken;
+    
+    // Try to find the specific logprob for this token from candidates
+    // to make the confidence score correct
+    if (newLogprobObj.content[0].top_logprobs) {
+      const candidate = newLogprobObj.content[0].top_logprobs.find(c => c.token === chosenToken);
+      if (candidate) {
+        newLogprobObj.content[0].logprob = candidate.logprob;
+        // We keep top_logprobs as is - they are still valid alternatives for this position
+      }
+    }
+  }
+  
   // Update state
   allTokens = [...keptTokens, chosenToken];
-  // We insert a null logprob for the forced token as we don't have its full context logprobs easily available
-  // or we could potentially use the candidate object, but for simplicity we use null
-  allLogprobs = [...keptLogprobs, null];
+  allLogprobs = [...keptLogprobs, newLogprobObj];
   
   console.log('[Retry] New token history:', allTokens);
   console.log('[Retry] Joined history text:', allTokens.join(''));

@@ -338,6 +338,11 @@
   filter: none;
 }
 
+/* Ensure interactive tokens show pointer */
+.cursor-pointer {
+  cursor: pointer !important;
+}
+
 /* Token confidence styles moved to win98.css to avoid conflicts */
 /* Use the standardized 6-level system: token-confidence-very-high, token-confidence-high, etc. */
 
