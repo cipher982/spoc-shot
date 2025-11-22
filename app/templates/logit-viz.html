@@ -404,7 +404,8 @@
   <!-- JavaScript -->
   <script>
     // Load the module and make functions available globally
-    import('/static/js/logit-viz.js').then(module => {
+    // Use relative path to work with subpath deployments
+    import('./static/js/logit-viz.js').then(module => {
       window.loadSelectedModel = module.loadSelectedModel;
     }).catch(error => {
       console.error('Failed to load logit-viz module:', error);
