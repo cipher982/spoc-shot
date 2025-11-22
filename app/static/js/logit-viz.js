@@ -57,21 +57,26 @@ let allLogprobs = [];
 let activeTokenElement = null;
 let generationId = 0; // Track generation attempts to prevent race conditions
 
-// Initialize
-document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[INIT] DOM Content Loaded');
-  setupEventListeners();
+// Initialize immediately when module loads (not waiting for DOMContentLoaded)
+console.log('[INIT] Module loaded, setting up immediately');
+setupEventListeners();
 
-  // Show the overlay explicitly if it was hidden for some reason
+// Check if WebLLM is already loaded (from cache or previous session)
+if (webllmManager.loaded && webllmManager.engine) {
+  console.log('[INIT] WebLLM already loaded, hiding overlay');
   if (elements.loadingOverlay) {
-    console.log('[INIT] Showing loading overlay');
+    elements.loadingOverlay.classList.add('hidden');
+  }
+  updateStatus('Ready', 'ready');
+} else {
+  // Show the overlay for model selection
+  if (elements.loadingOverlay) {
+    console.log('[INIT] Showing loading overlay for model selection');
     elements.loadingOverlay.classList.remove('hidden');
   } else {
     console.error('[INIT] Loading overlay element not found!');
   }
-
-  // We don't auto-load anymore - waiting for user selection
-});
+}
 
 // Global function for button onclick
 export function loadSelectedModel() {
@@ -115,6 +120,7 @@ export function loadSelectedModel() {
   }, 300);
 }
 
+
 // Function is now exported and will be made available via import in HTML
 
 // Setup event listeners
@@ -133,7 +139,7 @@ function setupEventListeners() {
   elements.tempSlider.addEventListener('input', (e) => {
     elements.tempDisplay.textContent = e.target.value;
   });
-  
+
   elements.topPSlider.addEventListener('input', (e) => {
     elements.topPDisplay.textContent = e.target.value;
   });
