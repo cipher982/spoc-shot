@@ -6,7 +6,7 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=8000
-      - APPLICATION_ROOT=/agent-zoom
+      - APPLICATION_ROOT=/storyteller
       - WEBLLM_MODE=${WEBLLM_MODE}
       - VLLM_BASE_URL=${VLLM_BASE_URL}
       - MODEL_NAME=${MODEL_NAME}
