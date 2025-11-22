@@ -1,152 +1,150 @@
-# SPOC-Shot Demo
+# The Storyteller's Quill
 
-SPOC-Shot is an educational sandbox that contrasts **multi-pass ReAct agents** against an optimized **single-pass (SPOC) agent**.  
-It provides a live dashboard, token-level metrics, step-by-step logs and full client-side inference through **WebLLM**.
+An interactive AI storytelling experience with real-time token probability visualization. Watch the model "think" as it writes, seeing the confidence and alternative choices for each word.
 
----
-
-## 1 Requirements
-
-• Python ≥ 3.12  
-• `uv` package manager (pip-installable)  
-• A modern browser with **WebGPU** (Chrome 113+, Firefox 110+) for WebLLM
-
-> 🛈  The server can be run on CPU-only machines; model inference happens in the browser by default.
+**Live Demo:** https://drose.io/storyteller/
 
 ---
 
-## 2 Quick Start (Local)
+## Features
+
+- **Interactive Story Generation** — Type a topic and watch the AI craft a story in real-time
+- **Token Probability Visualization** — See model confidence with color-coded uncertainty indicators
+- **Alternative Token Explorer** — Hover over any word to see what other tokens the model considered
+- **Click-to-Retry** — Don't like a word? Click it to regenerate from that point with a different choice
+- **Beautiful Old-Book Aesthetic** — Parchment textures, ink colors, and serif typography
+- **Fully Client-Side** — Model runs in your browser via WebLLM (no data sent to servers)
+
+---
+
+## Requirements
+
+- Python ≥ 3.12
+- `uv` package manager
+- A modern browser with **WebGPU** support (Chrome 113+, Edge 113+, Firefox 121+)
+
+> The server only serves static files; all inference happens client-side in your browser.
+
+---
+
+## Quick Start
 
 ```bash
-# 1. Configure environment (.env)
-# (You can skip this step; both `make install` and `make dev` will copy
-#  .env.example automatically, but the helper script is convenient.)
-./config.sh init      # copy .env.example → .env
-./config.sh dev       # dev mode: WebLLM, port 8004, auto-reload
+# 1. Install dependencies
+make install
 
-# 2. Install deps & launch
-make install          # ⇒ uv sync
-make dev              # ⇒ uv run uvicorn app.main:app --host 127.0.0.1 --port 8004 --reload
+# 2. Start development server
+make dev
 
-# 3. Open your browser
+# 3. Open browser
 open http://127.0.0.1:8004
 ```
 
-Alternate one-liner (uses whatever is already in `.env`):
+Or use the config helper:
 
 ```bash
-./run_demo.sh
+./config.sh init      # Create .env from template
+./config.sh dev       # Configure for development
+make dev              # Start server
 ```
 
 ---
 
-## 3 Configuration Helper
-
-`config.sh` replaces several old Make targets (`init`, `prod`, `hybrid`, `port`, `show`).
-
-| Command                 | Effect                                                        |
-|-------------------------|---------------------------------------------------------------|
-| `./config.sh init`      | Create `.env` from template                                   |
-| `./config.sh dev`       | WebLLM mode, port 8004, auto-reload                           |
-| `./config.sh prod`      | Server-only mode, port 80, no reload                          |
-| `./config.sh hybrid`    | Hybrid (WebLLM + vLLM) mode, port 8004                        |
-| `./config.sh port 3001` | Change exposed port                                           |
-| `./config.sh show`      | Display current `.env`                                        |
-
-Key environment variables (full list in `.env.example`):
-
-| Var            | Default        | Description                                      |
-|---------------|----------------|--------------------------------------------------|
-| `HOST`         | `0.0.0.0`      | Bind address                                     |
-| `PORT`         | `8004`         | HTTP port                                        |
-| `RELOAD`       | `true`         | Uvicorn autoreload                               |
-| `WEBLLM_MODE`  | `webllm`       | `webllm` \| `server` \| `hybrid`                 |
-| `VLLM_BASE_URL`| `http://cube:8000/v1` | vLLM REST endpoint when server/hybrid mode |
-| `MODEL_NAME`   | `local-7b`     | Model to request from vLLM                       |
-
----
-
-## 4 Make Targets (current)
+## Make Targets
 
 ```text
-make help        # print cheat-sheet
-make install     # uv sync
-make dev         # local development server (reload)
-make test        # run pytest & sanity checks
-make docker      # docker compose up --build (bind mount source)
-make docker-prod # production image (detached)
-make clean       # remove __pycache__, stray .pyc, prune docker
-```
-
-> ⚠️  Historical targets like `make run`, `make prod`, `make hybrid` are no longer in the Makefile. Use the equivalents above or `config.sh`.
-
----
-
-## 5 Docker Usage
-
-Development (source mounted, port forwarded from `.env`):
-
-```bash
-make docker              # or: docker compose up --build
-```
-
-
-Production (detached, no host port unless you set `PORT`):
-
-```bash
-make docker-prod         # or: docker compose up --build -d
+make help        # Show all available commands
+make install     # Install Python dependencies (uv sync)
+make dev         # Start development server with hot-reload
+make test        # Run test suite
+make docker      # Build and run in Docker (development)
+make docker-prod # Build and run in Docker (production, detached)
+make stop        # Stop the development server
+make clean       # Remove cache files and prune Docker
 ```
 
 ---
 
-## 6 API End-points
+## Configuration
 
-| Method | Path            | Description                                         |
-|--------|-----------------|-----------------------------------------------------|
-| POST   | `/solve`        | SSE stream – body fields: `prompt`, `mode`, `scenario` |
-| GET    | `/api/config`   | Returns `{ webllm_mode, server_available }`         |
-| GET    | `/`             | SPA index page                                      |
+Key environment variables (see `.env.example`):
+
+| Variable       | Default   | Description                          |
+|----------------|-----------|--------------------------------------|
+| `HOST`         | `0.0.0.0` | Server bind address                  |
+| `PORT`         | `8004`    | HTTP port                            |
+| `RELOAD`       | `true`    | Enable uvicorn auto-reload           |
+| `WEBLLM_MODE`  | `webllm`  | Inference mode (webllm/server/hybrid)|
 
 ---
 
-## 7 Testing
+## How It Works
+
+1. **WebLLM** loads a quantized LLM (Llama/Qwen) directly in your browser using WebGPU
+2. As the model generates tokens, it streams both the token and its **logprobs** (log probabilities)
+3. The UI visualizes confidence levels:
+   - **High confidence** (>90%) — Solid ink color
+   - **Medium confidence** (70-90%) — Slightly faded
+   - **Low confidence** (<70%) — Golden/uncertain appearance with decorative underline
+4. Hovering reveals the top-5 alternative tokens the model considered
+5. Clicking a token lets you "rewind" and try a different path
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      Browser                             │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
+│  │  logit-viz  │───▶│   WebLLM    │───▶│   WebGPU    │  │
+│  │    (.js)    │◀───│  Manager    │◀───│   (GPU)     │  │
+│  └─────────────┘    └─────────────┘    └─────────────┘  │
+└─────────────────────────────────────────────────────────┘
+              │
+              ▼ (static files only)
+┌─────────────────────────────────────────────────────────┐
+│                    FastAPI Server                        │
+│         Serves HTML/JS/CSS • Health checks              │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Testing
 
 ```bash
-# ensure .env exists first
-./config.sh init --quiet || true
-
 make test
 ```
 
-The suite verifies Python imports, file structure and basic setup. Note: The original agent tests have been archived to `tests/archive/test_agent.py` as they reference deprecated APIs.
+The test suite includes:
+- **Basic tests** — UI elements, parameter controls, accessibility
+- **E2E tests** — Full user interactions via Playwright
+- **Mock infrastructure** — GPU-free testing with simulated WebLLM responses
+
+See `tests/README.md` for details on the testing strategy.
 
 ---
 
-## 8 How It Works (recap)
+## Deployment
 
-1. **Multi-Pass (baseline ReAct)** – each tool interaction is a separate LLM call.
-2. **Single-Pass (SPOC)** – retains KV-cache and conversation state inside one streaming generation.
+Deployed via **Coolify** on clifford at `https://drose.io/storyteller/`
 
-The web UI visualises: latency, token usage, LLM call count, live log stream and step-wise state.
-
----
-
-## 9 Performance Notes
-
-WebGPU / WebLLM speed depends heavily on hardware:
-
-• Desktop dGPU → fast   
-• Laptop iGPU   → usable   
-• Mobile        → may fail due to memory limits (~2 GB required)
-
-The demo auto-detects capability and falls back to server or hybrid modes when available.
+The Docker container:
+- Builds with `uv` for fast dependency installation
+- Runs uvicorn on port 8000 internally
+- Caddy reverse proxy handles `/storyteller` path routing
 
 ---
 
-## 10 Roadmap / Contributions
+## History
 
-Planned features are tracked in `ROADMAP.md`.  PRs and issues are welcome — please run `make test` and format with black/ruff before submitting.
+This project evolved from **SPOC-Shot**, an agent comparison demo. In November 2025, it was reimagined as **The Storyteller's Quill** — focusing on the creative and educational aspects of watching an LLM generate text token-by-token.
+
+The original agent comparison code has been archived. See `CODE_REVIEW_SUMMARY.md` for details on the migration.
 
 ---
 
-© 2024 SPOC-Shot authors. Licensed under the Apache 2.0 License.
+## License
+
+Apache 2.0
