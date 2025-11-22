@@ -57,8 +57,11 @@ test:
 # Run E2E tests with Playwright
 test-e2e:
 	@echo "🎭 Running E2E tests for The Storyteller..."
+	@echo "💡 Make sure the server is running with 'make dev' in another terminal"
+	@echo "   or run 'uv run uvicorn app.main:app --host 127.0.0.1 --port 8004' first"
+	@sleep 2
 	@[ ! -f .env ] && cp .env.example .env || true
-	@uv run pytest tests/test_storyteller_e2e.py -v --browser chromium
+	@uv run python -m pytest tests/test_storyteller_e2e.py -v --browser chromium
 
 # Clean temporary files
 clean:
