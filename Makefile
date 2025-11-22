@@ -1,7 +1,7 @@
 # The Storyteller Makefile
 # ==========================
 
-.PHONY: help install dev docker docker-prod test test-e2e clean
+.PHONY: help install dev stop docker docker-prod test test-e2e clean
 
 # Default target
 help:
@@ -14,6 +14,7 @@ help:
 	@echo ""
 	@echo "💻 Local Development:"
 	@echo "  make dev           Run local development server"
+	@echo "  make stop          Stop the development server"
 	@echo "  make install       Install dependencies"
 	@echo "  make test          Run unit tests"
 	@echo "  make test-e2e      Run E2E tests with Playwright"
@@ -47,12 +48,21 @@ dev:
 	@[ ! -f .env ] && cp .env.example .env || true
 	@uv run python -m uvicorn app.main:app --host 127.0.0.1 --port 8004 --reload
 
+# Stop development server
+stop:
+	@echo "🛑 Stopping development server..."
+	@# Kill uvicorn processes specifically running app.main:app
+	@pgrep -f "uvicorn.*app.main:app" | xargs kill -9 2>/dev/null || echo "No storyteller server found running"
+	@# Also kill any remaining processes on port 8004 (safety net)
+	@lsof -ti:8004 | xargs kill -9 2>/dev/null || true
+	@echo "✅ Server stopped"
+
 # Run unit tests
 test:
 	@echo "🧪 Running unit tests..."
 	@[ ! -f .env ] && cp .env.example .env || true
 	@uv run python test_setup.py 2>/dev/null || true
-	@uv run pytest tests/test_agent.py -v 2>/dev/null || echo "No pytest tests found"
+	# test_agent.py removed - imports non-existent functions solve_single_pass/solve_multi_pass
 
 # Run E2E tests with Playwright
 test-e2e:

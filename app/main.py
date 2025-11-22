@@ -99,16 +99,7 @@ async def read_index():
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="logit-viz.html not found.")
 
-@app.get("/debug", response_class=HTMLResponse)
-async def css_debug():
-    """
-    Serves CSS debug page for testing variables.
-    """
-    try:
-        with open("app/templates/css-debug.html") as f:
-            return HTMLResponse(content=f.read(), status_code=200)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="css-debug.html not found.")
+# Debug endpoint removed - css-debug.html template no longer exists
 
 # ---------------------------------------------------------------------------
 # Optional favicon route

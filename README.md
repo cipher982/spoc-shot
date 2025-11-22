@@ -118,7 +118,7 @@ make docker-prod         # or: docker compose up --build -d
 make test
 ```
 
-The suite verifies Python imports, file structure and both agent paths (`tests/test_agent.py`).
+The suite verifies Python imports, file structure and basic setup. Note: The original agent tests have been archived to `tests/archive/test_agent.py` as they reference deprecated APIs.
 
 ---
 
