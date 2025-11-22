@@ -22,7 +22,7 @@
       --accent-gold: Dull gold
     */
     :root {
-      --paper-color: #fdfbf7;
+      --paper-color: #d8c8b0;
       --ink-color: #2c241b;
       --ink-faded: #5c4d3c;
       --leather-dark: #2a1810;
@@ -122,8 +122,9 @@
 
     /* Paper Sheet Effect */
     .paper-sheet {
-      background-color: #fdfbf7;
+      background-color: var(--paper-color);
       background-image: url("https://www.transparenttextures.com/patterns/cream-paper.png");
+      background-blend-mode: multiply;
       box-shadow: 
         0 1px 1px rgba(0,0,0,0.15), 
         0 10px 0 -5px #eee, 
@@ -152,7 +153,7 @@
     /* Tooltip styled like a marginalia note */
     #token-tooltip {
       font-family: 'Crimson Text', serif;
-      background: #fffef8;
+      background: #d8c8b0;
       border: 1px solid #d4c5b0;
       box-shadow: 5px 5px 15px rgba(0,0,0,0.2);
     }
@@ -161,9 +162,8 @@
 <body class="min-h-screen text-[#2c241b]">
   
   <!-- Loading Overlay (Parchment Style) -->
-  <div id="loading-overlay" class="hidden fixed inset-0 bg-[#1a120b] bg-opacity-90 flex items-center justify-center z-50">
-    <div class="bg-[#fdfbf7] rounded-sm shadow-2xl p-8 max-w-md w-full mx-4 border-4 border-double border-[#4a2c1d] relative">
-      <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style="background-image: url('https://www.transparenttextures.com/patterns/aged-paper.png');"></div>
+  <div id="loading-overlay" class="fixed inset-0 bg-[#1a120b] bg-opacity-90 flex items-center justify-center z-50">
+    <div class="bg-[#d8c8b0] rounded-sm shadow-2xl p-8 max-w-md w-full mx-4 border-4 border-double border-[#4a2c1d] relative" style="background-image: url('https://www.transparenttextures.com/patterns/cream-paper.png'); background-blend-mode: multiply;">
       
       <div class="flex flex-col items-center text-center mb-6 relative z-10">
         <div class="mb-4 text-4xl">✒️</div>
@@ -171,11 +171,45 @@
       </div>
       
       <div class="space-y-4 relative z-10">
-        <p id="loading-status" class="text-[#5c4d3c] font-serif italic">Summoning the spirits of storytelling...</p>
-        <div class="w-full bg-[#e6e0d0] h-2 rounded-full overflow-hidden border border-[#d4c5b0]">
-          <div id="loading-progress" class="bg-[#8c735a] h-full transition-all duration-300" style="width: 0%"></div>
+        <!-- Model Selection -->
+        <div class="mb-4 text-left">
+          <label class="block text-[#5c4d3c] font-serif text-sm italic mb-2">Choose your storyteller:</label>
+          <div class="space-y-2">
+            <label class="flex items-center p-3 border border-[#d4c5b0] rounded bg-[#efe6d5] hover:bg-[#e6e0d0] cursor-pointer transition-colors group">
+              <input type="radio" name="model-choice" value="Hermes-3-Llama-3.1-8B-q4f16_1-MLC" class="hidden peer" checked>
+              <div class="w-4 h-4 border-2 border-[#8d6e63] rounded-full mr-3 flex items-center justify-center peer-checked:border-[#2a1810] peer-checked:bg-[#2a1810]">
+                <div class="w-1.5 h-1.5 bg-white rounded-full peer-checked:block hidden"></div>
+              </div>
+              <div class="flex-1">
+                <div class="font-serif font-bold text-[#2a1810]">The Grand Bard</div>
+                <div class="text-xs text-[#5c4d3c] italic">Llama 3.1 8B - Eloquent & Detailed</div>
+              </div>
+            </label>
+
+            <label class="flex items-center p-3 border border-[#d4c5b0] rounded bg-[#efe6d5] hover:bg-[#e6e0d0] cursor-pointer transition-colors group">
+              <input type="radio" name="model-choice" value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC" class="hidden peer">
+              <div class="w-4 h-4 border-2 border-[#8d6e63] rounded-full mr-3 flex items-center justify-center peer-checked:border-[#2a1810] peer-checked:bg-[#2a1810]">
+                <div class="w-1.5 h-1.5 bg-white rounded-full peer-checked:block hidden"></div>
+              </div>
+              <div class="flex-1">
+                <div class="font-serif font-bold text-[#2a1810]">The Apprentice</div>
+                <div class="text-xs text-[#5c4d3c] italic">Qwen 0.5B - Swift & Simple</div>
+              </div>
+            </label>
+          </div>
         </div>
-        <p id="loading-progress-text" class="text-sm text-[#8c735a] font-mono text-right">0%</p>
+
+        <button id="load-model-btn" onclick="loadSelectedModel()" class="w-full py-2 bg-[#5d4037] hover:bg-[#4e342e] text-[#efebe9] font-bold rounded border border-[#8d6e63] shadow-md cinzel tracking-wider transition-colors mb-2">
+          Summon Spirit
+        </button>
+
+        <div id="loading-progress-container" class="hidden space-y-2">
+          <p id="loading-status" class="text-[#5c4d3c] font-serif italic text-sm">Summoning the spirits of storytelling...</p>
+          <div class="w-full bg-[#e6e0d0] h-2 rounded-full overflow-hidden border border-[#d4c5b0]">
+            <div id="loading-progress" class="bg-[#8c735a] h-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <p id="loading-progress-text" class="text-sm text-[#8c735a] font-mono text-right">0%</p>
+        </div>
       </div>
     </div>
   </div>
@@ -278,7 +312,7 @@
           </div>
           
           <!-- The Text -->
-          <div class="flex-grow overflow-y-auto p-10 md:p-12 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
+          <div class="flex-grow overflow-y-auto p-10 md:p-12 bg-transparent">
             <div id="heatmap-text" class="text-xl leading-loose text-[#2c241b] font-serif">
               <p class="text-[#8c735a] italic text-center mt-20">
                 "The blank page is the most terrifying thing the writer faces..."
@@ -299,7 +333,7 @@
       <div class="lg:col-span-4 space-y-6">
         
         <!-- Confidence Card -->
-        <div class="bg-[#fdfbf7] p-6 rounded shadow-lg border border-[#e6e0d0] relative rotate-1 transform hover:rotate-0 transition-transform duration-500">
+        <div class="bg-[#d8c8b0] p-6 rounded shadow-lg border border-[#e6e0d0] relative rotate-1 transform hover:rotate-0 transition-transform duration-500">
           <div class="absolute -top-3 -left-3 text-4xl text-[#d7ccc8] opacity-50">❝</div>
           
           <h3 class="text-lg font-bold text-[#5d4037] mb-4 cinzel border-b border-[#e6e0d0] pb-2">Certainty</h3>
@@ -316,7 +350,7 @@
         </div>
 
         <!-- Stats Card -->
-        <div class="bg-[#fdfbf7] p-6 rounded shadow-lg border border-[#e6e0d0] relative -rotate-1 transform hover:rotate-0 transition-transform duration-500">
+        <div class="bg-[#d8c8b0] p-6 rounded shadow-lg border border-[#e6e0d0] relative -rotate-1 transform hover:rotate-0 transition-transform duration-500">
            <h3 class="text-lg font-bold text-[#5d4037] mb-4 cinzel border-b border-[#e6e0d0] pb-2">Arcana</h3>
            <div class="space-y-2 font-serif text-[#4a2c1d]">
             <div class="flex justify-between items-center py-1 border-b border-dashed border-[#e6e0d0]">

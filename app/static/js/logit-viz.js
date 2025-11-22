@@ -38,8 +38,16 @@ const elements = {
   topPValue: document.getElementById('top-p-value'),
   coherenceValue: document.getElementById('coherence-value'),
   tooltip: document.getElementById('token-tooltip'),
-  tooltipCandidates: document.getElementById('tooltip-candidates')
+  tooltipCandidates: document.getElementById('tooltip-candidates'),
+  loadModelBtn: document.getElementById('load-model-btn'),
+  loadingProgressContainer: document.getElementById('loading-progress-container')
 };
+
+console.log('[INIT] Elements found:', {
+  loadingOverlay: !!elements.loadingOverlay,
+  loadModelBtn: !!elements.loadModelBtn,
+  loadingProgressContainer: !!elements.loadingProgressContainer
+});
 
 // State
 let currentAbortController = null;
@@ -51,12 +59,77 @@ let generationId = 0; // Track generation attempts to prevent race conditions
 
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('[INIT] DOM Content Loaded');
   setupEventListeners();
-  await initializeWebLLM();
+
+  // Show the overlay explicitly if it was hidden for some reason
+  if (elements.loadingOverlay) {
+    console.log('[INIT] Showing loading overlay');
+    elements.loadingOverlay.classList.remove('hidden');
+  } else {
+    console.error('[INIT] Loading overlay element not found!');
+  }
+
+  // We don't auto-load anymore - waiting for user selection
 });
+
+// Global function for button onclick
+function loadSelectedModel() {
+  console.log('[BUTTON] Load model button clicked via onclick');
+
+  // Get selected model
+  const selectedModel = document.querySelector('input[name="model-choice"]:checked');
+  if (!selectedModel) {
+    console.log('[BUTTON] No model selected');
+    alert('Please select a storyteller first!');
+    return;
+  }
+
+  const modelId = selectedModel.value;
+  console.log('[BUTTON] Selected model:', modelId);
+
+  // Disable interactions
+  const radioButtons = document.querySelectorAll('input[name="model-choice"]');
+  radioButtons.forEach(rb => {
+    rb.disabled = true;
+    const container = rb.closest('label');
+    if (container) {
+      container.classList.remove('hover:bg-[#e6e0d0]', 'cursor-pointer');
+      container.classList.add('opacity-60', 'cursor-not-allowed');
+    }
+  });
+
+  elements.loadModelBtn.disabled = true;
+  elements.loadModelBtn.classList.add('opacity-50', 'cursor-not-allowed');
+  elements.loadModelBtn.textContent = 'Summoning...';
+
+  // Small delay for UI update before heavy work
+  setTimeout(() => {
+    elements.loadModelBtn.classList.add('hidden');
+    // Hide the model selection area entirely to reduce clutter
+    const modelSelectionDiv = elements.loadModelBtn.previousElementSibling;
+    if (modelSelectionDiv) modelSelectionDiv.classList.add('hidden');
+
+    elements.loadingProgressContainer.classList.remove('hidden');
+    initializeWebLLM(modelId);
+  }, 300);
+}
+
+// Make function globally available
+window.loadSelectedModel = loadSelectedModel;
 
 // Setup event listeners
 function setupEventListeners() {
+  console.log('[SETUP] Setting up event listeners');
+
+  // Model loading button - also add event listener as backup
+  if (elements.loadModelBtn) {
+    console.log('[SETUP] Found load model button, adding listener');
+    elements.loadModelBtn.addEventListener('click', loadSelectedModel);
+  } else {
+    console.error('[SETUP] Load model button not found!');
+  }
+
   // Parameter sliders
   elements.tempSlider.addEventListener('input', (e) => {
     elements.tempDisplay.textContent = e.target.value;
@@ -463,7 +536,7 @@ async function applyCustomToken(index, text) {
 }
 
 // Initialize WebLLM
-async function initializeWebLLM() {
+async function initializeWebLLM(modelId) {
   try {
     updateStatus('Initializing WebLLM...', 'loading');
     if (elements.loadingOverlay) elements.loadingOverlay.classList.remove('hidden');
@@ -475,7 +548,7 @@ async function initializeWebLLM() {
 
     if (!('gpu' in navigator)) throw new Error('WebGPU unavailable');
     
-    const selectedModel = "Hermes-3-Llama-3.1-8B-q4f16_1-MLC";
+    const selectedModel = modelId || "Hermes-3-Llama-3.1-8B-q4f16_1-MLC";
     
     const progressCallback = (report) => {
       const progress = Math.round((report.progress || 0) * 100);
