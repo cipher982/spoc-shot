@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Global function for button onclick
-function loadSelectedModel() {
+export function loadSelectedModel() {
   console.log('[BUTTON] Load model button clicked via onclick');
 
   // Get selected model
@@ -115,8 +115,7 @@ function loadSelectedModel() {
   }, 300);
 }
 
-// Make function globally available
-window.loadSelectedModel = loadSelectedModel;
+// Function is now exported and will be made available via import in HTML
 
 // Setup event listeners
 function setupEventListeners() {

@@ -402,7 +402,14 @@
   </div>
 
   <!-- JavaScript -->
-  <script type="module" src="/static/js/logit-viz.js"></script>
+  <script>
+    // Load the module and make functions available globally
+    import('/static/js/logit-viz.js').then(module => {
+      window.loadSelectedModel = module.loadSelectedModel;
+    }).catch(error => {
+      console.error('Failed to load logit-viz module:', error);
+    });
+  </script>
   
   <!-- Tooltip (Hidden) -->
   <div id="token-tooltip" class="hidden fixed z-50 bg-[#fffef8] border border-[#d4c5b0] p-3 rounded shadow-xl max-w-xs">
