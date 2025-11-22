@@ -189,10 +189,19 @@ function showTooltip(tokenEl) {
     // Colorize confidence in tooltip
     const confColor = getConfidenceColorClass(c.confidence);
     
-    div.innerHTML = `
-      <span class="font-serif text-[#2c1e14] text-lg group-hover:text-[#1a120b] whitespace-pre">${c.token}</span>
-      <span class="text-xs ${confColor} ml-4 font-serif">${c.confidence.toFixed(1)}%</span>
-    `;
+    // Create token span safely
+    const tokenSpan = document.createElement('span');
+    tokenSpan.className = 'font-serif text-[#2c1e14] text-lg group-hover:text-[#1a120b] whitespace-pre';
+    tokenSpan.textContent = c.token;  // Safe text assignment
+    
+    // Create confidence span
+    const confSpan = document.createElement('span');
+    confSpan.className = `text-xs ${confColor} ml-4 font-serif`;
+    confSpan.textContent = `${c.confidence.toFixed(1)}%`;
+    
+    // Append spans to div
+    div.appendChild(tokenSpan);
+    div.appendChild(confSpan);
     
     div.onclick = (e) => {
       e.stopPropagation(); // Prevent closing immediately
@@ -205,10 +214,18 @@ function showTooltip(tokenEl) {
   // Add "Custom..." option at the bottom
   const customDiv = document.createElement('div');
   customDiv.className = 'flex items-center justify-between p-2 hover:bg-[#e6e0d0] rounded cursor-pointer group transition-colors border-t-2 border-[#d4c5b0] mt-1 pt-2';
-  customDiv.innerHTML = `
-    <span class="font-serif text-[#5c4d3c] text-lg group-hover:text-[#1a120b]">✏️ Custom word...</span>
-    <span class="text-xs text-[#8c735a] ml-4 font-serif italic">type</span>
-  `;
+  
+  // Create custom option spans safely
+  const customTextSpan = document.createElement('span');
+  customTextSpan.className = 'font-serif text-[#5c4d3c] text-lg group-hover:text-[#1a120b]';
+  customTextSpan.textContent = '✏️ Custom word...';
+  
+  const typeSpan = document.createElement('span');
+  typeSpan.className = 'text-xs text-[#8c735a] ml-4 font-serif italic';
+  typeSpan.textContent = 'type';
+  
+  customDiv.appendChild(customTextSpan);
+  customDiv.appendChild(typeSpan);
   
   customDiv.onclick = (e) => {
     e.stopPropagation();
@@ -453,7 +470,7 @@ async function initializeWebLLM() {
     
     // Dynamically import WebLLM
     const { CreateMLCEngine, prebuiltAppConfig } = await import(
-      'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@latest/+esm'
+      'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm'
     );
 
     if (!('gpu' in navigator)) throw new Error('WebGPU unavailable');
@@ -506,6 +523,9 @@ async function startGeneration() {
   allLogprobs = [];
   elements.heatmapText.innerHTML = '';
   resetMetrics();
+  
+  // CRITICAL: Increment generationId for new generation
+  generationId++;
   
   await runGenerationLoop(topic, []);
 }
