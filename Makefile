@@ -1,28 +1,29 @@
-# SPOC-Shot Demo Makefile
-# =======================
+# The Storyteller Makefile
+# ==========================
 
-.PHONY: help install dev docker docker-prod test clean
+.PHONY: help install dev docker docker-prod test test-e2e clean
 
 # Default target
 help:
-	@echo "🚀 SPOC-Shot Demo"
-	@echo "================="
+	@echo "🪶 The Storyteller"
+	@echo "=================="
 	@echo ""
 	@echo "🐋 Docker:"
-	@echo "  make docker        Build and run web demo (local)"
+	@echo "  make docker        Build and run storyteller (local)"
 	@echo "  make docker-prod   Build and run for production (detached)"
 	@echo ""
 	@echo "💻 Local Development:"
 	@echo "  make dev           Run local development server"
 	@echo "  make install       Install dependencies"
-	@echo "  make test          Run tests"
+	@echo "  make test          Run unit tests"
+	@echo "  make test-e2e      Run E2E tests with Playwright"
 	@echo ""
 	@echo "🧹 Maintenance:"
 	@echo "  make clean         Clean temporary files"
 
 # Docker web demo (local development)
 docker:
-	@echo "🐋 Building and running SPOC-Shot web demo (local)..."
+	@echo "🐋 Building and running The Storyteller (local)..."
 	@docker compose up --build
 
 # Docker production (detached, default compose file)
@@ -30,7 +31,7 @@ docker:
 # mounted, so container state remains isolated.  Override PORT/HOST in .env
 # if you need to expose a public port.
 docker-prod:
-	@echo "🐋 Building and running SPOC-Shot for production (detached)..."
+	@echo "🐋 Building and running The Storyteller for production (detached)..."
 	@docker compose up --build -d
 
 # Install dependencies
@@ -46,18 +47,18 @@ dev:
 	@[ ! -f .env ] && cp .env.example .env || true
 	@uv run python -m uvicorn app.main:app --host 127.0.0.1 --port 8004 --reload
 
-# Run tests
+# Run unit tests
 test:
-	@echo "🧪 Running WebLLM integration tests..."
+	@echo "🧪 Running unit tests..."
 	@[ ! -f .env ] && cp .env.example .env || true
-	@uv run python test_webllm_integration.py
-	@echo ""
-	@echo "🧪 Running REAL WebLLM logprobs test..."
-	@uv run python test_webllm_logprobs.py
-	@echo ""
-	@echo "🧪 Running additional tests..."
 	@uv run python test_setup.py 2>/dev/null || true
-	@uv run pytest -q 2>/dev/null || echo "No pytest tests found"
+	@uv run pytest tests/test_agent.py -v 2>/dev/null || echo "No pytest tests found"
+
+# Run E2E tests with Playwright
+test-e2e:
+	@echo "🎭 Running E2E tests for The Storyteller..."
+	@[ ! -f .env ] && cp .env.example .env || true
+	@uv run pytest tests/test_storyteller_e2e.py -v --browser chromium
 
 # Clean temporary files
 clean:
