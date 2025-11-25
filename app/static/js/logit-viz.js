@@ -12,6 +12,16 @@ import {
   CONFIDENCE_THRESHOLDS,
   CONFIDENCE_BAR_LENGTH 
 } from './constants.js';
+import {
+  getModelCatalog,
+  searchModels,
+  filterModels,
+  isReasoningModel,
+  hasProblematicQuantization,
+  getRecentModels,
+  addToRecentModels,
+  MODEL_FAMILIES
+} from './model-catalog.js';
 
 // DOM Elements
 const elements = {
@@ -40,8 +50,24 @@ const elements = {
   tooltip: document.getElementById('token-tooltip'),
   tooltipCandidates: document.getElementById('tooltip-candidates'),
   loadModelBtn: document.getElementById('load-model-btn'),
-  loadingProgressContainer: document.getElementById('loading-progress-container')
+  loadingProgressContainer: document.getElementById('loading-progress-container'),
+  // New model selector elements
+  libraryBrowser: document.getElementById('library-browser'),
+  modelSearch: document.getElementById('model-search'),
+  familyFilter: document.getElementById('family-filter'),
+  modelList: document.getElementById('model-list'),
+  customModelInput: document.getElementById('custom-model-input'),
+  customModelHint: document.getElementById('custom-model-hint'),
+  useCustomModelBtn: document.getElementById('use-custom-model-btn'),
+  reasoningWarning: document.getElementById('reasoning-warning'),
+  quantizationWarning: document.getElementById('quantization-warning'),
+  recentModelsSection: document.getElementById('recent-models-section'),
+  recentModelsList: document.getElementById('recent-models-list'),
 };
+
+// Model catalog state
+let modelCatalog = null;
+let selectedModelId = null;
 
 console.log('[INIT] Elements found:', {
   loadingOverlay: !!elements.loadingOverlay,
@@ -60,6 +86,7 @@ let generationId = 0; // Track generation attempts to prevent race conditions
 // Initialize immediately when module loads (not waiting for DOMContentLoaded)
 console.log('[INIT] Module loaded, setting up immediately');
 setupEventListeners();
+setupModelSelector();
 
 // Check if WebLLM is already loaded (from cache or previous session)
 if (webllmManager.loaded && webllmManager.engine) {
@@ -78,20 +105,343 @@ if (webllmManager.loaded && webllmManager.engine) {
   }
 }
 
+// ========================================
+// MODEL SELECTOR FUNCTIONALITY
+// ========================================
+
+/**
+ * Setup the model selector UI
+ */
+function setupModelSelector() {
+  console.log('[ModelSelector] Setting up...');
+  
+  // Load recent models
+  displayRecentModels();
+  
+  // Setup library browser lazy loading
+  if (elements.libraryBrowser) {
+    elements.libraryBrowser.addEventListener('toggle', async (e) => {
+      if (e.target.open && !modelCatalog) {
+        await loadModelCatalog();
+      }
+    });
+  }
+  
+  // Setup search
+  if (elements.modelSearch) {
+    elements.modelSearch.addEventListener('input', debounce(() => {
+      filterAndDisplayModels();
+    }, 200));
+  }
+  
+  // Setup family filter
+  if (elements.familyFilter) {
+    elements.familyFilter.addEventListener('change', () => {
+      filterAndDisplayModels();
+    });
+  }
+  
+  // Setup custom model button
+  if (elements.useCustomModelBtn) {
+    elements.useCustomModelBtn.addEventListener('click', () => {
+      const customId = elements.customModelInput?.value?.trim();
+      if (customId) {
+        selectModel(customId, true);
+      }
+    });
+  }
+  
+  // Setup custom model input enter key
+  if (elements.customModelInput) {
+    elements.customModelInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        elements.useCustomModelBtn?.click();
+      }
+      // Also check for reasoning model as user types
+      const value = e.target.value + (e.key.length === 1 ? e.key : '');
+      checkAndShowReasoningWarning(value);
+    });
+    
+    elements.customModelInput.addEventListener('input', () => {
+      checkAndShowReasoningWarning(elements.customModelInput.value);
+    });
+  }
+  
+  // Setup model choice radio buttons to check for reasoning warning
+  const radioButtons = document.querySelectorAll('input[name="model-choice"]');
+  radioButtons.forEach(radio => {
+    radio.addEventListener('change', () => {
+      checkAndShowReasoningWarning(radio.value);
+    });
+  });
+  
+  // Check initial selection
+  const initialSelection = document.querySelector('input[name="model-choice"]:checked');
+  if (initialSelection) {
+    checkAndShowReasoningWarning(initialSelection.value);
+  }
+}
+
+/**
+ * Load the model catalog from WebLLM
+ */
+async function loadModelCatalog() {
+  console.log('[ModelSelector] Loading catalog...');
+  
+  if (elements.modelList) {
+    elements.modelList.innerHTML = '<p class="text-xs text-[#8c735a] italic text-center py-4">Loading ancient tomes...</p>';
+  }
+  
+  try {
+    modelCatalog = await getModelCatalog();
+    console.log('[ModelSelector] Catalog loaded:', modelCatalog.all.length, 'models');
+    
+    // Populate family filter
+    if (elements.familyFilter) {
+      elements.familyFilter.innerHTML = '<option value="All">All Families</option>';
+      modelCatalog.familyNames.forEach(family => {
+        if (family !== 'Other') {
+          const option = document.createElement('option');
+          option.value = family;
+          option.textContent = family;
+          elements.familyFilter.appendChild(option);
+        }
+      });
+    }
+    
+    // Display all models
+    filterAndDisplayModels();
+    
+  } catch (error) {
+    console.error('[ModelSelector] Failed to load catalog:', error);
+    if (elements.modelList) {
+      elements.modelList.innerHTML = '<p class="text-xs text-red-600 text-center py-4">Failed to load model catalog</p>';
+    }
+  }
+}
+
+/**
+ * Filter and display models based on current search/filter state
+ */
+function filterAndDisplayModels() {
+  if (!modelCatalog || !elements.modelList) return;
+  
+  const searchQuery = elements.modelSearch?.value || '';
+  const familyFilter = elements.familyFilter?.value || 'All';
+  
+  let models = modelCatalog.all;
+  
+  // Apply search
+  if (searchQuery.trim()) {
+    models = searchModels(modelCatalog, searchQuery);
+  }
+  
+  // Apply family filter
+  if (familyFilter !== 'All') {
+    models = models.filter(m => m.family === familyFilter);
+  }
+  
+  // Sort by VRAM (smallest first for easier selection)
+  models = models.sort((a, b) => (a.vram_required_MB || 0) - (b.vram_required_MB || 0));
+  
+  // Render
+  renderModelList(models);
+}
+
+/**
+ * Render the model list
+ */
+function renderModelList(models) {
+  if (!elements.modelList) return;
+  
+  if (models.length === 0) {
+    elements.modelList.innerHTML = '<p class="text-xs text-[#8c735a] italic text-center py-4">No tomes match your search...</p>';
+    return;
+  }
+  
+  elements.modelList.innerHTML = '';
+  
+  models.forEach(model => {
+    const div = document.createElement('div');
+    
+    // Apply different styling for problematic models
+    const baseClass = 'model-list-item flex items-center p-2 rounded cursor-pointer transition-colors border border-transparent';
+    const hoverClass = model.isProblematic 
+      ? 'opacity-60 hover:bg-red-50 hover:border-red-200' 
+      : 'hover:bg-[#d8c8b0] hover:border-[#bcaaa4]';
+    div.className = `${baseClass} ${hoverClass}`;
+    div.dataset.modelId = model.model_id;
+    
+    // Build badges
+    let badges = '';
+    if (model.low_resource_required) {
+      badges += '<span class="ml-1 text-[10px] bg-green-100 text-green-700 px-1 rounded">📱</span>';
+    }
+    if (model.isReasoning) {
+      badges += '<span class="ml-1 text-[10px] bg-amber-100 text-amber-700 px-1 rounded">🧠</span>';
+    }
+    if (model.isProblematic) {
+      badges += '<span class="ml-1 text-[10px] bg-red-100 text-red-700 px-1 rounded" title="May have compatibility issues">⚠️</span>';
+    }
+    
+    div.innerHTML = `
+      <div class="flex-1 min-w-0">
+        <div class="font-serif text-sm text-[#2a1810] truncate">${model.displayName}${badges}</div>
+        <div class="text-[10px] text-[#8c735a] truncate">${model.parameterSize || ''} · ${model.vramGB ? model.vramGB + ' GB' : 'Unknown size'} · ${model.family}</div>
+      </div>
+    `;
+    
+    div.addEventListener('click', () => {
+      selectModel(model.model_id);
+    });
+    
+    elements.modelList.appendChild(div);
+  });
+}
+
+/**
+ * Select a model from the catalog or custom input
+ */
+function selectModel(modelId, isCustom = false) {
+  console.log('[ModelSelector] Selected:', modelId, isCustom ? '(custom)' : '');
+  selectedModelId = modelId;
+  
+  // Uncheck all radio buttons
+  const radioButtons = document.querySelectorAll('input[name="model-choice"]');
+  radioButtons.forEach(rb => rb.checked = false);
+  
+  // If it matches a featured model, check it
+  const matchingRadio = document.querySelector(`input[name="model-choice"][value="${modelId}"]`);
+  if (matchingRadio) {
+    matchingRadio.checked = true;
+  }
+  
+  // Update custom input if it was a library selection
+  if (!isCustom && elements.customModelInput) {
+    elements.customModelInput.value = modelId;
+  }
+  
+  // Close the library browser
+  if (elements.libraryBrowser) {
+    elements.libraryBrowser.open = false;
+  }
+  
+  // Check for reasoning model warning
+  checkAndShowReasoningWarning(modelId);
+  
+  // Visual feedback
+  if (elements.customModelHint) {
+    elements.customModelHint.textContent = `Selected: ${modelId}`;
+    elements.customModelHint.classList.add('text-[#5d4037]', 'font-semibold');
+  }
+}
+
+/**
+ * Check if model has warnings and show appropriate warnings
+ */
+function checkAndShowModelWarnings(modelId) {
+  if (!modelId) return;
+  
+  // Check reasoning model warning
+  if (elements.reasoningWarning) {
+    if (isReasoningModel(modelId)) {
+      elements.reasoningWarning.classList.remove('hidden');
+    } else {
+      elements.reasoningWarning.classList.add('hidden');
+    }
+  }
+  
+  // Check problematic quantization warning
+  if (elements.quantizationWarning) {
+    if (hasProblematicQuantization(modelId)) {
+      elements.quantizationWarning.classList.remove('hidden');
+    } else {
+      elements.quantizationWarning.classList.add('hidden');
+    }
+  }
+}
+
+// Alias for backward compatibility
+function checkAndShowReasoningWarning(modelId) {
+  checkAndShowModelWarnings(modelId);
+}
+
+/**
+ * Display recent models
+ */
+function displayRecentModels() {
+  const recent = getRecentModels();
+  
+  if (!recent.length || !elements.recentModelsSection || !elements.recentModelsList) {
+    return;
+  }
+  
+  elements.recentModelsSection.classList.remove('hidden');
+  elements.recentModelsList.innerHTML = '';
+  
+  recent.forEach(modelId => {
+    const btn = document.createElement('button');
+    btn.className = 'px-2 py-0.5 text-xs bg-[#e6e0d0] hover:bg-[#d8c8b0] text-[#5c4d3c] rounded border border-[#d4c5b0] font-serif transition-colors truncate max-w-[150px]';
+    btn.textContent = modelId.replace(/-MLC.*$/, '').replace(/-q\d+f\d+.*$/, '');
+    btn.title = modelId;
+    btn.addEventListener('click', () => {
+      selectModel(modelId);
+    });
+    elements.recentModelsList.appendChild(btn);
+  });
+}
+
+/**
+ * Simple debounce helper
+ */
+function debounce(fn, delay) {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+}
+
 // Global function for button onclick
 export function loadSelectedModel() {
   console.log('[BUTTON] Load model button clicked via onclick');
 
-  // Get selected model
-  const selectedModel = document.querySelector('input[name="model-choice"]:checked');
-  if (!selectedModel) {
+  // Determine which model to load (priority: custom input > selected from catalog > radio button)
+  let modelId = null;
+  
+  // 1. Check if there's a custom model input with a value
+  const customInput = elements.customModelInput?.value?.trim();
+  if (customInput) {
+    modelId = customInput;
+    console.log('[BUTTON] Using custom model:', modelId);
+  }
+  
+  // 2. Check if a model was selected from the catalog
+  if (!modelId && selectedModelId) {
+    modelId = selectedModelId;
+    console.log('[BUTTON] Using catalog selection:', modelId);
+  }
+  
+  // 3. Fall back to radio button selection
+  if (!modelId) {
+    const selectedRadio = document.querySelector('input[name="model-choice"]:checked');
+    if (selectedRadio) {
+      modelId = selectedRadio.value;
+      console.log('[BUTTON] Using radio selection:', modelId);
+    }
+  }
+  
+  if (!modelId) {
     console.log('[BUTTON] No model selected');
     alert('Please select a storyteller first!');
     return;
   }
 
-  const modelId = selectedModel.value;
-  console.log('[BUTTON] Selected model:', modelId);
+  console.log('[BUTTON] Final selected model:', modelId);
+  
+  // Add to recent models
+  addToRecentModels(modelId);
 
   // Disable interactions
   const radioButtons = document.querySelectorAll('input[name="model-choice"]');
