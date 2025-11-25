@@ -12,13 +12,13 @@ export class WebLLMManager {
 
     try {
       logger.log("🔄 Starting WebLLM initialization...");
-      
+
       // Show loading panel
       const loadingPanel = dom.elements.modelLoadingPanel;
       const modelStatus = dom.elements.modelStatus;
       const modelProgressText = dom.elements.modelProgressText;
       const modelProgressBar = dom.elements.modelProgressBar;
-      
+
       if (loadingPanel) loadingPanel.classList.remove('hidden');
       if (modelStatus) modelStatus.textContent = "Loading WebLLM library...";
 
