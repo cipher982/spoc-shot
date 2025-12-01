@@ -494,7 +494,7 @@
     // Dynamically construct base path to handle both /storyteller and /storyteller/ URLs
     // Cache bust version - increment when JS changes
     const basePath = window.location.pathname.replace(/\/?$/, '/');
-    const version = 'v2';
+    const version = 'v3';
     import(basePath + `static/js/logit-viz.js?${version}`).then(module => {
       window.loadSelectedModel = module.loadSelectedModel;
     }).catch(error => {

@@ -916,10 +916,27 @@ async function initializeWebLLM(modelId) {
     };
 
     const engine = await CreateMLCEngine(selectedModel, { initProgressCallback: progressCallback });
-    
+
     webllmManager.engine = engine;
-    webllmManager.loaded = true;
     window.webllmEngine = engine;
+
+    // Warm up the engine with a tiny generation to ensure wasm bindings are ready
+    // This prevents "VectorInt" errors when user clicks Write immediately after load
+    if (elements.loadingStatus) elements.loadingStatus.textContent = 'Warming up...';
+    try {
+      // Do a minimal completion to initialize internal state
+      const warmup = await engine.completions.create({
+        prompt: 'Hi',
+        max_tokens: 1,
+        stream: false
+      });
+    } catch (warmupErr) {
+      // Ignore warmup errors, the model should still work
+      console.warn('Warmup generation failed (non-critical):', warmupErr.message);
+    }
+
+    // Now mark as fully ready
+    webllmManager.loaded = true;
 
     if (elements.loadingOverlay) elements.loadingOverlay.classList.add('hidden');
     updateStatus('Ready', 'ready');
@@ -932,21 +949,27 @@ async function initializeWebLLM(modelId) {
 
 // Start generation (wraps internal logic)
 async function startGeneration() {
+  // Check if model is ready
+  if (!webllmManager.loaded || !webllmManager.engine) {
+    updateStatus('Model not ready - please wait', 'error');
+    return;
+  }
+
   const topic = elements.promptInput.value.trim();
   if (!topic) {
     alert('Please enter a story topic');
     return;
   }
-  
+
   // Reset state for fresh start
   allTokens = [];
   allLogprobs = [];
   elements.heatmapText.innerHTML = '';
   resetMetrics();
-  
-  // CRITICAL: Increment generationId for new generation
+
+  // Increment generationId for new generation
   generationId++;
-  
+
   await runGenerationLoop(topic, []);
 }
 
