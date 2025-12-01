@@ -492,8 +492,10 @@
   <script>
     // Load the module and make functions available globally
     // Dynamically construct base path to handle both /storyteller and /storyteller/ URLs
+    // Cache bust version - increment when JS changes
     const basePath = window.location.pathname.replace(/\/?$/, '/');
-    import(basePath + 'static/js/logit-viz.js').then(module => {
+    const version = 'v2';
+    import(basePath + `static/js/logit-viz.js?${version}`).then(module => {
       window.loadSelectedModel = module.loadSelectedModel;
     }).catch(error => {
       console.error('Failed to load logit-viz module:', error);
