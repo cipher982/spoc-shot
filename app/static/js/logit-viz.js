@@ -839,25 +839,20 @@ async function applyCustomToken(index, text) {
   
   // Tokenize the custom text
   const tokens = await tokenizeText(text);
-  console.log(`[Custom] User typed: "${text}" → Tokens:`, tokens);
-  
+
   if (tokens.length === 0) return;
-  
+
   // Similar to retryGeneration but potentially with multiple tokens
   if (isGenerating) {
-    console.log('[Custom] Stopping current generation before applying');
     await stopGeneration();
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
+
   generationId++;
-  
+
   // Keep everything before the clicked position
   const keptTokens = allTokens.slice(0, index);
   const keptLogprobs = allLogprobs.slice(0, index);
-  
-  console.log('[Custom] Kept tokens:', keptTokens);
-  console.log('[Custom] Injecting tokens:', tokens);
   
   // For multi-token injection, we'll insert all tokens
   // The first token gets the original logprobs structure (preserving candidates)
@@ -875,10 +870,7 @@ async function applyCustomToken(index, text) {
   // Update state with all new tokens
   allTokens = [...keptTokens, ...tokens];
   allLogprobs = [...keptLogprobs, firstTokenLogprobs, ...new Array(tokens.length - 1).fill(null)];
-  
-  console.log('[Custom] New token history:', allTokens);
-  console.log('[Custom] Total tokens:', allTokens.length);
-  
+
   // Re-render UI
   elements.heatmapText.innerHTML = '';
   allTokens.forEach((token, i) => {
@@ -962,11 +954,9 @@ async function startGeneration() {
 async function retryGeneration(index, chosenToken) {
   hideTooltip();
   
-  // CRITICAL: Stop any ongoing generation first
+  // Stop any ongoing generation first
   if (isGenerating) {
-    console.log('[Retry] Stopping current generation before retry');
     await stopGeneration();
-    // Wait a bit for the generation to actually stop
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   
@@ -975,12 +965,8 @@ async function retryGeneration(index, chosenToken) {
   
   // Slice history to keep everything BEFORE the clicked token
   // If I click token at index 5, I want tokens 0-4, then replace 5 with chosenToken
-  console.log(`[Retry] Generation ${generationId}: Splice at index ${index}. Replacing with: "${chosenToken}"`);
-  
   const keptTokens = allTokens.slice(0, index);
   const keptLogprobs = allLogprobs.slice(0, index);
-  
-  console.log('[Retry] Kept tokens:', keptTokens);
   
   // Preserve the logprobs from the original position so we keep candidates and interactivity
   let newLogprobObj = null;
@@ -1007,10 +993,7 @@ async function retryGeneration(index, chosenToken) {
   // Update state
   allTokens = [...keptTokens, chosenToken];
   allLogprobs = [...keptLogprobs, newLogprobObj];
-  
-  console.log('[Retry] New token history:', allTokens);
-  console.log('[Retry] Joined history text:', allTokens.join(''));
-  
+
   // Re-render UI
   elements.heatmapText.innerHTML = '';
   allTokens.forEach((token, i) => {
@@ -1033,15 +1016,9 @@ async function runGenerationLoop(topic, currentHistoryTokens) {
   
   // Capture the current generation ID
   const thisGenerationId = generationId;
-  
-  console.log(`[GenLoop ${thisGenerationId}] Starting with currentHistoryTokens.length:`, currentHistoryTokens.length);
-  console.log(`[GenLoop ${thisGenerationId}] Topic:`, topic);
-  
+
   isGenerating = true;
   currentAbortController = new AbortController();
-  
-  console.log(`[GenLoop ${thisGenerationId}] Created new AbortController`);
-  console.log(`[GenLoop ${thisGenerationId}] AbortController.signal.aborted:`, currentAbortController.signal.aborted);
   
   elements.runButton.classList.add('hidden');
   elements.stopButton.classList.remove('hidden');
@@ -1064,9 +1041,6 @@ async function runGenerationLoop(topic, currentHistoryTokens) {
       promptText = `Write a story about ${topic}:\n\n`;
     }
     
-    console.log(`[GenLoop ${thisGenerationId}] Using completions API`);
-    console.log(`[GenLoop ${thisGenerationId}] Prompt: "${promptText}"`);
-    
     // Create completion
     const completionParams = {
       prompt: promptText,
@@ -1079,94 +1053,65 @@ async function runGenerationLoop(topic, currentHistoryTokens) {
       echo: false  // Don't echo the prompt back
     };
     
-    console.log(`[GenLoop ${thisGenerationId}] Completion params:`, completionParams);
-    
     let chunks;
     try {
       chunks = await engine.completions.create(completionParams);
-      console.log(`[GenLoop ${thisGenerationId}] Chunks created successfully`);
-      console.log(`[GenLoop ${thisGenerationId}] Chunks type:`, typeof chunks);
-      console.log(`[GenLoop ${thisGenerationId}] Is async iterable:`, chunks && typeof chunks[Symbol.asyncIterator] === 'function');
     } catch (createError) {
-      console.error(`[GenLoop ${thisGenerationId}] Failed to create chunks:`, createError);
+      console.error(`[Generation] Failed to create completion:`, createError);
       throw createError;
     }
 
     let chunkCount = 0;
-    console.log(`[GenLoop ${thisGenerationId}] Starting to iterate chunks...`);
-    
-    // Add a timeout check
+
+    // Timeout check for debugging stuck generations
     const timeoutId = setTimeout(() => {
-      console.error(`[GenLoop ${thisGenerationId}] TIMEOUT: No chunks received after 5 seconds`);
-      console.error(`[GenLoop ${thisGenerationId}] Chunks object:`, chunks);
-      console.error(`[GenLoop ${thisGenerationId}] thisGenerationId:`, thisGenerationId, 'vs generationId:', generationId);
-      console.error(`[GenLoop ${thisGenerationId}] isGenerating:`, isGenerating);
-      console.error(`[GenLoop ${thisGenerationId}] AbortController aborted:`, currentAbortController?.signal?.aborted);
-      // Check if it's a non-streaming response
-      if (chunks && chunks.choices) {
-        console.error(`[GenLoop ${thisGenerationId}] Looks like non-streaming response:`, chunks);
+      if (chunkCount === 0) {
+        console.error(`[Generation] TIMEOUT: No chunks received after 5 seconds`);
       }
     }, 5000);
-    
-    console.log(`[GenLoop ${thisGenerationId}] About to enter for-await loop...`);
-    
+
     try {
       for await (const chunk of chunks) {
         if (chunkCount === 0) {
-          console.log(`[GenLoop ${thisGenerationId}] First chunk received!`);
-          clearTimeout(timeoutId); // Clear timeout on first chunk
+          clearTimeout(timeoutId);
         }
         chunkCount++;
-        
-        console.log(`[GenLoop ${thisGenerationId}] Received chunk ${chunkCount}`);
-        
-        // Debug log for first few chunks
-        if (chunkCount <= 3) {
-          console.log(`[GenLoop ${thisGenerationId}] Chunk ${chunkCount} details:`, JSON.stringify(chunk, null, 2));
-        }
-        
+
         // Check if this generation has been superseded
         if (thisGenerationId !== generationId) {
-          console.log(`[GenLoop ${thisGenerationId}] Cancelled - newer generation ${generationId} started`);
           break;
         }
-        
+
         // Check for cancellation
         if (currentAbortController && currentAbortController.signal.aborted) {
-          console.log(`[GenLoop ${thisGenerationId}] Aborted detected in loop`);
           break;
         }
 
         const choice = chunk.choices?.[0];
         if (!choice) {
-          console.warn(`[GenLoop ${thisGenerationId}] No choice in chunk ${chunkCount}`);
           continue;
         }
-        
+
         // Completions API returns content in choice.text
         const content = choice.text || '';
         const logprobs = choice.logprobs;
-        
+
         if (content) {
-          // Completions API may return multiple tokens at once
-          console.log(`[GenLoop ${thisGenerationId}] Chunk ${chunkCount}: "${content}"`);
-          
           // Add to state
           allTokens.push(content);
           if (logprobs) allLogprobs.push(logprobs);
           else allLogprobs.push(null);
-          
+
           appendTokenToHeatmap(content, logprobs, allTokens.length - 1);
           updateMetrics();
         }
       }
-      
-      console.log(`[GenLoop ${thisGenerationId}] Finished processing ${chunkCount} chunks`);
-      clearTimeout(timeoutId); // Clear timeout if we finished normally
-      
+
+      clearTimeout(timeoutId);
+
     } catch (iterError) {
-      console.error(`[GenLoop ${thisGenerationId}] Error in chunk iteration:`, iterError);
-      clearTimeout(timeoutId); // Clear timeout on error
+      console.error(`[Generation] Error during streaming:`, iterError);
+      clearTimeout(timeoutId);
       throw iterError;
     }
     
@@ -1197,24 +1142,20 @@ async function runGenerationLoop(topic, currentHistoryTokens) {
 
 // Stop generation
 async function stopGeneration() {
-  console.log('[stopGeneration] Called');
   if (currentAbortController) {
-    console.log('[stopGeneration] Aborting controller');
     currentAbortController.abort();
     currentAbortController = null;
   }
-  
+
   // Explicitly interrupt the engine to ensure it stops processing
   if (webllmManager.engine && typeof webllmManager.engine.interruptGenerate === 'function') {
     try {
-      console.log('[stopGeneration] Calling engine.interruptGenerate()');
       await webllmManager.engine.interruptGenerate();
-      console.log('[stopGeneration] Engine interrupted successfully');
     } catch (err) {
-      console.warn('[stopGeneration] Error interrupting engine:', err);
+      // Ignore interruption errors
     }
   }
-  
+
   isGenerating = false;
 }
 
