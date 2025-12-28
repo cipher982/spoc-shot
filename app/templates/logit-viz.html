@@ -178,7 +178,7 @@
           <!-- Featured Models -->
           <div id="featured-models" class="space-y-2">
             <label class="model-option flex items-center p-3 border border-[#d4c5b0] rounded bg-[#efe6d5] hover:bg-[#e6e0d0] cursor-pointer transition-colors group">
-              <input type="radio" name="model-choice" value="Hermes-3-Llama-3.1-8B-q4f16_1-MLC" class="hidden peer" checked>
+              <input type="radio" name="model-choice" value="Hermes-3-Llama-3.1-8B-q4f16_1-MLC" class="hidden peer">
               <div class="w-4 h-4 border-2 border-[#8d6e63] rounded-full mr-3 flex items-center justify-center peer-checked:border-[#2a1810] peer-checked:bg-[#2a1810]">
                 <div class="w-1.5 h-1.5 bg-white rounded-full peer-checked:block hidden"></div>
               </div>
@@ -189,7 +189,7 @@
             </label>
 
             <label class="model-option flex items-center p-3 border border-[#d4c5b0] rounded bg-[#efe6d5] hover:bg-[#e6e0d0] cursor-pointer transition-colors group">
-              <input type="radio" name="model-choice" value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC" class="hidden peer">
+              <input type="radio" name="model-choice" value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC" class="hidden peer" checked>
               <div class="w-4 h-4 border-2 border-[#8d6e63] rounded-full mr-3 flex items-center justify-center peer-checked:border-[#2a1810] peer-checked:bg-[#2a1810]">
                 <div class="w-1.5 h-1.5 bg-white rounded-full peer-checked:block hidden"></div>
               </div>
@@ -494,7 +494,7 @@
     // Dynamically construct base path to handle both /storyteller and /storyteller/ URLs
     // Cache bust version - increment when JS changes
     const basePath = window.location.pathname.replace(/\/?$/, '/');
-    const version = 'v3';
+    const version = 'v4';
     import(basePath + `static/js/logit-viz.js?${version}`).then(module => {
       window.loadSelectedModel = module.loadSelectedModel;
     }).catch(error => {

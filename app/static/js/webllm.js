@@ -35,7 +35,7 @@ export class WebLLMManager {
       logger.log("✅ WebGPU ready");
 
       // 3️⃣ Check model availability
-      const selectedModel = "Hermes-3-Llama-3.1-8B-q4f16_1-MLC";
+      const selectedModel = "Qwen2.5-0.5B-Instruct-q4f16_1-MLC";
       const availableModels = webllm.prebuiltAppConfig.model_list.map(m => m.model_id);
       
       if (!availableModels.includes(selectedModel)) {
