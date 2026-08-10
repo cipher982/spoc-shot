@@ -61,7 +61,6 @@ stop:
 test:
 	@echo "🧪 Running unit tests..."
 	@[ ! -f .env ] && cp .env.example .env || true
-	@uv run python test_setup.py 2>/dev/null || true
 	# test_agent.py removed - imports non-existent functions solve_single_pass/solve_multi_pass
 
 # Run E2E tests with Playwright

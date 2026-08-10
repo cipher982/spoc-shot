@@ -28,9 +28,10 @@ ENV PYTHONPATH=/app
 # Expose port (will be overridden by ENV)
 EXPOSE ${PORT}
 
-# Health check
+# Health check (uses $PORT so the image works standalone; compose overrides
+# to 8000). Curl is present because the base image ships with it.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD curl -f http://127.0.0.1:8000/ || exit 1
+  CMD curl -f "http://127.0.0.1:${PORT}/" || exit 1
 
 # Run the application with environment variables
 CMD ["sh", "-c", "uv run uvicorn app.main:app --host $HOST --port $PORT"]
