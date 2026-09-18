@@ -500,19 +500,7 @@
   </div>
 
   <!-- JavaScript -->
-  <script type="module">
-    window.__loader_status = 'started';
-    const basePath = window.location.pathname.replace(/\/?$/, '/');
-    const version = 'v7';
-    try {
-      const module = await import(basePath + `static/js/logit-viz.js?${version}`);
-      window.loadSelectedModel = module.loadSelectedModel;
-      window.__loader_status = 'loaded';
-    } catch (error) {
-      window.__loader_status = 'error: ' + error.toString();
-      console.error('Failed to load logit-viz module:', error);
-    }
-  </script>
+  <script type="module" src="/storyteller/static/js/logit-viz.js?v7"></script>
   
   <!-- Tooltip (Hidden) -->
   <div id="token-tooltip" class="hidden fixed z-50 bg-[#fffef8] border border-[#d4c5b0] p-3 rounded shadow-xl max-w-xs">

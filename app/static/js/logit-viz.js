@@ -471,10 +471,8 @@ export function loadSelectedModel() {
     initializeWebLLM(modelId);
   }, 300);
 }
-
-
-// Function is now exported and will be made available via import in HTML
-
+// Expose globally for inline onclick
+window.loadSelectedModel = loadSelectedModel;
 // Setup event listeners
 function setupEventListeners() {
   console.log('[SETUP] Setting up event listeners');
