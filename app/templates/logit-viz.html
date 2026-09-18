@@ -1,5 +1,10 @@
 <!doctype html>
 <html lang="en">
+  <script>
+    window.__early_errors = [];
+    window.addEventListener('error', e => window.__early_errors.push(e.message || String(e)));
+    window.addEventListener('unhandledrejection', e => window.__early_errors.push('REJECT: ' + (e.reason ? (e.reason.stack || e.reason) : String(e))));
+  </script>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -506,6 +511,7 @@
       window.loadSelectedModel = module.loadSelectedModel;
       window.__app_ready = true;
     }).catch(error => {
+      window.__script_error = error.stack || error.toString();
       console.error('Failed to load logit-viz module:', error);
     });
   </script>
