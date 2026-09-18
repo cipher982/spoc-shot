@@ -500,7 +500,15 @@
   </div>
 
   <!-- JavaScript -->
-  <script type="module" src="/storyteller/static/js/logit-viz.js?v8"></script>
+  <script>
+    const basePath = window.location.pathname.replace(/\/?$/, '/');
+    import(basePath + 'static/js/logit-viz.js?v8').then(module => {
+      window.loadSelectedModel = module.loadSelectedModel;
+      window.__app_ready = true;
+    }).catch(error => {
+      console.error('Failed to load logit-viz module:', error);
+    });
+  </script>
   
   <!-- Tooltip (Hidden) -->
   <div id="token-tooltip" class="hidden fixed z-50 bg-[#fffef8] border border-[#d4c5b0] p-3 rounded shadow-xl max-w-xs">
