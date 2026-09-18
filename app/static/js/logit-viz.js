@@ -1,19 +1,19 @@
 // Standalone Logit/Token Visualization
 // Reuses existing visualization logic with modern Tailwind UI
 
-import { webllmManager } from './webllm.js?v6';
+import { webllmManager } from './webllm.js?v8';
 import { 
   processToken, 
   createTokenElement, 
   calculateMetrics, 
   formatMetrics 
-} from './confidence-utils.js?v6';
+} from './confidence-utils.js?v8';
 import { 
   CONFIDENCE_THRESHOLDS,
   CONFIDENCE_BAR_LENGTH,
   WEBLLM_CDN_URL,
   DEFAULT_MODEL_ID
-} from './constants.js?v6';
+} from './constants.js?v8';
 import {
   getModelCatalog,
   searchModels,
@@ -23,7 +23,7 @@ import {
   getRecentModels,
   addToRecentModels,
   MODEL_FAMILIES
-} from './model-catalog.js?v6';
+} from './model-catalog.js?v8';
 
 // DOM Elements
 const elements = {

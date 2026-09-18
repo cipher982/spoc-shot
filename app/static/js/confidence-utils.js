@@ -8,7 +8,7 @@ import {
   MAX_PERPLEXITY_DISPLAY,
   VALIDATION,
   MATH
-} from './constants.js?v6';
+} from './constants.js?v8';
 
 // ========================================
 // CORE CONFIDENCE CALCULATIONS
