@@ -1,4 +1,4 @@
-import { WEBLLM_CDN_URL } from './constants.js';
+import { WEBLLM_CDN_URL } from './constants.js?v6';
 
 // Model Catalog Module
 // Fetches and organizes WebLLM's available models for the selector UI
