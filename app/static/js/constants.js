@@ -23,8 +23,8 @@ export const UPDATE_THRESHOLD = 3; // Update UI every N tokens
 // ========================================
 
 // WebLLM Model Configuration
-export const WEBLLM_CDN_URL = "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm";
-
+export const WEBLLM_CDN_URL = "https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.85/+esm";
+export const DEFAULT_MODEL_ID = "SmolLM2-360M-Instruct-q4f16_1-MLC";
 // Model Parameters
 export const DEFAULT_TEMPERATURE = 0.7;
 export const DEFAULT_TOP_P = 0.9;

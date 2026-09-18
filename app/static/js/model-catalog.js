@@ -1,3 +1,5 @@
+import { WEBLLM_CDN_URL } from './constants.js';
+
 // Model Catalog Module
 // Fetches and organizes WebLLM's available models for the selector UI
 
@@ -15,7 +17,7 @@ const OPTIONAL_THINKING_PATTERNS = [
   /^Qwen3-/i,
 ];
 
-// Quantizations known to have issues in WebLLM 0.2.79
+// Quantizations known to have issues in WebLLM
 // q4f32 has binding errors, q0f16/q0f32 can be unstable
 const PROBLEMATIC_QUANTIZATIONS = [
   /q4f32/i,
@@ -25,18 +27,19 @@ const PROBLEMATIC_QUANTIZATIONS = [
 
 // Model family detection patterns
 const MODEL_FAMILIES = {
-  'Llama': /^(Llama|Hermes|TinyLlama)/i,
   'Qwen': /^Qwen/i,
-  'DeepSeek': /^DeepSeek/i,
-  'Phi': /^Phi/i,
   'Gemma': /^gemma/i,
+  'Ministral': /^Ministral/i,
   'Mistral': /^(Mistral|OpenHermes|NeuralHermes|WizardMath)/i,
+  'Phi': /^Phi/i,
   'SmolLM': /^SmolLM/i,
+  'Llama': /^(Llama|Hermes|TinyLlama)/i,
+  'DeepSeek': /^DeepSeek/i,
+  'OLMo': /^OLMo/i,
   'StableLM': /^stablelm/i,
   'RedPajama': /^RedPajama/i,
   'Other': /.*/,
 };
-
 // Size tier thresholds (in MB)
 const SIZE_TIERS = {
   'Tiny': { max: 1000, label: '< 1 GB', icon: '🪶' },
@@ -74,10 +77,7 @@ export async function getModelCatalog() {
 async function fetchAndParseCatalog() {
   try {
     // Dynamically import WebLLM to get the prebuilt config
-    const { prebuiltAppConfig } = await import(
-      'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm'
-    );
-
+    const { prebuiltAppConfig } = await import(WEBLLM_CDN_URL);
     const models = prebuiltAppConfig.model_list;
     
     // Parse and enrich model data

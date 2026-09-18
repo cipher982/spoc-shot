@@ -10,7 +10,9 @@ import {
 } from './confidence-utils.js';
 import { 
   CONFIDENCE_THRESHOLDS,
-  CONFIDENCE_BAR_LENGTH 
+  CONFIDENCE_BAR_LENGTH,
+  WEBLLM_CDN_URL,
+  DEFAULT_MODEL_ID
 } from './constants.js';
 import {
   getModelCatalog,
@@ -889,13 +891,11 @@ async function initializeWebLLM(modelId) {
     if (elements.loadingOverlay) elements.loadingOverlay.classList.remove('hidden');
     
     // Dynamically import WebLLM
-    const { CreateMLCEngine, prebuiltAppConfig } = await import(
-      'https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.79/+esm'
-    );
+    const { CreateMLCEngine, prebuiltAppConfig } = await import(WEBLLM_CDN_URL);
 
     if (!('gpu' in navigator)) throw new Error('WebGPU unavailable');
     
-    const selectedModel = modelId || "Hermes-3-Llama-3.1-8B-q4f16_1-MLC";
+    const selectedModel = modelId || DEFAULT_MODEL_ID;
     
     const progressCallback = (report) => {
       const progress = Math.round((report.progress || 0) * 100);
