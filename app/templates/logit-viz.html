@@ -1,10 +1,5 @@
 <!doctype html>
 <html lang="en">
-  <script>
-    window.__early_errors = [];
-    window.addEventListener('error', e => window.__early_errors.push(e.message || String(e)));
-    window.addEventListener('unhandledrejection', e => window.__early_errors.push('REJECT: ' + (e.reason ? (e.reason.stack || e.reason) : String(e))));
-  </script>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -505,16 +500,7 @@
   </div>
 
   <!-- JavaScript -->
-  <script>
-    const basePath = window.location.pathname.replace(/\/?$/, '/');
-    import(basePath + 'static/js/logit-viz.js?v8').then(module => {
-      window.loadSelectedModel = module.loadSelectedModel;
-      window.__app_ready = true;
-    }).catch(error => {
-      window.__script_error = error.stack || error.toString();
-      console.error('Failed to load logit-viz module:', error);
-    });
-  </script>
+  <script type="module" src="/storyteller/static/js/logit-viz.js?v8"></script>
   
   <!-- Tooltip (Hidden) -->
   <div id="token-tooltip" class="hidden fixed z-50 bg-[#fffef8] border border-[#d4c5b0] p-3 rounded shadow-xl max-w-xs">
