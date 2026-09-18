@@ -501,16 +501,17 @@
 
   <!-- JavaScript -->
   <script type="module">
-    // Load the module and make functions available globally
-    // Dynamically construct base path to handle both /storyteller and /storyteller/ URLs
-    // Cache bust version - increment when JS changes
+    window.__loader_status = 'started';
     const basePath = window.location.pathname.replace(/\/?$/, '/');
     const version = 'v7';
-    import(basePath + `static/js/logit-viz.js?${version}`).then(module => {
+    try {
+      const module = await import(basePath + `static/js/logit-viz.js?${version}`);
       window.loadSelectedModel = module.loadSelectedModel;
-    }).catch(error => {
+      window.__loader_status = 'loaded';
+    } catch (error) {
+      window.__loader_status = 'error: ' + error.toString();
       console.error('Failed to load logit-viz module:', error);
-    });
+    }
   </script>
   
   <!-- Tooltip (Hidden) -->
