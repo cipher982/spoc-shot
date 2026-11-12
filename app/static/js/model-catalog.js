@@ -1,4 +1,4 @@
-import { WEBLLM_CDN_URL } from './constants.js?v8';
+import { WEBLLM_CDN_URL } from './constants.js?v9';
 
 // Model Catalog Module
 // Fetches and organizes WebLLM's available models for the selector UI
@@ -10,17 +10,17 @@ let catalogPromise = null;
 // Known reasoning models that output <think> tags
 const REASONING_MODEL_PATTERNS = [
   /^DeepSeek-R1-Distill/i,
+  /^Ministral-.*-Reasoning/i,
 ];
 
 // Models with optional thinking mode (user can enable)
 const OPTIONAL_THINKING_PATTERNS = [
-  /^Qwen3-/i,
+  /^Qwen3(?:\.5)?-/i,
 ];
 
 // Quantizations known to have issues in WebLLM
-// q4f32 has binding errors, q0f16/q0f32 can be unstable
+// q0f16/q0f32 unquantized weights can exhaust WebGPU buffer limits
 const PROBLEMATIC_QUANTIZATIONS = [
-  /q4f32/i,
   /q0f16/i,
   /q0f32/i,
 ];

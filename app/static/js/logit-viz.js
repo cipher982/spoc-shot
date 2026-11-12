@@ -1,19 +1,19 @@
 // Standalone Logit/Token Visualization
 // Reuses existing visualization logic with modern Tailwind UI
 
-import { webllmManager } from './webllm.js?v8';
+import { webllmManager } from './webllm.js?v9';
 import { 
   processToken, 
   createTokenElement, 
   calculateMetrics, 
   formatMetrics 
-} from './confidence-utils.js?v8';
+} from './confidence-utils.js?v9';
 import { 
   CONFIDENCE_THRESHOLDS,
   CONFIDENCE_BAR_LENGTH,
   WEBLLM_CDN_URL,
   DEFAULT_MODEL_ID
-} from './constants.js?v8';
+} from './constants.js?v9';
 import {
   getModelCatalog,
   searchModels,
@@ -23,7 +23,7 @@ import {
   getRecentModels,
   addToRecentModels,
   MODEL_FAMILIES
-} from './model-catalog.js?v8';
+} from './model-catalog.js?v9';
 
 // DOM Elements
 const elements = {
@@ -80,6 +80,7 @@ console.log('[INIT] Elements found:', {
 // State
 let currentAbortController = null;
 let isGenerating = false;
+let isLoadingModel = false;
 let allTokens = [];
 let allLogprobs = [];
 let activeTokenElement = null;
@@ -407,7 +408,11 @@ function debounce(fn, delay) {
 
 // Global function for button onclick
 export function loadSelectedModel() {
-  console.log('[BUTTON] Load model button clicked via onclick');
+  if (isLoadingModel || webllmManager.loaded) {
+    console.log('[BUTTON] Model load already in progress or complete, ignoring duplicate call');
+    return;
+  }
+  console.log('[BUTTON] Load model button clicked');
 
   // Determine which model to load (priority: custom input > selected from catalog > radio button)
   let modelId = null;
@@ -456,6 +461,7 @@ export function loadSelectedModel() {
     }
   });
 
+  isLoadingModel = true;
   elements.loadModelBtn.disabled = true;
   elements.loadModelBtn.classList.add('opacity-50', 'cursor-not-allowed');
   elements.loadModelBtn.textContent = 'Summoning...';
@@ -882,7 +888,7 @@ async function applyCustomToken(index, text) {
   await runGenerationLoop(prompt, allTokens);
 }
 
-// Initialize WebLLM
+// Initialize WebLLM (single MLCEngine instance per tab to avoid Emscripten VectorInt collisions)
 async function initializeWebLLM(modelId) {
   try {
     updateStatus('Initializing WebLLM...', 'loading');
@@ -892,8 +898,20 @@ async function initializeWebLLM(modelId) {
     const { CreateMLCEngine, prebuiltAppConfig } = await import(WEBLLM_CDN_URL);
 
     if (!('gpu' in navigator)) throw new Error('WebGPU unavailable');
-    
-    const selectedModel = modelId || DEFAULT_MODEL_ID;
+
+    let selectedModel = modelId || DEFAULT_MODEL_ID;
+
+    // Auto-fallback from q4f16_1 to q4f32_1 if adapter lacks shader-f16
+    const adapter = await navigator.gpu.requestAdapter();
+    const hasShaderF16 = Boolean(adapter && adapter.features && adapter.features.has('shader-f16'));
+    const modelEntry = prebuiltAppConfig.model_list.find(m => m.model_id === selectedModel);
+    if (!hasShaderF16 && modelEntry?.required_features?.includes('shader-f16')) {
+      const f32Candidate = selectedModel.replace('q4f16_1', 'q4f32_1');
+      if (prebuiltAppConfig.model_list.some(m => m.model_id === f32Candidate)) {
+        console.warn(`[WebLLM] Adapter lacks shader-f16; falling back to ${f32Candidate}`);
+        selectedModel = f32Candidate;
+      }
+    }
     
     const progressCallback = (report) => {
       const progress = Math.round((report.progress || 0) * 100);
@@ -913,27 +931,16 @@ async function initializeWebLLM(modelId) {
       if (elements.loadingStatus) elements.loadingStatus.textContent = statusText;
     };
 
-    const engine = await CreateMLCEngine(selectedModel, { initProgressCallback: progressCallback });
+    let engine = webllmManager.engine;
+    if (engine) {
+      engine.setInitProgressCallback(progressCallback);
+      await engine.reload(selectedModel);
+    } else {
+      engine = await CreateMLCEngine(selectedModel, { initProgressCallback: progressCallback });
+    }
 
     webllmManager.engine = engine;
     window.webllmEngine = engine;
-
-    // Warm up the engine with a tiny generation to ensure wasm bindings are ready
-    // This prevents "VectorInt" errors when user clicks Write immediately after load
-    if (elements.loadingStatus) elements.loadingStatus.textContent = 'Warming up...';
-    try {
-      // Do a minimal completion to initialize internal state
-      const warmup = await engine.completions.create({
-        prompt: 'Hi',
-        max_tokens: 1,
-        stream: false
-      });
-    } catch (warmupErr) {
-      // Ignore warmup errors, the model should still work
-      console.warn('Warmup generation failed (non-critical):', warmupErr.message);
-    }
-
-    // Now mark as fully ready
     webllmManager.loaded = true;
 
     if (elements.loadingOverlay) elements.loadingOverlay.classList.add('hidden');
@@ -942,6 +949,8 @@ async function initializeWebLLM(modelId) {
     console.error(error);
     updateStatus(`Error: ${error.message}`, 'error');
     if (elements.loadingOverlay) elements.loadingOverlay.classList.add('hidden');
+  } finally {
+    isLoadingModel = false;
   }
 }
 
