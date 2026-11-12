@@ -483,10 +483,11 @@ window.loadSelectedModel = loadSelectedModel;
 function setupEventListeners() {
   console.log('[SETUP] Setting up event listeners');
 
-  // Model loading button - also add event listener as backup
+  // Model loading button - enable now that module & listener are attached
   if (elements.loadModelBtn) {
     console.log('[SETUP] Found load model button, adding listener');
     elements.loadModelBtn.addEventListener('click', loadSelectedModel);
+    elements.loadModelBtn.disabled = false;
   } else {
     console.error('[SETUP] Load model button not found!');
   }
