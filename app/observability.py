@@ -17,11 +17,24 @@ from opentelemetry.sdk.resources import Resource
 
 logger = logging.getLogger(__name__)
 
+def resolve_otel_config() -> tuple[str, bool]:
+    """Return (endpoint, enabled) defaulting OTel off unless an endpoint is configured."""
+    endpoint = (
+        os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        or os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
+        or os.getenv("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT")
+        or ""
+    ).strip()
+    raw_enable = os.getenv("ENABLE_OTEL")
+    if raw_enable is None:
+        return endpoint, bool(endpoint)
+    return endpoint, raw_enable.strip().lower() in {"1", "true", "yes"}
+
+
 # Configuration
-OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
 OTEL_SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "spoc-shot")
 OTEL_SERVICE_VERSION = os.getenv("OTEL_SERVICE_VERSION", "0.1.0")
-ENABLE_OTEL = os.getenv("ENABLE_OTEL", "true").lower() == "true"
+OTEL_EXPORTER_OTLP_ENDPOINT, ENABLE_OTEL = resolve_otel_config()
 
 # Global instrumentation state
 _instrumented = False

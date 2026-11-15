@@ -1,0 +1,35 @@
+# Version control and editor files
+.git/
+.gitignore
+.cursor/
+.DS_Store
+
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+
+# Python caches and virtual environments
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Tests and JS/Playwright tooling
+tests/
+node_modules/
+package*.json
+playwright.config.ts
+playwright-report/
+test-results/
+pytest.ini
+
+# Non-runtime docs and compose files (keep README.md for pyproject metadata)
+*.md
+!README.md
+docker-compose*.yml
+Dockerfile*

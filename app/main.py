@@ -50,8 +50,18 @@ dictConfig(LogConfig)
 
 logger = logging.getLogger(__name__)
 
+def _env_flag(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in {"1", "true", "yes"}
+
+
+_docs_enabled = _env_flag("ENABLE_API_DOCS")
+
 # Don't use root_path - let Caddy handle subdirectory routing with uri strip_prefix
-app = FastAPI()
+app = FastAPI(
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None,
+)
 
 # Mount static files FIRST, before middleware/instrumentation
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -121,6 +131,9 @@ async def debug_metrics():
     """
     Debug endpoint to check if business metrics are working.
     """
+    if not _env_flag("ENABLE_DEBUG_METRICS"):
+        raise HTTPException(status_code=404, detail="Not Found")
+
     if not business_metrics:
         return {"error": "Business metrics not initialized"}
     

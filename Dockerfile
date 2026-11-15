@@ -13,7 +13,7 @@ RUN pip install uv && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-RUN uv sync --frozen
+RUN uv sync --frozen --no-dev
 
 # Copy application code
 COPY app/ ./app/
